@@ -1,0 +1,1 @@
+export const BASE_VIRTUAL_ADDRESS = "0x0b3e328455c4059eeb9e3f84b5543f74e24e7e1b";
