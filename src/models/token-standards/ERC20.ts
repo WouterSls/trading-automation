@@ -27,15 +27,15 @@ export class ERC20 {
     return this.decimals;
   }
 
-  public getTotalSupply(): string {
+  public getRawTotalSupply(): string {
     return this.totalSupply;
   }
 
-  public getAllowance(ownerAddress: string, spenderAddres: string) {
+  public getRawAllowance(ownerAddress: string, spenderAddres: string) {
     return this.contract.allowance(ownerAddress, spenderAddres);
   }
 
-  public async getTokenBalance(walletAddress: string): Promise<bigint> {
+  public async getRawTokenBalance(walletAddress: string): Promise<bigint> {
     return await this.contract.balanceOf(walletAddress);
   }
 

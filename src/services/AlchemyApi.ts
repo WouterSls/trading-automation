@@ -1,4 +1,9 @@
-import { TokenPriceData, TokenPriceResponse, TokenAddressInput, TokenPriceRequestBody } from "../lib/types/alchemy-api.types";
+import { PriceDataResponse, NetworkEnum, PriceDataRequestBody, PriceData, AddressPriceData, SymbolPriceData } from "../lib/types/alchemy-api.types";
+
+  interface priceRequest {
+    network: NetworkEnum;
+    address: string;
+  }
 
 export class AlchemyApi {
   private readonly PRICES_API_URL: string = "https://api.g.alchemy.com/prices/v1";
@@ -6,27 +11,35 @@ export class AlchemyApi {
 
   constructor(private readonly apiKey: string) {}
 
-  async getEthUsdPrice(): Promise<TokenPriceData> {
+  /**
+   * 
+   * @prices 
+   */
+  async getEthUsdPrice(): Promise<SymbolPriceData> {
     if (!this.apiKey) {
       throw new Error("Alchemy API key is not set");
     }
     const baseUrl = `${this.PRICES_API_URL}/${this.apiKey}/tokens/by-symbol`;
-    const symbols = ["ETH"];
     const queryParams = new URLSearchParams({
-      symbols: symbols.join(","),
+      symbols: "ETH",
     });
+
     const url = `${baseUrl}?${queryParams}`;
     const response = await fetch(url);
     if (!response.ok) {
       throw new Error(`Failed to fetch ETH price: ${response.statusText}`);
     }
-    const tokenPriceResponse: TokenPriceResponse = await response.json();
+    const priceDataResponse: PriceDataResponse = await response.json();
 
-    if (tokenPriceResponse.data.length === 0) {
+    if (priceDataResponse.data.length === 0) {
       throw new Error("No ETH price data found");
     }
 
-    const ethTokenPriceData = tokenPriceResponse.data[0];
+    const ethTokenPriceData: PriceData = priceDataResponse.data[0];
+
+    if (!this.isSymbolPriceData(ethTokenPriceData)) {
+      throw new Error("ETH price data error");
+    }
 
     if (ethTokenPriceData.error) {
       throw new Error("ETH price data error");
@@ -39,28 +52,137 @@ export class AlchemyApi {
     return ethTokenPriceData;
   }
 
+  /**
+   * 
+   * @token 
+   */
+  async getTokenPrice(network: NetworkEnum, address: string): Promise<AddressPriceData> {
+    if (!this.apiKey) {
+      throw new Error("Alchemy API key is not set");
+    }
 
+    const baseUrl = `${this.PRICES_API_URL}/${this.apiKey}/tokens/by-address`;
+    const tokenRequest = {network: network, address: address};
 
-  async getTokenPrices(addresses: TokenAddressInput[]): Promise<TokenPriceResponse> {
+    const body: PriceDataRequestBody = {
+      addresses: [tokenRequest]
+    }
 
-    const url = 'https://api.g.alchemy.com/prices/v1/docs-demo/tokens/by-address';
-    
-    const response = await fetch(url, {
+    const response= await fetch(baseUrl, {
       method: 'POST',
       headers: {
-        'accept': 'application/json',
         'content-type': 'application/json',
-        'Authorization': `Bearer ${this.apiKey}`
       },
-      body: JSON.stringify({
-        addresses
-      } as TokenPriceRequestBody)
+      body: JSON.stringify(body)
     });
 
     if (!response.ok) {
       throw new Error(`Failed to fetch token prices: ${response.statusText}`);
     }
 
-    return response.json() as Promise<TokenPriceResponse>;
+    const data: PriceDataResponse = await response.json();
+
+    if (data.data.length === 0) {
+      throw new Error("No token price data found");
+    }
+
+    const tokenPriceData: PriceData = data.data[0];
+
+    if (!this.isAddressPriceData(tokenPriceData)) {
+      throw new Error("Token price data error");
+    }
+
+    if (tokenPriceData.error) {
+      throw new Error("Token price data error");
+    }
+
+    return tokenPriceData;
+  }
+  async getTokenPrices(requests: priceRequest[]): Promise<AddressPriceData[]> {
+    if (!this.apiKey) {
+      throw new Error("Alchemy API key is not set");
+    }
+
+    const baseUrl = `${this.PRICES_API_URL}/${this.apiKey}/tokens/by-address`;
+
+    const body: PriceDataRequestBody = {addresses: []}
+
+    for (const request of requests) {
+        body.addresses.push({network: request.network, address: request.address});
+    }
+
+    const response= await fetch(baseUrl, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify(body)
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch token prices: ${response.statusText}`);
+    }
+
+    const data: PriceDataResponse = await response.json();
+
+    if (data.data.length === 0) {
+      throw new Error("No token price data found");
+    }
+
+    const prices: PriceData[] = data.data;
+    const resultPrices: AddressPriceData[] = prices.filter(price => this.isAddressPriceData(price)) as AddressPriceData[];
+
+    return resultPrices;
+  }
+
+  /**
+   * 
+   * @wallet 
+   */
+  async getAllTokensOwnedByWallet(walletAddress: string): Promise<AddressPriceData[]> {
+    if (!this.apiKey) {
+      throw new Error("Alchemy API key is not set");
+    }
+    const baseUrl = `${this.TOKEN_API_URL}/${this.apiKey}`;
+
+    const body = {
+      id: 1,
+      jsonrpc: "2.0",
+      method: "alchemy_getTokenBalances",
+      params: [walletAddress],
+    }
+
+    const res = await fetch(baseUrl, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify(body)
+    });
+
+    if (!res.ok) {
+        console.error(res);
+      throw new Error(`Failed to fetch token balances: ${res.statusText}`);
+    }
+
+    const data = await res.json();
+
+    //console.log(res);
+    console.log(data);
+
+    return [];
+    
+    
+  }
+
+  /**
+   * 
+   * @private 
+   */
+  private isAddressPriceData(priceData: PriceData): priceData is AddressPriceData {
+    return 'address' in priceData;
+  }
+  private isSymbolPriceData(priceData: PriceData): priceData is SymbolPriceData {
+    return 'symbol' in priceData;
   }
 }

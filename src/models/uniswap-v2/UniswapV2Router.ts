@@ -1,12 +1,12 @@
 import { Contract, ethers, Wallet, ContractTransactionResponse, ContractTransactionReceipt } from "ethers";
 
-import { ChainConfig } from "../config/chain-config";
-import { ERC20 } from "./Erc20";
-import { TradeSuccessInfo } from "../lib/types/trading.types";
+import { ChainConfig } from "../../config/chain-config";
+import { ERC20 } from "../token-standards/ERC20";
+import { TradeSuccessInfo } from "../../lib/types/trading.types";
 
-import { UNISWAP_V2_ROUTER_INTERFACE } from "../contract-abis/uniswap-v2";
-import { calculateSlippageAmount, extractRawTokenOutputFromLogs } from "../lib/utils";
-import { TRADING_CONFIG } from "../config/setup-config";
+import { UNISWAP_V2_ROUTER_INTERFACE } from "../../contract-abis/uniswap-v2";
+import { calculateSlippageAmount, extractRawTokenOutputFromLogs } from "../../lib/utils";
+import { TRADING_CONFIG } from "../../config/setup-config";
 
 export class UniswapV2Router {
   private readonly NAME = "Uniswap V2 Router";
@@ -275,8 +275,8 @@ export class UniswapV2Router {
    */
   async simulateSellSwap(erc20: ERC20, rawSellAmount: bigint): Promise<void> {
     try {
-      const rawBalance = await erc20.getTokenBalance(this.walletAddress);
-      const allowedBalance = await erc20.getAllowance(this.walletAddress, this.routerAddress);
+      const rawBalance = await erc20.getRawTokenBalance(this.walletAddress);
+      const allowedBalance = await erc20.getRawAllowance(this.walletAddress, this.routerAddress);
 
       if (rawBalance <= 0n) {
         throw new Error(`No token balance for: ${erc20.getName()}`);
@@ -316,8 +316,8 @@ export class UniswapV2Router {
   async swapExactTokenForEth(token: ERC20, rawSellAmount: bigint): Promise<TradeSuccessInfo> {
     try {
       if (!this.isInitialized) throw new Error("Router not initialized");
-      const rawBalance = await token.getTokenBalance(this.walletAddress);
-      const allowedBalance = await token.getAllowance(this.walletAddress, this.routerAddress);
+      const rawBalance = await token.getRawTokenBalance(this.walletAddress);
+      const allowedBalance = await token.getRawAllowance(this.walletAddress, this.routerAddress);
 
       if (rawBalance === 0n) {
         throw new Error(`No balance for token: ${token.getName()}`);
