@@ -2,11 +2,11 @@ import { Contract, ethers, Wallet, ContractTransactionResponse, ContractTransact
 
 import { ChainConfig } from "../config/chain-config";
 import { ERC20 } from "./Erc20";
-import { TradeSuccessInfo } from "../types";
+import { TradeSuccessInfo } from "../lib/types/trading.types";
 
 import { UNISWAP_V2_ROUTER_INTERFACE } from "../contract-abis/uniswap-v2";
-import { calculateSlippageAmount, extractRawTokenOutputFromLogs } from "../utils";
-import { TRADING_CONFIG } from "../config/trading-config";
+import { calculateSlippageAmount, extractRawTokenOutputFromLogs } from "../lib/utils";
+import { TRADING_CONFIG } from "../config/setup-config";
 
 export class UniswapV2Router {
   private readonly NAME = "Uniswap V2 Router";

@@ -1,7 +1,7 @@
 import { ethers, Provider, Wallet } from "ethers";
 
-import { ERC20_INTERFACE } from "./contract-abis/erc20";
-import { ERC20 } from "./models/Erc20";
+import { ERC20_INTERFACE } from "../contract-abis/erc20";
+import { ERC20 } from "../models/Erc20";
 
 export async function createMinimalErc20(address: string, provider: Provider): Promise<ERC20> {
   const contract = new ethers.Contract(address, ERC20_INTERFACE, provider);
