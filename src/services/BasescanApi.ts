@@ -13,6 +13,10 @@ export class BasescanApi {
 
   constructor(private apiKey: string) {}
 
+  /**
+   *
+   * @abi
+   */
   async getVerifiedAbi(contractAddress: string) {
     const params = new URLSearchParams({
       module: "contract",
@@ -50,6 +54,10 @@ export class BasescanApi {
     return result;
   }
 
+  /**
+   *
+   * @contractCreator
+   */
   async getContractCreator(contractAddress: string): Promise<string> {
     const params = new URLSearchParams({
       module: "contract",
