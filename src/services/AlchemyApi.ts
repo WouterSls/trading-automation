@@ -1,9 +1,12 @@
-import { PriceDataResponse, NetworkEnum, PriceDataRequestBody, PriceData, AddressPriceData, SymbolPriceData } from "../lib/types/alchemy-api.types";
-
-  interface priceRequest {
-    network: NetworkEnum;
-    address: string;
-  }
+import {
+  PriceDataResponse,
+  NetworkEnum,
+  PriceDataRequestBody,
+  PriceData,
+  AddressPriceData,
+  SymbolPriceData,
+  PriceRequest,
+} from "../lib/types/alchemy-api.types";
 
 export class AlchemyApi {
   private readonly PRICES_API_URL: string = "https://api.g.alchemy.com/prices/v1";
@@ -12,8 +15,8 @@ export class AlchemyApi {
   constructor(private readonly apiKey: string) {}
 
   /**
-   * 
-   * @prices 
+   *
+   * @prices
    */
   async getEthUsdPrice(): Promise<SymbolPriceData> {
     if (!this.apiKey) {
@@ -53,8 +56,8 @@ export class AlchemyApi {
   }
 
   /**
-   * 
-   * @token 
+   *
+   * @token
    */
   async getTokenPrice(network: NetworkEnum, address: string): Promise<AddressPriceData> {
     if (!this.apiKey) {
@@ -62,18 +65,18 @@ export class AlchemyApi {
     }
 
     const baseUrl = `${this.PRICES_API_URL}/${this.apiKey}/tokens/by-address`;
-    const tokenRequest = {network: network, address: address};
+    const tokenRequest = { network: network, address: address };
 
     const body: PriceDataRequestBody = {
-      addresses: [tokenRequest]
-    }
+      addresses: [tokenRequest],
+    };
 
-    const response= await fetch(baseUrl, {
-      method: 'POST',
+    const response = await fetch(baseUrl, {
+      method: "POST",
       headers: {
-        'content-type': 'application/json',
+        "content-type": "application/json",
       },
-      body: JSON.stringify(body)
+      body: JSON.stringify(body),
     });
 
     if (!response.ok) {
@@ -98,25 +101,25 @@ export class AlchemyApi {
 
     return tokenPriceData;
   }
-  async getTokenPrices(requests: priceRequest[]): Promise<AddressPriceData[]> {
+  async getTokenPrices(requests: PriceRequest[]): Promise<AddressPriceData[]> {
     if (!this.apiKey) {
       throw new Error("Alchemy API key is not set");
     }
 
     const baseUrl = `${this.PRICES_API_URL}/${this.apiKey}/tokens/by-address`;
 
-    const body: PriceDataRequestBody = {addresses: []}
+    const body: PriceDataRequestBody = { addresses: [] };
 
     for (const request of requests) {
-        body.addresses.push({network: request.network, address: request.address});
+      body.addresses.push({ network: request.network, address: request.address });
     }
 
-    const response= await fetch(baseUrl, {
-      method: 'POST',
+    const response = await fetch(baseUrl, {
+      method: "POST",
       headers: {
-        'content-type': 'application/json',
+        "content-type": "application/json",
       },
-      body: JSON.stringify(body)
+      body: JSON.stringify(body),
     });
 
     if (!response.ok) {
@@ -130,14 +133,16 @@ export class AlchemyApi {
     }
 
     const prices: PriceData[] = data.data;
-    const resultPrices: AddressPriceData[] = prices.filter(price => this.isAddressPriceData(price)) as AddressPriceData[];
+    const resultPrices: AddressPriceData[] = prices.filter((price) =>
+      this.isAddressPriceData(price),
+    ) as AddressPriceData[];
 
     return resultPrices;
   }
 
   /**
-   * 
-   * @wallet 
+   *
+   * @wallet
    */
   async getAllTokensOwnedByWallet(walletAddress: string): Promise<AddressPriceData[]> {
     if (!this.apiKey) {
@@ -150,18 +155,18 @@ export class AlchemyApi {
       jsonrpc: "2.0",
       method: "alchemy_getTokenBalances",
       params: [walletAddress],
-    }
+    };
 
     const res = await fetch(baseUrl, {
-      method: 'POST',
+      method: "POST",
       headers: {
-        'content-type': 'application/json',
+        "content-type": "application/json",
       },
-      body: JSON.stringify(body)
+      body: JSON.stringify(body),
     });
 
     if (!res.ok) {
-        console.error(res);
+      console.error(res);
       throw new Error(`Failed to fetch token balances: ${res.statusText}`);
     }
 
@@ -171,18 +176,16 @@ export class AlchemyApi {
     console.log(data);
 
     return [];
-    
-    
   }
 
   /**
-   * 
-   * @private 
+   *
+   * @private
    */
   private isAddressPriceData(priceData: PriceData): priceData is AddressPriceData {
-    return 'address' in priceData;
+    return "address" in priceData;
   }
   private isSymbolPriceData(priceData: PriceData): priceData is SymbolPriceData {
-    return 'symbol' in priceData;
+    return "symbol" in priceData;
   }
 }
