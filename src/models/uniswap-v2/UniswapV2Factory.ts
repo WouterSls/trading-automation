@@ -1,7 +1,6 @@
 import { Contract, Wallet } from "ethers";
 import { UNISWAP_V2_FACTORY_INTERFACE } from "../../contract-abis/uniswap-v2";
-import { ChainType } from "../../lib/types/trading.types";
-import { getChainConfig } from "../../config/chain-config";
+import { ChainType, getChainConfig } from "../../config/chain-config";
 
 export class UniswapV2Factory {
   private factoryContract: Contract;

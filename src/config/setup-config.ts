@@ -1,13 +1,13 @@
-import { ethers, JsonRpcProvider, Wallet } from "ethers";
-import { ChainConfig, getChainConfig } from "./chain-config";
 import dotenv from "dotenv";
 import path from "path";
 
-import { AlchemyApi } from "../services/AlchemyApi";
-import { ChainType } from "../lib/types/trading.types";
-import { GeckoTerminalApi } from "../services/GeckoTerminalApi";
-
 dotenv.config({ path: path.resolve(__dirname, "../../.env") });
+
+import { ethers, JsonRpcProvider, Wallet } from "ethers";
+import { ChainConfig, getChainConfig, ChainType } from "./chain-config";
+
+import { AlchemyApi } from "../services/AlchemyApi";
+import { GeckoTerminalApi } from "../services/GeckoTerminalApi";
 
 export const TRADING_CONFIG = {
   USD_BUY_SIZE: 20,

@@ -1,4 +1,4 @@
-import { ChainType } from "../lib/types/trading.types";
+import { ChainType } from "../config/chain-config";
 import { NewPoolsResponse, TokenPriceResponse } from "../lib/types/geckoterminal-api.types";
 
 export class GeckoTerminalApi {

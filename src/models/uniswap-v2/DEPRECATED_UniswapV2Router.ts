@@ -7,9 +7,9 @@ import {
   TransactionRequest,
 } from "ethers";
 
-import { ChainConfig, getChainConfig } from "../../config/chain-config";
+import { ChainConfig, getChainConfig, ChainType } from "../../config/chain-config";
 import { ERC20 } from "../ERC/ERC20";
-import { ChainType, TradeSuccessInfo } from "../../lib/types/trading.types";
+import { TradeSuccessInfo } from "../../lib/types/trading.types";
 
 import { UNISWAP_V2_ROUTER_INTERFACE } from "../../contract-abis/uniswap-v2";
 import { calculateSlippageAmount, extractRawTokenOutputFromLogs } from "../../lib/utils";

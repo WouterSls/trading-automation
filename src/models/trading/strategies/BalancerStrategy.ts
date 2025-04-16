@@ -1,5 +1,5 @@
 import { Wallet } from "ethers";
-import { ChainType } from "../../../lib/types/trading.types";
+import { ChainType } from "../../../config/chain-config";
 import { AbstractTradingStrategy } from "./AbstractTradingStrategy";
 import { ERC20 } from "../../ERC/ERC20";
 import { BuyTrade } from "../trades/BuyTrade";

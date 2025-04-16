@@ -1,4 +1,4 @@
-import { ChainType } from "../../lib/types/trading.types";
+import { ChainType } from "../../config/chain-config";
 import { GeckoTerminalApi } from "../../services/GeckoTerminalApi";
 
 export async function getPrice(chain: ChainType, tokenAddress: string) {
