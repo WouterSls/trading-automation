@@ -2,7 +2,10 @@ import { ethers, JsonRpcProvider, Wallet } from "ethers";
 import { ChainConfig, getChainConfig } from "./chain-config";
 import dotenv from "dotenv";
 import path from "path";
+
 import { AlchemyApi } from "../services/AlchemyApi";
+import { ChainType } from "../lib/types/trading.types";
+import { GeckoTerminalApi } from "../services/GeckoTerminalApi";
 
 dotenv.config({ path: path.resolve(__dirname, "../../.env") });
 
@@ -28,8 +31,33 @@ export const getBaseProvider = async (): Promise<JsonRpcProvider> => {
   return provider;
 };
 export const getBaseChainConfig = async (): Promise<ChainConfig> => {
-  const BASE_CHAIN_ID = 8453n;
-  return getChainConfig(BASE_CHAIN_ID);
+  return getChainConfig(ChainType.BASE);
+};
+
+export const getBaseWallet_1 = async (): Promise<Wallet> => {
+  const rpcUrl = process.env.BASE_RPC_URL;
+  const privateKey = process.env.MS_PRIVATE_KEY;
+
+  if (!rpcUrl || !privateKey) {
+    throw new Error("RPC_URL and PRIVATE_KEY must be set");
+  }
+
+  const provider = new ethers.JsonRpcProvider(rpcUrl);
+  const wallet = new ethers.Wallet(privateKey, provider);
+  return wallet;
+};
+
+export const getArbitrumWallet_1 = async (): Promise<Wallet> => {
+  const rpcUrl = process.env.ARB_RPC_URL;
+  const privateKey = process.env.MS_PRIVATE_KEY;
+
+  if (!rpcUrl || !privateKey) {
+    throw new Error("RPC_URL and PRIVATE_KEY must be set");
+  }
+
+  const provider = new ethers.JsonRpcProvider(rpcUrl);
+  const wallet = new ethers.Wallet(privateKey, provider);
+  return wallet;
 };
 
 export const getAlchemyApi = async (): Promise<AlchemyApi> => {
@@ -40,15 +68,6 @@ export const getAlchemyApi = async (): Promise<AlchemyApi> => {
   return new AlchemyApi(apiKey);
 };
 
-export const getBaseWallet_1 = async (): Promise<Wallet> => {
-  const rpcUrl = process.env.BASE_RPC_URL;
-  const privateKey = process.env.MS_KEY;
-
-  if (!rpcUrl || !privateKey) {
-    throw new Error("RPC_URL and PRIVATE_KEY must be set");
-  }
-
-  const provider = new ethers.JsonRpcProvider(rpcUrl);
-  const wallet = new ethers.Wallet(privateKey, provider);
-  return wallet;
+export const getCoingeckoApi = async (): Promise<GeckoTerminalApi> => {
+  return new GeckoTerminalApi();
 };
