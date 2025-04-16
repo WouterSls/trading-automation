@@ -5,8 +5,6 @@ import { ERC20 } from "../ERC/ERC20";
 import { BuyTrade } from "./trades/BuyTrade";
 
 export class Trader {
-  private bestStrategy: ITradingStrategy | null = null;
-
   constructor(
     private wallet: Wallet,
     private chain: ChainType,
@@ -15,20 +13,19 @@ export class Trader {
 
   getChain = (): ChainType => this.chain;
   getStrategies = (): ITradingStrategy[] => this.strategies;
-  getBestStrategy = (): ITradingStrategy | null => this.bestStrategy;
 
   async buy(token: ERC20, usdAmount: number): Promise<BuyTrade> {
-    await this.sortStrategies(token.getTokenAddress());
+    const bestStrategy = await this.getBestStrategy(token.getTokenAddress());
 
-    return this.bestStrategy!.buy(this.wallet, token, usdAmount);
+    return bestStrategy.buy(this.wallet, token, usdAmount);
   }
   async simulateBuy(token: ERC20, usdAmount: number): Promise<boolean> {
-    await this.sortStrategies(token.getTokenAddress());
+    const bestStrategy = await this.getBestStrategy(token.getTokenAddress());
 
-    return this.bestStrategy!.simulateBuy(this.wallet, token, usdAmount);
+    return bestStrategy.simulateBuy(this.wallet, token, usdAmount);
   }
 
-  private async sortStrategies(tokenAddress: string): Promise<void> {
+  private async getBestStrategy(tokenAddress: string): Promise<ITradingStrategy> {
     let bestStrategy: ITradingStrategy | null = null;
     let bestETHLiquidity: number = 0;
 
@@ -51,6 +48,6 @@ export class Trader {
       throw new Error(`No strategy found for token: ${tokenAddress}`);
     }
 
-    this.bestStrategy = bestStrategy;
+    return bestStrategy;
   }
 }
