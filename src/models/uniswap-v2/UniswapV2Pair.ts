@@ -5,9 +5,17 @@ export class UniswapV2Pair {
   private pairContract: Contract | null = null;
   private isInitialized = false;
 
-  constructor(private wallet: Wallet, private pairAddress: string) {
+  constructor(
+    private wallet: Wallet,
+    private pairAddress: string,
+  ) {
     this.pairContract = new Contract(pairAddress, UNISWAP_V2_PAIR_INTERFACE, wallet);
   }
+
+  /**
+   * Getters
+   */
+  getAddress = (): string => this.pairAddress;
 
   /**
    * Validates that the address is actually a Uniswap V2 Pair by checking if it implements the required interface
