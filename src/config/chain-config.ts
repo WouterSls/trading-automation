@@ -1,4 +1,8 @@
-import { ChainType } from "../lib/types/trading.types";
+export enum ChainType {
+  ETH = "eth",
+  ARB = "arbitrum",
+  BASE = "base",
+}
 
 export const supportedChains: Record<ChainType, ChainConfig> = {
   [ChainType.ETH]: {
