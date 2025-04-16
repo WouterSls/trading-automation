@@ -1,5 +1,6 @@
 import { ethers, Contract } from "ethers";
 import { TransactionRequest } from "ethers";
+import { UserError } from "../../lib/errors";
 
 export class ERC20 {
   constructor(
@@ -7,8 +8,8 @@ export class ERC20 {
     private symbol: string,
     private tokenAddress: string,
     private decimals: number,
-    private totalSupply: string,
-    private contract: Contract
+    private rawTotalSupply: bigint,
+    private contract: Contract,
   ) {}
 
   public getName(): string {
@@ -27,27 +28,27 @@ export class ERC20 {
     return this.decimals;
   }
 
-  public getRawTotalSupply(): string {
-    return this.totalSupply;
+  public getRawTotalSupply(): bigint {
+    return this.rawTotalSupply;
   }
 
   public getRawAllowance(ownerAddress: string, spenderAddres: string) {
     return this.contract.allowance(ownerAddress, spenderAddres);
   }
 
-  public async getRawTokenBalance(walletAddress: string): Promise<bigint> {
-    return await this.contract.balanceOf(walletAddress);
-  }
-
-  public async getFormattedTokenBalance(walletAddress: string): Promise<number> {
-    const balance = await this.contract.balanceOf(walletAddress);
+  public async getFormattedTokenBalance(address: string): Promise<number> {
+    const balance = await this.contract.balanceOf(address);
     const balanceFormatted = ethers.formatUnits(balance.toString(), this.decimals);
     return parseFloat(balanceFormatted);
   }
 
+  public async getRawTokenBalance(address: string): Promise<bigint> {
+    return await this.contract.balanceOf(address);
+  }
+
   public async createApproveTransaction(spenderAddress: string, rawAmount: bigint): Promise<TransactionRequest> {
     try {
-      if (rawAmount <= 0n) throw new Error("Invalid amount for approve transaction");
+      if (rawAmount <= 0n) throw new UserError("Invalid amount for approve transaction");
 
       const abiInterface = new ethers.Interface([
         "function approve(address spender, uint256 amount) external returns (bool)",
@@ -61,9 +62,10 @@ export class ERC20 {
       };
 
       return tx;
-    } catch (error: unknown) {
+    } catch (error) {
+      if (error instanceof UserError) throw error;
       const errorMessage = error instanceof Error ? error.message : "Unknown error";
-      throw new Error(`Failed to create approve transaction: ${errorMessage}`);
+      throw new UserError(`Failed to create approve transaction: ${errorMessage}`);
     }
   }
 }
