@@ -1,14 +1,14 @@
 export enum NetworkEnum {
-    ETH = "eth-mainnet",
-    BASE = "base-mainnet",
-    ARBITRUM = "arbitrum-mainnet",
-    APE = "apechain-mainnet"
+  ETH = "eth-mainnet",
+  BASE = "base-mainnet",
+  ARBITRUM = "arbitrum-mainnet",
+  APE = "apechain-mainnet",
 }
 
 type BasePriceData = {
   prices: PriceInfo[];
   error: string | null;
-}
+};
 interface PriceInfo {
   currency: string;
   value: string;
@@ -24,14 +24,10 @@ export interface SymbolPriceData extends BasePriceData {
 export type PriceData = AddressPriceData | SymbolPriceData;
 
 export interface PriceDataRequestBody {
-    addresses: {network: NetworkEnum, address: string}[];
+  addresses: { network: NetworkEnum; address: string }[];
 }
 export interface PriceDataResponse {
   data: PriceData[];
-}
-
-export interface TokenDataRequestBody {
-    
 }
 
 export interface TokenDataResponse {
@@ -43,4 +39,9 @@ interface TokenData {
   name: string;
   symbol: string;
   decimals: number;
+}
+
+export interface PriceRequest {
+  network: NetworkEnum;
+  address: string;
 }
