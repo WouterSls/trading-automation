@@ -2,6 +2,7 @@ import { ethers, Provider, Wallet } from "ethers";
 
 import { ERC20_INTERFACE } from "../contract-abis/erc20";
 import { ERC20 } from "../models/ERC/ERC20";
+import { ChainType, mapNetworkNameToChainType } from "../config/chain-config";
 
 export async function createMinimalErc20(address: string, provider: Provider): Promise<ERC20> {
   const contract = new ethers.Contract(address, ERC20_INTERFACE, provider);
@@ -59,4 +60,12 @@ export function encodePath(tokens: string[], fees: number[]): string {
   encoded += tokens[tokens.length - 1].slice(2);
 
   return encoded;
+}
+
+export async function validateNetwork(wallet: Wallet, chainType: ChainType) {
+  const network = await wallet.provider!.getNetwork();
+  const chain = mapNetworkNameToChainType(network.name);
+  if (chain !== chainType) {
+    throw new Error(`Wallet and factory are on different networks`);
+  }
 }
