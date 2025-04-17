@@ -16,3 +16,17 @@ export abstract class BaseTrade {
   getTokenPriceUsd = (): string => this.tokenPriceUsd;
   getEthPriceUsd = (): string => this.ethPriceUsd;
 }
+
+export interface TradeSuccessInfo {
+  transactionHash: string;
+  confirmedBlock: number;
+  rawTokensReceived?: string;
+  rawTokensSpent?: string;
+  formattedTokensReceived?: string;
+  formattedTokensSpent?: string;
+  ethSpent?: string;
+  ethReceived?: string;
+  gasCost: string;
+  tokenPriceUsd: string;
+  ethPriceUsd: string;
+}
