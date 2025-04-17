@@ -1,15 +1,28 @@
 import { Wallet } from "ethers";
 import { ChainType } from "../../../config/chain-config";
 import { ERC20 } from "../../ERC/ERC20";
-import { AbstractTradingStrategy } from "./AbstractTradingStrategy";
 import { BuyTrade } from "../trades/BuyTrade";
+import { ITradingStrategy } from "../ITradingStrategy";
 
-export class SushiswapV2Strategy extends AbstractTradingStrategy {
+export class SushiswapV2Strategy implements ITradingStrategy {
+  private strategyName: string;
+  private chain: ChainType;
+
   constructor(STRATEGY_NAME: string, chain: ChainType) {
-    super(STRATEGY_NAME, chain);
+    this.strategyName = STRATEGY_NAME;
+    this.chain = chain;
   }
 
+  getName = (): string => this.strategyName;
+  getChain = (): ChainType => this.chain;
+
   async getETHLiquidity(wallet: Wallet): Promise<string> {
+    return new Promise<string>((resolve, reject) => {
+      resolve("0");
+    });
+  }
+
+  async getUsdcPrice(wallet: Wallet): Promise<string> {
     return new Promise<string>((resolve, reject) => {
       resolve("0");
     });
