@@ -1,11 +1,10 @@
 import { ethers } from "ethers";
 import { getAlchemyApi, getBaseWallet_1 } from "../../config/setup-config";
-import { PriceData } from "../../lib/types/alchemy-api.types";
+import { PriceData } from "../../services/types/alchemy-api.types";
 
 async function getWalletInfo() {
   const wallet = await getBaseWallet_1();
   const alchemyApi = await getAlchemyApi();
-
 
   const balance = await wallet.provider!.getBalance(wallet.address);
   const formattedBalance = ethers.formatEther(balance);
@@ -13,7 +12,7 @@ async function getWalletInfo() {
   const ethTokenPriceData: PriceData = await alchemyApi.getEthUsdPrice();
   const symbol = ethTokenPriceData.symbol;
   const currency = ethTokenPriceData.prices[0].currency;
-  const value:string = ethTokenPriceData.prices[0].value;
+  const value: string = ethTokenPriceData.prices[0].value;
 
   const parsedValue = parseFloat(value);
   const parsedBalance = parseFloat(formattedBalance);
@@ -28,9 +27,8 @@ async function getWalletInfo() {
   const balanceUsdValue = parsedValue * parsedBalance;
   console.log(`${currency.toUpperCase()} value: ${balanceUsdValue.toFixed(2)}`);
 
-
-console.log("");
-console.log("All tokens:", allTokens) ;
+  console.log("");
+  console.log("All tokens:", allTokens);
 }
 
 if (require.main === module) {
