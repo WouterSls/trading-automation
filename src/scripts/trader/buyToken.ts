@@ -1,5 +1,5 @@
 import { Wallet } from "ethers";
-import { getArbitrumWallet_1, TRADING_CONFIG } from "../../config/setup-config";
+import { getArbitrumWallet_1, TRADING_CONFIG } from "../../hooks/useSetup";
 import { ARB_ARB_ADDRESS } from "../../lib/token-addresses";
 import { createMinimalErc20 } from "../../lib/utils";
 import { TraderFactory } from "../../models/trading/TraderFactory";
@@ -23,8 +23,8 @@ async function buyToken(usdAmount: number, _tokenAddress?: string, _wallet?: Wal
   console.log("------------------------------------------");
 
   //const buyTrade = await trader.buy(wallet, erc20, usdAmount);
-  const success = await trader.simulateBuy(erc20, usdAmount);
-  console.log("success", success);
+  const ethLiquidity = await trader.wethLiquidity(erc20.getTokenAddress());
+  console.log("ethLiquidity", ethLiquidity);
 
   //console.log("buyTrade", buyTrade);
 
