@@ -1,5 +1,5 @@
 import { ChainType } from "../config/chain-config";
-import { NewPoolsResponse, TokenPriceResponse } from "../lib/types/geckoterminal-api.types";
+import { NewPoolsResponse, TokenPriceResponse } from "./types/geckoterminal-api.types";
 
 export class GeckoTerminalApi {
   private readonly BASE_URL = "https://api.geckoterminal.com/api/v2";
