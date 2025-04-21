@@ -29,7 +29,6 @@ export async function poolInteraction() {
 
 
     console.log(`Current Tick: ${currentTick}`);
-    console.log(`Liquidity: ${liquidity}`);
     console.log(`Tick Spacing: ${tickSpacing}`);
 
 
@@ -45,7 +44,7 @@ export async function poolInteraction() {
      */
 
     const tickBelow = Math.floor(currentTickNumber / tickSpacingNumber) * tickSpacingNumber;
-    console.log(`closest initialized tick below current tick: ${tickBelow}`);
+    console.log(`tick below current tick: ${tickBelow}`);
     // Math.floor() is used to round down to the nearest integer.
     // division by tickspace of current tick gives us a decimal value -> Math.floor() rounds it down to the nearest integer. (=closest initialized tick below current tick)
     const tickAbove = tickBelow + tickSpacingNumber;
@@ -54,18 +53,21 @@ export async function poolInteraction() {
     console.log(`Our tick ${currentTick} is between ${tickBelow} and ${tickAbove}`);
     console.log("--------------------------------");
 
+    console.log(`Liquidity: ${liquidity}`);
+    console.log("--------------------------------");
     const tick0Info: TickInfo = await pool.getTickInfo(tickBelow);
     console.log(`Tick ${tickBelow} Info:`);
 
-    console.log(`liquidityGross: ${tick0Info.liquidityGross}`);
-    console.log(`liquidityNet: ${tick0Info.liquidityNet}`);
-    console.log(`initialized: ${tick0Info.initialized}`);
+    console.log(`\tliquidityGross: ${tick0Info.liquidityGross}`);
+    console.log(`\tliquidityNet: ${tick0Info.liquidityNet}`);
+    console.log(`\tinitialized: ${tick0Info.initialized}`);
 
     const tick1Info:TickInfo = await pool.getTickInfo(tickAbove);
     console.log(`Tick ${tickAbove} Info:`);
-    console.log(`liquidityGross: ${tick1Info.liquidityGross}`);
-    console.log(`liquidityNet: ${tick1Info.liquidityNet}`);
-    console.log(`initialized: ${tick1Info.initialized}`);
+    console.log(`\tliquidityGross: ${tick1Info.liquidityGross}`);
+    console.log(`\tliquidityNet: ${tick1Info.liquidityNet}`);
+    console.log(`\tinitialized: ${tick1Info.initialized}`);
+
 
 }
     
