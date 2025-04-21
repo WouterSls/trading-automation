@@ -1,7 +1,15 @@
 import dotenv from "dotenv";
 import path from "path";
+import fs from "fs";
 
-dotenv.config({ path: path.resolve(__dirname, "../../../.env") });
+const envPaths = [
+  path.resolve(__dirname, "../../../.env"), 
+  path.resolve(__dirname, "../../.env"),    
+];
+
+let envPath = envPaths.find(p => fs.existsSync(p));
+
+dotenv.config({ path: envPath });
 
 import { ethers, JsonRpcProvider, Wallet } from "ethers";
 import { ChainConfig, getChainConfig, ChainType } from "../config/chain-config";
