@@ -5,12 +5,12 @@ import {
   BASE_VIRTUAL_ADDRESS,
   ETH_WETH_ADDRESS,
   ETH_PEPE_ADDRESS,
-  V3_POOL_PEPE_ETH_3000_ADDRESS,
   ARB_ARB_ADDRESS,
   ARB_WETH_ADDRESS,
   V2_PAIR_ARB_WETH_ADDRESS,
   BASE_WETH_ADDRESS,
   V2_PAIR_BASE_VIRTUAL_WETH_ADDRESS,
+  V2_PAIR_PEPE_ETH_ADDRESS,
 } from "../../../src/lib/token-addresses";
 import { ethers, Wallet } from "ethers";
 
@@ -60,7 +60,7 @@ describe("ETH UniswapV2Factory Config", () => {
       const expectedPairAddress = ethers.ZeroAddress;
 
       // Act
-      const actualPairAddress = await factory.getPairAddress(ethWallet, ETH_WETH_ADDRESS);
+      const actualPairAddress = await factory.getTokenWETHPairAddress(ethWallet, ETH_WETH_ADDRESS);
 
       // Assert
       expect(actualPairAddress).toEqual(expectedPairAddress);
@@ -71,7 +71,7 @@ describe("ETH UniswapV2Factory Config", () => {
       const expectedPairAddress = ethers.ZeroAddress;
 
       // Act
-      const actualPairAddress = await factory.getPairAddress(ethWallet, BASE_VIRTUAL_ADDRESS);
+      const actualPairAddress = await factory.getTokenWETHPairAddress(ethWallet, BASE_VIRTUAL_ADDRESS);
 
       // Assert
       expect(actualPairAddress).toEqual(expectedPairAddress);
@@ -82,7 +82,7 @@ describe("ETH UniswapV2Factory Config", () => {
       const expectedPairAddress = ethers.ZeroAddress;
 
       // Act
-      const actualPairAddress = await factory.getPairAddress(ethWallet, BASE_VIRTUAL_ADDRESS);
+      const actualPairAddress = await factory.getTokenWETHPairAddress(ethWallet, BASE_VIRTUAL_ADDRESS);
 
       // Assert
       expect(actualPairAddress).toEqual(expectedPairAddress);
@@ -90,10 +90,10 @@ describe("ETH UniswapV2Factory Config", () => {
 
     it("ethWallet_getPairAddressValidERC20WithPoolExists_PEPE_returns_V3_POOL_PEPE_ETH_3000_ADDRESS", async () => {
       // Arrange
-      const expectedPairAddress = V3_POOL_PEPE_ETH_3000_ADDRESS;
+      const expectedPairAddress = V2_PAIR_PEPE_ETH_ADDRESS;
 
       // Act
-      const actualPairAddress = await factory.getPairAddress(ethWallet, ETH_PEPE_ADDRESS);
+      const actualPairAddress = await factory.getTokenWETHPairAddress(ethWallet, ETH_PEPE_ADDRESS);
 
       // Assert
       expect(actualPairAddress).toEqual(expectedPairAddress);
@@ -102,7 +102,7 @@ describe("ETH UniswapV2Factory Config", () => {
     it("offlineWallet_getPairAddress_throws_error", async () => {
       // Arrange
       // Act / Assert
-      await expect(factory.getPairAddress(offlineWallet, ETH_WETH_ADDRESS)).rejects.toThrow(
+      await expect(factory.getTokenWETHPairAddress(offlineWallet, ETH_WETH_ADDRESS)).rejects.toThrow(
         MISSING_PROVIDER_ERROR_MESSAGE,
       );
     });
@@ -150,7 +150,7 @@ describe("ARB UniswapV2Factory Config", () => {
       const expectedPairAddress = ethers.ZeroAddress;
 
       // Act
-      const actualPairAddress = await factory.getPairAddress(arbWallet, ARB_WETH_ADDRESS);
+      const actualPairAddress = await factory.getTokenWETHPairAddress(arbWallet, ARB_WETH_ADDRESS);
 
       // Assert
       expect(actualPairAddress).toEqual(expectedPairAddress);
@@ -161,7 +161,7 @@ describe("ARB UniswapV2Factory Config", () => {
       const expectedPairAddress = V2_PAIR_ARB_WETH_ADDRESS;
 
       // Act
-      const actualPairAddress = await factory.getPairAddress(arbWallet, ARB_ARB_ADDRESS);
+      const actualPairAddress = await factory.getTokenWETHPairAddress(arbWallet, ARB_ARB_ADDRESS);
 
       // Assert
       expect(actualPairAddress).not.toEqual(ethers.ZeroAddress);
@@ -171,7 +171,7 @@ describe("ARB UniswapV2Factory Config", () => {
     it("offlineWallet_getPairAddress_throws_error", async () => {
       // Arrange
       // Act / Assert
-      await expect(factory.getPairAddress(offlineWallet, ARB_WETH_ADDRESS)).rejects.toThrow(
+      await expect(factory.getTokenWETHPairAddress(offlineWallet, ARB_WETH_ADDRESS)).rejects.toThrow(
         MISSING_PROVIDER_ERROR_MESSAGE,
       );
     });
@@ -223,7 +223,7 @@ describe("BASE UniswapV2Factory Config", () => {
       const expectedPairAddress = ethers.ZeroAddress;
 
       // Act
-      const actualPairAddress = await factory.getPairAddress(baseWallet, BASE_WETH_ADDRESS);
+      const actualPairAddress = await factory.getTokenWETHPairAddress(baseWallet, BASE_WETH_ADDRESS);
 
       // Assert
       expect(actualPairAddress).toEqual(expectedPairAddress);
@@ -234,7 +234,7 @@ describe("BASE UniswapV2Factory Config", () => {
       const expectedPairAddress = V2_PAIR_BASE_VIRTUAL_WETH_ADDRESS;
 
       // Act
-      const actualPairAddress = await factory.getPairAddress(baseWallet, BASE_VIRTUAL_ADDRESS);
+      const actualPairAddress = await factory.getTokenWETHPairAddress(baseWallet, BASE_VIRTUAL_ADDRESS);
 
       // Assert
       expect(actualPairAddress).not.toEqual(ethers.ZeroAddress);
@@ -244,7 +244,7 @@ describe("BASE UniswapV2Factory Config", () => {
     it("offlineWallet_getPairAddress_throws_error", async () => {
       // Arrange
       // Act / Assert
-      await expect(factory.getPairAddress(offlineWallet, ARB_WETH_ADDRESS)).rejects.toThrow(
+      await expect(factory.getTokenWETHPairAddress(offlineWallet, ARB_WETH_ADDRESS)).rejects.toThrow(
         MISSING_PROVIDER_ERROR_MESSAGE,
       );
     });

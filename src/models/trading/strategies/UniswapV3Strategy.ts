@@ -36,7 +36,7 @@ export class UniswapV3Strategy implements ITradingStrategy {
       let bestLiquidity = 0n;
 
       for (const feeTier of feeTiers) {
-        const poolAddress = await this.factory.getPoolAddress(wallet, tokenAddress, feeTier);
+        const poolAddress = await this.factory.getTokenWETHPoolAddress(wallet, tokenAddress, feeTier);
         if (!poolAddress) continue;
 
         const weth = new ethers.Contract(this.factory!.getWETHAddress(), ERC20_INTERFACE, wallet);

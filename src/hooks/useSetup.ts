@@ -1,7 +1,7 @@
 import dotenv from "dotenv";
 import path from "path";
 
-dotenv.config({ path: path.resolve(__dirname, "../../.env") });
+dotenv.config({ path: path.resolve(__dirname, "../../../.env") });
 
 import { ethers, JsonRpcProvider, Wallet } from "ethers";
 import { ChainConfig, getChainConfig, ChainType } from "../config/chain-config";

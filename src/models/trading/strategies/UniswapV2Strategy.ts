@@ -27,7 +27,7 @@ export class UniswapV2Strategy implements ITradingStrategy {
   getChain = (): ChainType => this.chain;
 
   async getETHLiquidity(wallet: Wallet, tokenAddress: string): Promise<string> {
-    const pairAddress: string | null = await this.factory!.getPairAddress(wallet, tokenAddress);
+    const pairAddress: string | null = await this.factory!.getTokenWETHPairAddress(wallet, tokenAddress);
     if (!pairAddress) throw new Error(`No pair found for ${tokenAddress} and ${this.factory!.getWETHAddress()}`);
 
     const weth = new ethers.Contract(this.factory!.getWETHAddress(), ERC20_INTERFACE, wallet);
@@ -61,7 +61,7 @@ export class UniswapV2Strategy implements ITradingStrategy {
 
   private async getV2Reserves(wallet: Wallet, tokenAddress: string) {
     try {
-      const pair = await this.factory.getPair(wallet, tokenAddress);
+      const pair = await this.factory.getTokenWETHPair(wallet, tokenAddress);
       const WETH_ADDRESS = this.factory.getWETHAddress();
 
       if (pair.getAddress() === ethers.ZeroAddress) {

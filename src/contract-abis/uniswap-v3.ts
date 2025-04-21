@@ -1,9 +1,18 @@
 import { ethers } from "ethers";
 
 const V3_POOL_ABI = [
-  "function slot0() view returns (uint160 sqrtPriceX96, int24 tick, uint16 lastFee, uint8 unlocked, uint256 liquidity, int24 tickSpacing, bool initialized)",
-  "function liquidity() view returns (uint128)",
-  "function ticks(int24) view returns (uint256 liquidityGross, int128 liquidityNet, uint256 feeGrowthOutside0X128, uint256 feeGrowthOutside1X128, int56 tickCumulative, uint16 tickIndex, uint88 community, uint256 blockTimestampLast)",
+  // IMMUTABLES
+  "function factory() external view returns (address)",
+  "function token0() external view returns (address)",
+  "function token1() external view returns (address)",
+  "function fee() external view returns (uint24)",
+  "function tickSpacing() external view returns (int24)",
+  "function maxLiquidityPerTick() external view returns (uint128)",
+
+  // MUTABLES
+  "function slot0() external view returns (uint160 sqrtPriceX96, int24 tick, uint16 observationIndex, uint16 observationCardinality, uint16 observationCardinalityNext, uint8 feeProtocol, bool unlocked)",
+  "function liquidity() external view returns (uint128)",
+  "function ticks(int24) external view returns (uint256 liquidityGross, int128 liquidityNet, uint256 feeGrowthOutside0X128, uint256 feeGrowthOutside1X128, int56 tickCumulative, uint16 tickIndex, uint88 community, uint256 blockTimestampLast)",
 ] as const;
 
 const V2_QUOTER_ABI = [

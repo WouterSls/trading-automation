@@ -1,5 +1,5 @@
 import { ethers } from "ethers";
-import { getAlchemyApi, getBaseWallet_1 } from "../../config/setup-config";
+import { getAlchemyApi, getBaseWallet_1 } from "../../hooks/useSetup";
 import { PriceData } from "../../services/types/alchemy-api.types";
 
 async function getWalletInfo() {
