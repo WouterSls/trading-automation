@@ -12,7 +12,8 @@ export interface ChainConfig {
   explorerUrl?: string;
   tokenAddresses: {
     weth: string;
-    usdc?: string;
+    usdc: string;
+    dai: string;
   };
   uniswapV2: {
     factoryAddress: string;
@@ -20,12 +21,12 @@ export interface ChainConfig {
   };
   uniswapV3: {
     factoryAddress: string;
-    swapRouterAddress: string;
-    swapRouterV2Address?: string;
     quoterV2Address: string;
+    tickLensAddress: string;
+    swapRouterV2Address: string;
     universalRouterAddress: string;
+    permit2Address?: string;
   };
-  permit2Address?: string;
   velo?: {};
 }
 
@@ -39,6 +40,7 @@ export const supportedChains: Record<ChainType, ChainConfig> = {
     tokenAddresses: {
       weth: "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
       usdc: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+      dai: "0x6b175474e89094c44da98b954eedeac495271d0f",
     },
     uniswapV2: {
       factoryAddress: "0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f",
@@ -46,11 +48,12 @@ export const supportedChains: Record<ChainType, ChainConfig> = {
     },
     uniswapV3: {
       factoryAddress: "0x1F98431c8aD98523631AE4a59f267346ea31F984",
-      swapRouterAddress: "0xE592427A0AEce92De3Edee1F18E0157C05861564",
       quoterV2Address: "0x61fFE014bA17989E743c5F6cB21bF9697530B21e",
+      tickLensAddress: "0xbfd8137f7d1516D3ea5cA83523914859ec47F573",
+      swapRouterV2Address: "0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45",
       universalRouterAddress: "0x66a9893cc07d91d95644aedd05d03f95e1dba8af",
+      permit2Address: "0x000000000022D473030F116dDEE9F6B43aC78BA3",
     },
-    permit2Address: "0x000000000022D473030F116dDEE9F6B43aC78BA3",
   },
   [ChainType.ARB]: {
     id: 42161n,
@@ -60,7 +63,8 @@ export const supportedChains: Record<ChainType, ChainConfig> = {
     explorerUrl: "https://arbiscan.io",
     tokenAddresses: {
       weth: "0x82aF49447D8a07e3bd95BD0d56f35241523fBab1",
-      usdc: "0xaf88d065e77c8cc2239327c5edb3a432268e5831",
+      usdc: "0xaf88d065e77c8cC2239327C5EDb3A432268e5831",
+      dai: "",
     },
     uniswapV2: {
       factoryAddress: "0xf1D7CC64Fb4452F05c498126312eBE29f30Fbcf9",
@@ -68,10 +72,11 @@ export const supportedChains: Record<ChainType, ChainConfig> = {
     },
     uniswapV3: {
       factoryAddress: "0x1F98431c8aD98523631AE4a59f267346ea31F984",
-      swapRouterAddress: "0xE592427A0AEce92De3Edee1F18E0157C05861564",
-      swapRouterV2Address: "0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45",
       quoterV2Address: "0x61fFE014bA17989E743c5F6cB21bF9697530B21e",
+      tickLensAddress: "0xbfd8137f7d1516D3ea5cA83523914859ec47F573",
+      swapRouterV2Address: "0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45",
       universalRouterAddress: "0xa51afafe0263b40edaef0df8781ea9aa03e381a3",
+      permit2Address: "0x000000000022D473030F116dDEE9F6B43aC78BA3",
     },
   },
   [ChainType.BASE]: {
@@ -83,6 +88,7 @@ export const supportedChains: Record<ChainType, ChainConfig> = {
     tokenAddresses: {
       weth: "0x4200000000000000000000000000000000000006",
       usdc: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+      dai: "",
     },
     uniswapV2: {
       factoryAddress: "0x8909Dc15e40173Ff4699343b6eB8132c65e18eC6",
@@ -90,10 +96,11 @@ export const supportedChains: Record<ChainType, ChainConfig> = {
     },
     uniswapV3: {
       factoryAddress: "0x33128a8fC17869897dcE68Ed026d694621f6FDfD",
-      swapRouterAddress: "",
-      swapRouterV2Address: "0x2626664c2603336E57B271c5C0b26F421741e481",
       quoterV2Address: "0x3d4e44Eb1374240CE5F1B871ab261CD16335B76a",
+      tickLensAddress: "0x0CdeE061c75D43c82520eD998C23ac2991c9ac6d",
+      swapRouterV2Address: "0x2626664c2603336E57B271c5C0b26F421741e481",
       universalRouterAddress: "0x6ff5693b99212da76ad316178a184ab56d299b43",
+      permit2Address: "0x000000000022D473030F116dDEE9F6B43aC78BA3",
     },
   },
 };
