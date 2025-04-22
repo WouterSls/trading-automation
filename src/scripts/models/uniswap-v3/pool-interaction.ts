@@ -1,6 +1,7 @@
 import { getEthWallet_1 } from "../../../hooks/useSetup";
 import { UniswapV3Factory, UniswapV3Pool, TickInfo } from "../../../models/uniswap-v3";
 import { ChainType } from "../../../config/chain-config";
+import { ethers } from "ethers";
 
 enum FeeTier {
     "0.05%" = 500,
@@ -39,34 +40,59 @@ export async function poolInteraction() {
      * 
      * The reason the tick is not initialized (no info in tickBitmap) is because the tick is not a multiple of the tick spacing.
      * To find the closest multiple of the tick spacing, we can use floor division of the current tick and the tick spacing.
-     * Then we multiply the result by the tick spacing to get the closest multiple of the tick spacing.
+     * Then we multiply the result by the tick spacing to get the closest multiple of the tick spacing (initiliazed tick).
      * 
      */
 
     const tickBelow = Math.floor(currentTickNumber / tickSpacingNumber) * tickSpacingNumber;
-    console.log(`tick below current tick: ${tickBelow}`);
     // Math.floor() is used to round down to the nearest integer.
     // division by tickspace of current tick gives us a decimal value -> Math.floor() rounds it down to the nearest integer. (=closest initialized tick below current tick)
     const tickAbove = tickBelow + tickSpacingNumber;
-    console.log(`tick above: ${tickAbove}`);
+    const twoTicksAbove = tickBelow + tickSpacingNumber * 2;
 
-    console.log(`Our tick ${currentTick} is between ${tickBelow} and ${tickAbove}`);
+    console.log(`${tickBelow} < ${currentTick} (current tick) < ${tickAbove} < ${twoTicksAbove}`);
+    console.log("--------------------------------");
+    console.log(`Liquidity: ${ethers.formatEther(liquidity)}`);
+    console.log("--------------------------------");
+    const tickBelowInfo: TickInfo = await pool.getTickInfo(tickBelow);
+    console.log(`Tick below ${tickBelow} Info:`);
+    console.log(`\tliquidityNet: ${ethers.formatEther(tickBelowInfo.liquidityNet)}`);
+    console.log(`\tinitialized: ${tickBelowInfo.initialized}`);
+
+    const tickAboveInfo:TickInfo = await pool.getTickInfo(tickAbove);
+    console.log(`Tick above ${tickAbove} Info:`);
+    console.log(`\tliquidityNet: ${ethers.formatEther(tickAboveInfo.liquidityNet)}`);
+    console.log(`\tinitialized: ${tickAboveInfo.initialized}`);
+
+    const twoTicksAboveInfo:TickInfo = await pool.getTickInfo(twoTicksAbove);
+    console.log(`Tick two ticks above ${twoTicksAbove} Info:`);
+    console.log(`\tliquidityNet: ${ethers.formatEther(twoTicksAboveInfo.liquidityNet)}`);
+    console.log(`\tinitialized: ${twoTicksAboveInfo.initialized}`);
     console.log("--------------------------------");
 
-    console.log(`Liquidity: ${liquidity}`);
+    console.log("Price increasing... (tick moving to the right)")
+    const newTick = Number(currentTick) + tickSpacingNumber;
+    console.log(`${tickBelow} < ${tickAbove} < ${newTick} (current tick) < ${twoTicksAbove}`);
+    console.log("We add the net liquidity of the tick we cross to the liquidity");
+    console.log(`crossed tick: ${tickAbove} with net liquidity: ${ethers.formatEther(tickAboveInfo.liquidityNet)}`);
+
+    /**
+     * LiuquidityNet summary:
+     *      Positive liquidityNet = increase in tick/price -> liquidity increases
+     *      Positive liquidityNet = decrease in tick/price -> liquidity decreases
+     *      Negative liquidityNet = increase in tick/price -> liquidity decreases
+     *      Negative liquidityNet = decrease in tick/price -> liquidity increases
+     */
+    const l_nextTick = BigInt(liquidity) + BigInt(tickAboveInfo.liquidityNet);
     console.log("--------------------------------");
-    const tick0Info: TickInfo = await pool.getTickInfo(tickBelow);
-    console.log(`Tick ${tickBelow} Info:`);
+    console.log(`Liquidity in next tick: ${ethers.formatEther(l_nextTick)}`);
+    console.log("--------------------------------");
 
-    console.log(`\tliquidityGross: ${tick0Info.liquidityGross}`);
-    console.log(`\tliquidityNet: ${tick0Info.liquidityNet}`);
-    console.log(`\tinitialized: ${tick0Info.initialized}`);
 
-    const tick1Info:TickInfo = await pool.getTickInfo(tickAbove);
-    console.log(`Tick ${tickAbove} Info:`);
-    console.log(`\tliquidityGross: ${tick1Info.liquidityGross}`);
-    console.log(`\tliquidityNet: ${tick1Info.liquidityNet}`);
-    console.log(`\tinitialized: ${tick1Info.initialized}`);
+
+
+
+
 
 
 }
