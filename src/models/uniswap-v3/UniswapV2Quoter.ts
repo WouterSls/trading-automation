@@ -20,7 +20,7 @@ export class UniswapV2Quoter {
     const chainConfig = getChainConfig(chain);
     this.WETH_ADDRESS = chainConfig.tokenAddresses.weth;
     this.USDC_ADDRESS = chainConfig.tokenAddresses.usdc!;
-    this.QUOTER_ADDRESS = chainConfig.uniswapV3.quoterAddress;
+    this.QUOTER_ADDRESS = chainConfig.uniswapV3.quoterV2Address;
 
     if (!this.USDC_ADDRESS || this.USDC_ADDRESS.trim() === "") {
       throw new Error(`USDC address not defined for chain: ${chainConfig.name}`);
