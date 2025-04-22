@@ -25,7 +25,7 @@ const V3_FACTORY_ABI = [
   "function createPool(address tokenA, address tokenB, uint24 fee) external returns (address pool)",
 ] as const;
 
-const V3_ROUTER_ABI = [
+const V3_ROUTER_02_ABI = [
   // Core swapping functions
   "function exactInputSingle(tuple(address tokenIn, address tokenOut, uint24 fee, address recipient, uint256 deadline, uint256 amountIn, uint256 amountOutMinimum, uint160 sqrtPriceLimitX96)) external payable returns (uint256 amountOut)",
   "function exactInput(tuple(bytes path, address recipient, uint256 deadline, uint256 amountIn, uint256 amountOutMinimum)) external payable returns (uint256 amountOut)",
@@ -36,4 +36,4 @@ const V3_ROUTER_ABI = [
 export const POOL_ABI = new ethers.Interface(V3_POOL_ABI);
 export const QUOTER_ABI = new ethers.Interface(V2_QUOTER_ABI);
 export const FACTORY_ABI = new ethers.Interface(V3_FACTORY_ABI);
-export const ROUTER_ABI = new ethers.Interface(V3_ROUTER_ABI);
+export const ROUTER_ABI = new ethers.Interface(V3_ROUTER_02_ABI);

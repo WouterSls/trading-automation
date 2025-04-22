@@ -105,10 +105,7 @@ async function routerInteraction(chain: ChainType, wallet: Wallet) {
 
   console.log("Creating transaction...");
   const tx: TransactionRequest = await router.createExactInputSingleTransaction(wallet, exactInputTrade);
-
-  //const callTxReceipt = await wallet.call(populatedTx);
-  //console.log("Call transaction receipt:", callTxReceipt);
-  const txHash = await router.exactInputSingle(wallet, exactInputTrade);
+  const txHash = await wallet.sendTransaction(tx);
   console.log("Transaction hash:", txHash);
 }
 
