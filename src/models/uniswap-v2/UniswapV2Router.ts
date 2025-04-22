@@ -151,7 +151,7 @@ export class UniswapV2Router {
    * Creates an ethers transaction request for swapExactETHForTokens function
    * @param wallet - The wallet to trade with
    * @param token - The ERC20 token to buy
-   * @param usdAmount - The amount of USD to buy
+   * @param usdAmount - The amount of USD to buy for
    * @returns The transaction request
    */
   async createSwapExactETHInputTransaction(
@@ -161,6 +161,7 @@ export class UniswapV2Router {
   ): Promise<TransactionRequest> {
     this.routerContract = this.routerContract!.connect(wallet) as Contract;
 
+    //TODO: Extract functionality to individual methods
     const { minOutputAmount, path, deadline, value } = await this.prepareBuySwapParameters(token, usdAmount);
 
     const abiInterface = new ethers.Interface([
