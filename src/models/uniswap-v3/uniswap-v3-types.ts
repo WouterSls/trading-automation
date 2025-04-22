@@ -18,11 +18,11 @@ export interface ExactInputSingleParams {
   /** The unix time after which a swap will fail */
   deadline: number;
   /** The exact amount of the inbound token to swap */
-  amountIn: string;
+  amountIn: bigint;
   /** The minimum amount of the outbound token to receive */
-  amountOutMinimum: string;
+  amountOutMinimum: bigint;
   /** Price limit for the swap */
-  sqrtPriceLimitX96: string;
+  sqrtPriceLimitX96: bigint;
 }
 
 /**
