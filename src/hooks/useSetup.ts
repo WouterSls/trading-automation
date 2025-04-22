@@ -2,12 +2,9 @@ import dotenv from "dotenv";
 import path from "path";
 import fs from "fs";
 
-const envPaths = [
-  path.resolve(__dirname, "../../../.env"), 
-  path.resolve(__dirname, "../../.env"),    
-];
+const envPaths = [path.resolve(__dirname, "../../../.env"), path.resolve(__dirname, "../../.env")];
 
-let envPath = envPaths.find(p => fs.existsSync(p));
+let envPath = envPaths.find((p) => fs.existsSync(p));
 
 dotenv.config({ path: envPath });
 
@@ -64,6 +61,19 @@ export const getBaseWallet_1 = (): Wallet => {
   return wallet;
 };
 
+export const getBaseWallet_2 = (): Wallet => {
+  const rpcUrl = process.env.BASE_RPC_URL;
+  const privateKey = process.env.CL_PRIVATE_KEY;
+
+  if (!rpcUrl || !privateKey) {
+    throw new Error("RPC_URL and PRIVATE_KEY must be set");
+  }
+
+  const provider = new ethers.JsonRpcProvider(rpcUrl);
+  const wallet = new ethers.Wallet(privateKey, provider);
+  return wallet;
+};
+
 export const getArbitrumWallet_1 = (): Wallet => {
   const rpcUrl = process.env.ARB_RPC_URL;
   const privateKey = process.env.MS_PRIVATE_KEY;
@@ -77,9 +87,35 @@ export const getArbitrumWallet_1 = (): Wallet => {
   return wallet;
 };
 
+export const getArbitrumWallet_2 = (): Wallet => {
+  const rpcUrl = process.env.ARB_RPC_URL;
+  const privateKey = process.env.CL_PRIVATE_KEY;
+
+  if (!rpcUrl || !privateKey) {
+    throw new Error("RPC_URL and PRIVATE_KEY must be set");
+  }
+
+  const provider = new ethers.JsonRpcProvider(rpcUrl);
+  const wallet = new ethers.Wallet(privateKey, provider);
+  return wallet;
+};
+
 export const getEthWallet_1 = (): Wallet => {
   const rpcUrl = process.env.ETH_RPC_URL;
   const privateKey = process.env.MS_PRIVATE_KEY;
+
+  if (!rpcUrl || !privateKey) {
+    throw new Error("RPC_URL and PRIVATE_KEY must be set");
+  }
+
+  const provider = new ethers.JsonRpcProvider(rpcUrl);
+  const wallet = new ethers.Wallet(privateKey, provider);
+  return wallet;
+};
+
+export const getEthWallet_2 = (): Wallet => {
+  const rpcUrl = process.env.ETH_RPC_URL;
+  const privateKey = process.env.CL_PRIVATE_KEY;
 
   if (!rpcUrl || !privateKey) {
     throw new Error("RPC_URL and PRIVATE_KEY must be set");
