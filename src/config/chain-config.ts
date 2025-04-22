@@ -20,7 +20,9 @@ export interface ChainConfig {
   };
   uniswapV3: {
     factoryAddress: string;
-    quoterAddress: string;
+    swapRouterAddress: string;
+    swapRouterV2Address?: string;
+    quoterV2Address: string;
     universalRouterAddress: string;
   };
   permit2Address?: string;
@@ -44,8 +46,9 @@ export const supportedChains: Record<ChainType, ChainConfig> = {
     },
     uniswapV3: {
       factoryAddress: "0x1F98431c8aD98523631AE4a59f267346ea31F984",
-      quoterAddress: "0x61fFE014bA17989E743c5F6cB21bF9697530B21e",
-      universalRouterAddress: "0x3fC91A3afd70395Cd496C647d5a6CC9D4B2b7FAD",
+      swapRouterAddress: "0xE592427A0AEce92De3Edee1F18E0157C05861564",
+      quoterV2Address: "0x61fFE014bA17989E743c5F6cB21bF9697530B21e",
+      universalRouterAddress: "0x66a9893cc07d91d95644aedd05d03f95e1dba8af",
     },
     permit2Address: "0x000000000022D473030F116dDEE9F6B43aC78BA3",
   },
@@ -65,8 +68,10 @@ export const supportedChains: Record<ChainType, ChainConfig> = {
     },
     uniswapV3: {
       factoryAddress: "0x1F98431c8aD98523631AE4a59f267346ea31F984",
-      quoterAddress: "0x61fFE014bA17989E743c5F6cB21bF9697530B21e",
-      universalRouterAddress: "0x5E325eDA8064b456f4781070C0738d849c824258",
+      swapRouterAddress: "0xE592427A0AEce92De3Edee1F18E0157C05861564",
+      swapRouterV2Address: "0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45",
+      quoterV2Address: "0x61fFE014bA17989E743c5F6cB21bF9697530B21e",
+      universalRouterAddress: "0xa51afafe0263b40edaef0df8781ea9aa03e381a3",
     },
   },
   [ChainType.BASE]: {
@@ -85,8 +90,10 @@ export const supportedChains: Record<ChainType, ChainConfig> = {
     },
     uniswapV3: {
       factoryAddress: "0x33128a8fC17869897dcE68Ed026d694621f6FDfD",
-      quoterAddress: "0x3d4e44Eb1374240CE5F1B871ab261CD16335B76a",
-      universalRouterAddress: "0x3fC91A3afd70395Cd496C647d5a6CC9D4B2b7FAD",
+      swapRouterAddress: "",
+      swapRouterV2Address: "0x2626664c2603336E57B271c5C0b26F421741e481",
+      quoterV2Address: "0x3d4e44Eb1374240CE5F1B871ab261CD16335B76a",
+      universalRouterAddress: "0x6ff5693b99212da76ad316178a184ab56d299b43",
     },
   },
 };
