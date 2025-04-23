@@ -1,4 +1,4 @@
-import { ethers, Wallet, TransactionRequest } from "ethers";
+import { ethers, Wallet, TransactionRequest, Contract } from "ethers";
 
 import { ChainType, getChainConfig } from "../../../config/chain-config";
 import { ExactInputSingleParams } from "../../../models/uniswap-v3/uniswap-v3-types";
@@ -14,6 +14,8 @@ import {
   getBaseWallet_2,
 } from "../../../hooks/useSetup";
 import { createMinimalErc20, validateNetwork } from "../../../lib/utils";
+import { QUOTER_ABI, ROUTER_ABI } from "../../../contract-abis/uniswap-v3";
+import { calculatePriceFromSqrtPriceX96 } from "../../../models/uniswap-v3/uniswap-v3-utils";
 
 async function routerInteraction(chain: ChainType, wallet: Wallet) {
   await validateNetwork(wallet, chain);
@@ -69,7 +71,7 @@ async function routerInteraction(chain: ChainType, wallet: Wallet) {
 
   console.log();
 
-  const inputAmount = ethers.parseUnits("0.01", usdcContract.getDecimals());
+  const inputAmount = ethers.parseUnits("100", usdcContract.getDecimals());
   console.log("input amount", inputAmount);
 
   const routerAllowance = await usdcContract.getRawAllowance(wallet.address, ROUTER_ADDRESS);
@@ -101,21 +103,27 @@ async function routerInteraction(chain: ChainType, wallet: Wallet) {
     sqrtPriceLimitX96: 0n,
   };
 
-  console.log("Exact input trade:", exactInputTrade);
-
   console.log("Creating transaction...");
   const tx: TransactionRequest = await router.createExactInputSingleTransaction(wallet, exactInputTrade);
-  const txHash = await wallet.sendTransaction(tx);
-  console.log("Transaction hash:", txHash);
+  tx.gasLimit = 500_000;
+  console.log(tx);
+  const popTx = await wallet.populateTransaction(tx);
+  console.log(popTx);
+  const txResponse = await wallet.call(popTx);
+  console.log("interaction response: ", txResponse);
+  //const txReceipt = await txResponse.wait();
+  //console.log("receipt: ", txReceipt);
 }
 
 if (require.main === module) {
+  const ethWallet = getEthWallet_1();
   const baseWallet = getBaseWallet_1();
 
   const arbWallet2 = getArbitrumWallet_2();
 
+  const eth = ChainType.ETH;
   const base = ChainType.BASE;
   const arb = ChainType.ARB;
 
-  routerInteraction(arb, arbWallet2).catch(console.error);
+  routerInteraction(base, baseWallet).catch(console.error);
 }
