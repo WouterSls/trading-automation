@@ -126,6 +126,19 @@ export const getEthWallet_2 = (): Wallet => {
   return wallet;
 };
 
+export const getHardhatWallet_1 = (): Wallet => {
+  const rpcUrl = process.env.HARDHAT_RPC_URL;
+  const privateKey = process.env.HARDHAT_PRIVATE_KEY_1;
+
+  if (!rpcUrl || !privateKey) {
+    throw new Error("RPC_URL and PRIVATE_KEY must be set");
+  }
+
+  const provider = new ethers.JsonRpcProvider(rpcUrl);
+  const wallet = new ethers.Wallet(privateKey, provider);
+  return wallet;
+};
+
 export const getAlchemyApi = (): AlchemyApi => {
   const apiKey = process.env.ALCHEMY_API_KEY;
   if (!apiKey) {
