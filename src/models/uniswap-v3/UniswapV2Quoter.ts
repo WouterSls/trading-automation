@@ -1,59 +1,147 @@
-import { Contract, ethers } from "ethers";
+import { Contract, ethers, Wallet } from "ethers";
 
 import { ChainType, getChainConfig } from "../../config/chain-config";
 
 import { QUOTER_ABI } from "../../contract-abis/uniswap-v3";
+import { validateNetwork } from "../../lib/utils";
+import {
+  QuoteExactInputSingleParams,
+  QuoterExactInputResponse,
+  QuoteExactOutputSingleParams,
+  QuoterExactOutputResponse,
+} from "./uniswap-v3-types";
 
 export class UniswapV2Quoter {
   //Addresses
-  private WETH_ADDRESS: string;
-  private USDC_ADDRESS: string;
-  private QUOTER_ADDRESS: string;
+  private wethAddress: string;
+  private usdcAddress: string;
+  private quoterAddress: string;
 
   //Contract
   private quoterContract: Contract;
 
-  //Constants
-  private readonly USDC_DECIMALS = 6;
-
-  constructor(chain: ChainType) {
+  constructor(private chain: ChainType) {
     const chainConfig = getChainConfig(chain);
-    this.WETH_ADDRESS = chainConfig.tokenAddresses.weth;
-    this.USDC_ADDRESS = chainConfig.tokenAddresses.usdc!;
-    this.QUOTER_ADDRESS = chainConfig.uniswapV3.quoterV2Address;
+    this.wethAddress = chainConfig.tokenAddresses.weth;
+    this.usdcAddress = chainConfig.tokenAddresses.usdc!;
+    this.quoterAddress = chainConfig.uniswapV3.quoterV2Address;
 
-    if (!this.USDC_ADDRESS || this.USDC_ADDRESS.trim() === "") {
+    if (!this.usdcAddress || this.usdcAddress.trim() === "") {
       throw new Error(`USDC address not defined for chain: ${chainConfig.name}`);
     }
 
-    if (!this.WETH_ADDRESS || this.WETH_ADDRESS.trim() === "") {
+    if (!this.wethAddress || this.wethAddress.trim() === "") {
       throw new Error(`WETH address not defined for chain: ${chainConfig.name}`);
     }
 
-    if (!this.QUOTER_ADDRESS || this.QUOTER_ADDRESS.trim() === "") {
+    if (!this.quoterAddress || this.quoterAddress.trim() === "") {
       throw new Error(`Quoter address not defined for chain: ${chainConfig.name}`);
     }
 
-    this.quoterContract = new ethers.Contract(this.QUOTER_ADDRESS, QUOTER_ABI);
+    this.quoterContract = new ethers.Contract(this.quoterAddress, QUOTER_ABI);
+  }
+
+  getQuoterAddress = () => this.quoterAddress;
+  getWethAddress = () => this.wethAddress;
+  getUsdcAddress = () => this.usdcAddress;
+
+  async quoteExactInput(wallet: Wallet, path: string[], amountIn: bigint): Promise<QuoterExactInputResponse> {
+    this.quoterContract = this.quoterContract.connect(wallet) as Contract;
+
+    await this._networkAndQuoterCheck(wallet);
+
+    const { amountOut, sqrtPriceX96After, initializedTicksCrossed, gasEstimate } =
+      await this.quoterContract.quoteExactInput.staticCall(path, amountIn);
+
+    return { amountOut, sqrtPriceX96After, initializedTicksCrossed, gasEstimate };
+  }
+
+  async quoteExactInputSingle(wallet: Wallet, params: QuoteExactInputSingleParams): Promise<QuoterExactInputResponse> {
+    this.quoterContract = this.quoterContract.connect(wallet) as Contract;
+
+    await this._networkAndQuoterCheck(wallet);
+
+    const { amountOut, sqrtPriceX96After, initializedTicksCrossed, gasEstimate } =
+      await this.quoterContract.quoteExactInputSingle.staticCall(params);
+
+    return { amountOut, sqrtPriceX96After, initializedTicksCrossed, gasEstimate };
+  }
+
+  async quoteExactOutput(wallet: Wallet, path: string[], amountOut: bigint): Promise<QuoterExactOutputResponse> {
+    this.quoterContract = this.quoterContract.connect(wallet) as Contract;
+
+    await this._networkAndQuoterCheck(wallet);
+
+    const { amountIn, sqrtPriceX96After, initializedTicksCrossed, gasEstimate } =
+      await this.quoterContract.quoteExactOutput.staticCall(path, amountOut);
+
+    return { amountIn, sqrtPriceX96After, initializedTicksCrossed, gasEstimate };
+  }
+
+  async quoteExactOutputSingle(
+    wallet: Wallet,
+    params: QuoteExactOutputSingleParams,
+  ): Promise<QuoterExactOutputResponse> {
+    this.quoterContract = this.quoterContract.connect(wallet) as Contract;
+
+    await this._networkAndQuoterCheck(wallet);
+
+    const { amountIn, sqrtPriceX96After, initializedTicksCrossed, gasEstimate } =
+      await this.quoterContract.quoteExactOutputSingle.staticCall(params);
+
+    return { amountIn, sqrtPriceX96After, initializedTicksCrossed, gasEstimate };
   }
 
   /**
-   *
-   * @pricing
+   * Validates that the wallet is on the correct network and that the factory address is valid
+   * @param wallet Wallet instance -> blockchain provider
+   * @returns true if the wallet is on the correct network and that the factory address is valid, false otherwise
    */
-  async quoteExactInput(path: string[], amountIn: number): Promise<number> {
-    return 0;
-  }
+  private async _networkAndQuoterCheck(wallet: Wallet): Promise<boolean> {
+    await validateNetwork(wallet, this.chain);
 
-  async quoteExactInputSingle(path: string[], amountIn: number): Promise<number> {
-    return 10;
-  }
+    const code = await wallet.provider!.getCode(this.quoterAddress);
+    if (code === "0x" || code === "0x0") {
+      throw new Error(`No contract found at router address: ${this.quoterAddress}`);
+    }
 
-  async quoteExactOutput(path: string[], amountOut: number): Promise<number> {
-    return 0;
-  }
+    try {
+      await this.quoterContract.quoteExactInputSingle.staticCall({
+        tokenIn: this.wethAddress,
+        tokenOut: this.usdcAddress,
+        fee: 3000,
+        amountIn: ethers.parseUnits("100", 18),
+        sqrtPriceLimitX96: 0n,
+      });
+      return true;
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
 
-  async quoteExactOutputSingle(path: string[], amountOut: number): Promise<number> {
-    return 0;
+      const revertDataError = errorMessage.includes("missing revert data");
+
+      const functionNotFoundError =
+        errorMessage.includes("function not found") ||
+        errorMessage.includes("not a function") ||
+        errorMessage.includes("unknown function");
+
+      const missingProviderError =
+        errorMessage.toLowerCase().includes("cannot read property") ||
+        errorMessage.toLowerCase().includes("cannot read properties") ||
+        errorMessage.includes("missing provider");
+
+      if (revertDataError) {
+        return true;
+      }
+
+      if (functionNotFoundError) {
+        throw new Error(`Contract at ${this.quoterAddress} is not a Uniswap V3 Quoter`);
+      }
+
+      if (missingProviderError) {
+        throw new Error(`Wallet has missing provider: ${errorMessage}`);
+      }
+
+      throw new Error(`${errorMessage}`);
+    }
   }
 }

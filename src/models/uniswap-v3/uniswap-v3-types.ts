@@ -80,4 +80,56 @@ export interface ExactOutputParams {
   amountOut: string;
   /** The maximum amount of the inbound token to spend */
   amountInMaximum: string;
-} 
+}
+
+/**
+ * Uniswap V2 Quoter parameter type definitions
+ */
+
+/**
+ * Parameters for quoting exact input single swaps
+ * Gets the expected amount out for swapping an exact amount of input tokens through a single pool
+ */
+export interface QuoteExactInputSingleParams {
+  /** The contract address of the inbound token */
+  tokenIn: string;
+  /** The contract address of the outbound token */
+  tokenOut: string;
+  /** The exact amount of input tokens to swap */
+  amountIn: bigint;
+  /** The fee tier of the pool (in hundredths of a basis point) */
+  fee: number;
+  /** Price limit for the swap */
+  sqrtPriceLimitX96: number;
+}
+
+/**
+ * Parameters for quoting exact output single swaps
+ * Gets the expected amount in required to receive an exact amount of output tokens through a single pool
+ */
+export interface QuoteExactOutputSingleParams {
+  /** The contract address of the inbound token */
+  tokenIn: string;
+  /** The contract address of the outbound token */
+  tokenOut: string;
+  /** The exact amount of output tokens to receive */
+  amount: bigint;
+  /** The fee tier of the pool (in hundredths of a basis point) */
+  fee: number;
+  /** Price limit for the swap */
+  sqrtPriceLimitX96: number;
+}
+
+export interface QuoterExactInputResponse {
+  amountOut: bigint;
+  sqrtPriceX96After: bigint;
+  initializedTicksCrossed: bigint;
+  gasEstimate: bigint;
+}
+
+export interface QuoterExactOutputResponse {
+  amountIn: bigint;
+  sqrtPriceX96After: bigint;
+  initializedTicksCrossed: bigint;
+  gasEstimate: bigint;
+}
