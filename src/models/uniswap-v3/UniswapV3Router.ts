@@ -56,30 +56,22 @@ export class UniswapV3Router {
    * @param params The swap parameters
    * @returns The amount of tokens received
    */
-  async exactInputSingle(wallet: Wallet, params: ExactInputSingleParams): Promise<string> {
+  async exactInputSingle(wallet: Wallet, params: ExactInputSingleParams): Promise<ContractTransactionResponse> {
     this.routerContract = this.routerContract.connect(wallet) as Contract;
     await this._networkAndRouterCheck(wallet);
 
     try {
-      const tx: ContractTransactionResponse = await this.routerContract.exactInputSingle(
-        {
-          tokenIn: params.tokenIn,
-          tokenOut: params.tokenOut,
-          fee: params.fee,
-          recipient: params.recipient,
-          deadline: params.deadline,
-          amountIn: params.amountIn,
-          amountOutMinimum: params.amountOutMinimum,
-          sqrtPriceLimitX96: params.sqrtPriceLimitX96,
-        },
-        {
-          value: 0,
-          gasLimit: 5000000,
-          gasPrice: ethers.parseUnits("0.1", "gwei"),
-        },
-      );
+      const tx: ContractTransactionResponse = await this.routerContract.exactInputSingle({
+        tokenIn: params.tokenIn,
+        tokenOut: params.tokenOut,
+        fee: params.fee,
+        recipient: params.recipient,
+        amountIn: params.amountIn,
+        amountOutMinimum: params.amountOutMinimum,
+        sqrtPriceLimitX96: params.sqrtPriceLimitX96,
+      });
       console.log("Transaction response:", tx);
-      return tx.hash;
+      return tx;
     } catch (error: unknown) {
       console.log("Error:", error);
       const errorMessage = error instanceof Error ? error.message : "Unknown error";
@@ -98,7 +90,6 @@ export class UniswapV3Router {
         tokenOut: params.tokenOut,
         fee: params.fee,
         recipient: params.recipient,
-        deadline: params.deadline,
         amountIn: params.amountIn,
         amountOutMinimum: params.amountOutMinimum,
         sqrtPriceLimitX96: params.sqrtPriceLimitX96,
@@ -174,7 +165,8 @@ export class UniswapV3Router {
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : "Unknown error";
 
-      const revertDataError = errorMessage.includes("missing revert data");
+      const revertDataError =
+        errorMessage.includes("missing revert data") || errorMessage.includes("execution reverted");
 
       const functionNotFoundError =
         errorMessage.includes("function not found") ||

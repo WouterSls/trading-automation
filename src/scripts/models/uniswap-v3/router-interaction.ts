@@ -12,6 +12,7 @@ import {
   getArbitrumWallet_2,
   getEthWallet_2,
   getBaseWallet_2,
+  getHardhatWallet_1,
 } from "../../../hooks/useSetup";
 import { createMinimalErc20, validateNetwork } from "../../../lib/utils";
 import { QUOTER_ABI, ROUTER_ABI } from "../../../contract-abis/uniswap-v3";
@@ -97,7 +98,6 @@ async function routerInteraction(chain: ChainType, wallet: Wallet) {
     tokenOut: WETH_ADDRESS,
     fee: 3000,
     recipient: wallet.address,
-    deadline: deadline,
     amountIn: inputAmount,
     amountOutMinimum: 0n,
     sqrtPriceLimitX96: 0n,
@@ -105,20 +105,17 @@ async function routerInteraction(chain: ChainType, wallet: Wallet) {
 
   console.log("Creating transaction...");
   const tx: TransactionRequest = await router.createExactInputSingleTransaction(wallet, exactInputTrade);
-  tx.gasLimit = 500_000;
-  console.log(tx);
-  const popTx = await wallet.populateTransaction(tx);
-  console.log(popTx);
-  const txResponse = await wallet.call(popTx);
-  console.log("interaction response: ", txResponse);
-  //const txReceipt = await txResponse.wait();
-  //console.log("receipt: ", txReceipt);
+  try {
+    const txResponse = await wallet.call(tx);
+    console.log("interaction response: ", txResponse);
+  } catch (error: unknown) {
+    console.log("error:", error);
+  }
 }
 
 if (require.main === module) {
   const ethWallet = getEthWallet_1();
   const baseWallet = getBaseWallet_1();
-
   const arbWallet2 = getArbitrumWallet_2();
 
   const eth = ChainType.ETH;

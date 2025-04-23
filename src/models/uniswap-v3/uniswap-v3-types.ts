@@ -3,7 +3,8 @@
  */
 
 /**
- * Parameters for exact input single swaps
+ * Parameters for exact input single swaps on SwapRouter02
+ * REMEMBER: deadline is not used on SwapRouter02
  * Swaps an exact amount of one token for as much as possible of another token
  */
 export interface ExactInputSingleParams {
@@ -15,8 +16,6 @@ export interface ExactInputSingleParams {
   fee: number;
   /** The destination address of the outbound token */
   recipient: string;
-  /** The unix time after which a swap will fail */
-  deadline: number;
   /** The exact amount of the inbound token to swap */
   amountIn: bigint;
   /** The minimum amount of the outbound token to receive */
