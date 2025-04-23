@@ -90,7 +90,7 @@ async function routerInteraction(chain: ChainType, wallet: Wallet) {
 
   const deadline = Math.floor(Date.now() / 1000) + 60 * 20; // 20 minutes in seconds
   console.log("Deadline:", deadline);
-  console.log("Deadline as date:", new Date(deadline * 1000)); // Convert to ms for display only
+  console.log("Deadline as date:", new Date(deadline * 1000));
 
   const exactInputTrade: ExactInputSingleParams = {
     tokenIn: USDC_ADDRESS,
