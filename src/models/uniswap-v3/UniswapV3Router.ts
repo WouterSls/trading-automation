@@ -1,11 +1,4 @@
-import {
-  Contract,
-  ContractTransactionReceipt,
-  ContractTransactionResponse,
-  ethers,
-  TransactionRequest,
-  Wallet,
-} from "ethers";
+import { Contract, ContractTransactionResponse, ethers, TransactionRequest, Wallet } from "ethers";
 import {
   ExactInputParams,
   ExactInputSingleParams,
@@ -13,8 +6,8 @@ import {
   ExactOutputSingleParams,
 } from "./uniswap-v3-types";
 import { ChainType, getChainConfig } from "../../config/chain-config";
-import { ROUTER_ABI } from "../../contract-abis/uniswap-v3";
-import { extractRawTokenOutputFromLogs, validateNetwork } from "../../lib/utils";
+import { ROUTER_INTERFACE } from "../../contract-abis/uniswap-v3";
+import { validateNetwork } from "../../lib/utils";
 
 export class UniswapV3Router {
   // Addresses
@@ -44,7 +37,7 @@ export class UniswapV3Router {
       throw new Error(`UniV3 Router address not defined for chain: ${chainConfig.name}`);
     }
 
-    this.routerContract = new ethers.Contract(this.routerAddress, ROUTER_ABI);
+    this.routerContract = new ethers.Contract(this.routerAddress, ROUTER_INTERFACE);
   }
 
   getRouterAddress = () => this.routerAddress;
@@ -52,16 +45,19 @@ export class UniswapV3Router {
   getUsdcAddress = () => this.usdcAddress;
 
   /**
-   * Performs an exact input single swap
+   * The swapExactInputSingle function is for performing exact input swaps,
+   * which swap a fixed amount of one token for a maximum possible amount of another token
+   *
    * @param params The swap parameters
    * @returns The amount of tokens received
    */
   async exactInputSingle(wallet: Wallet, params: ExactInputSingleParams): Promise<ContractTransactionResponse> {
     this.routerContract = this.routerContract.connect(wallet) as Contract;
+
     await this._networkAndRouterCheck(wallet);
 
     try {
-      const tx: ContractTransactionResponse = await this.routerContract.exactInputSingle({
+      const txResponse: ContractTransactionResponse = await this.routerContract.exactInputSingle({
         tokenIn: params.tokenIn,
         tokenOut: params.tokenOut,
         fee: params.fee,
@@ -70,15 +66,12 @@ export class UniswapV3Router {
         amountOutMinimum: params.amountOutMinimum,
         sqrtPriceLimitX96: params.sqrtPriceLimitX96,
       });
-      console.log("Transaction response:", tx);
-      return tx;
+      return txResponse;
     } catch (error: unknown) {
-      console.log("Error:", error);
       const errorMessage = error instanceof Error ? error.message : "Unknown error";
       throw new Error(`${errorMessage}`);
     }
   }
-
   async createExactInputSingleTransaction(wallet: Wallet, params: ExactInputSingleParams): Promise<TransactionRequest> {
     this.routerContract = this.routerContract.connect(wallet) as Contract;
 
@@ -109,19 +102,96 @@ export class UniswapV3Router {
    * @param params The swap parameters
    * @returns The amount of tokens received
    */
-  async exactInput(params: ExactInputParams): Promise<string> {
-    // TODO: Implement swap functionality
-    return "0";
+  async exactInput(wallet: Wallet, params: ExactInputParams): Promise<ContractTransactionResponse> {
+    this.routerContract = this.routerContract.connect(wallet) as Contract;
+
+    await this._networkAndRouterCheck(wallet);
+
+    try {
+      const txResponse: ContractTransactionResponse = await this.routerContract.exactInput(params);
+      return txResponse;
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      throw new Error(`${errorMessage}`);
+    }
+  }
+  async createExactInputTransaction(wallet: Wallet, params: ExactInputParams): Promise<TransactionRequest> {
+    this.routerContract = this.routerContract.connect(wallet) as Contract;
+
+    await this._networkAndRouterCheck(wallet);
+
+    const encodedData = this.routerContract.interface.encodeFunctionData("exactInput", [
+      {
+        path: params.path,
+        recipient: params.recipient,
+        amountIn: params.amountIn,
+        amountOutMinimum: params.amountOutMinimum,
+      },
+    ]);
+
+    const tx: TransactionRequest = {
+      to: this.routerAddress,
+      data: encodedData,
+    };
+
+    return tx;
   }
 
   /**
-   * Performs an exact output single swap
+   *
+   * The swapExactOutputSingle function is for performing exact output swaps,
+   * which swap a minimum possible amount of one token for a fixed amount of another token.
+   *
    * @param params The swap parameters
    * @returns The amount of tokens spent
    */
-  async exactOutputSingle(params: ExactOutputSingleParams): Promise<string> {
-    // TODO: Implement swap functionality
-    return "0";
+  async exactOutputSingle(wallet: Wallet, params: ExactOutputSingleParams): Promise<ContractTransactionResponse> {
+    this.routerContract = this.routerContract.connect(wallet) as Contract;
+
+    await this._networkAndRouterCheck(wallet);
+
+    try {
+      const txResponse: ContractTransactionResponse = await this.routerContract.exactOutputSingle({
+        tokenIn: params.tokenIn,
+        tokenOut: params.tokenOut,
+        fee: params.fee,
+        recipient: params.recipient,
+        amountOut: params.amountOut,
+        amountInMaximum: params.amountInMaximum,
+        sqrtPriceLimitX96: params.sqrtPriceLimitX96,
+      });
+      return txResponse;
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      throw new Error(`${errorMessage}`);
+    }
+  }
+  async createExactOutputSingleTransaction(
+    wallet: Wallet,
+    params: ExactOutputSingleParams,
+  ): Promise<TransactionRequest> {
+    this.routerContract = this.routerContract.connect(wallet) as Contract;
+
+    await this._networkAndRouterCheck(wallet);
+
+    const encodedData = this.routerContract.interface.encodeFunctionData("exactOutputSingle", [
+      {
+        tokenIn: params.tokenIn,
+        tokenOut: params.tokenOut,
+        fee: params.fee,
+        recipient: params.recipient,
+        amountOut: params.amountOut,
+        amountInMaximum: params.amountInMaximum,
+        sqrtPriceLimitX96: params.sqrtPriceLimitX96,
+      },
+    ]);
+
+    const tx: TransactionRequest = {
+      to: this.routerAddress,
+      data: encodedData,
+    };
+
+    return tx;
   }
 
   /**
@@ -129,9 +199,39 @@ export class UniswapV3Router {
    * @param params The swap parameters
    * @returns The amount of tokens spent
    */
-  async exactOutput(params: ExactOutputParams): Promise<string> {
-    // TODO: Implement swap functionality
-    return "0";
+  async exactOutput(wallet: Wallet, params: ExactOutputParams): Promise<ContractTransactionResponse> {
+    this.routerContract = this.routerContract.connect(wallet) as Contract;
+
+    await this._networkAndRouterCheck(wallet);
+
+    try {
+      const txResponse: ContractTransactionResponse = await this.routerContract.exactOutput(params);
+      return txResponse;
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      throw new Error(`${errorMessage}`);
+    }
+  }
+  async createExactOutputTransaction(wallet: Wallet, params: ExactOutputParams): Promise<TransactionRequest> {
+    this.routerContract = this.routerContract.connect(wallet) as Contract;
+
+    await this._networkAndRouterCheck(wallet);
+
+    const encodedData = this.routerContract.interface.encodeFunctionData("exactOutput", [
+      {
+        path: params.path,
+        recipient: params.recipient,
+        amountOut: params.amountOut,
+        amountInMaximum: params.amountInMaximum,
+      },
+    ]);
+
+    const tx: TransactionRequest = {
+      to: this.routerAddress,
+      data: encodedData,
+    };
+
+    return tx;
   }
 
   /**
@@ -154,7 +254,6 @@ export class UniswapV3Router {
           tokenOut: this.usdcAddress,
           fee: 3000,
           recipient: wallet.address,
-          deadline: Math.floor(Date.now() / 1000) + 1000 * 60 * 20,
           amountIn: ethers.parseUnits("0.001", 18),
           amountOutMinimum: 0n,
           sqrtPriceLimitX96: 0n,
