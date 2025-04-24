@@ -5,9 +5,9 @@ import { ERC20 } from "../../models/ERC/ERC20";
 import { createMinimalErc20 } from "../../lib/utils";
 import { UniswapV2Router } from "../../models/uniswap-v2/UniswapV2Router";
 import { WETH_INTERFACE } from "../../contract-abis/erc20";
-import { UniswapV3Router } from "../../models/uniswap-v3/UniswapV3Router";
+import { UniswapV3Router } from "../../models/uniswap-v3/UniswapV3SwapRouterV2";
 import { ExactInputSingleParams, QuoteExactInputSingleParams } from "../../models/uniswap-v3/uniswap-v3-types";
-import { UniswapV2Quoter } from "../../models/uniswap-v3/UniswapV2Quoter";
+import { UniswapV2Quoter } from "../../models/uniswap-v3/UniswapV3QuoterV2";
 
 export async function forkTesting(wallet: Wallet, chain: ChainType) {
   const chainConfig = getChainConfig(chain);

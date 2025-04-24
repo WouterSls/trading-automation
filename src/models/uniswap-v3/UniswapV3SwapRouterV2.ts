@@ -9,7 +9,7 @@ import { ChainType, getChainConfig } from "../../config/chain-config";
 import { ROUTER_INTERFACE } from "../../contract-abis/uniswap-v3";
 import { validateNetwork } from "../../lib/utils";
 
-export class UniswapV3Router {
+export class UniswapV3SwapRouterV2 {
   // Addresses
   private wethAddress: string;
   private usdcAddress: string;

@@ -2,7 +2,7 @@ import { ERC20 } from "../../ERC/ERC20";
 import { ethers, Wallet } from "ethers";
 import { ChainType } from "../../../config/chain-config";
 
-import { UniswapV2Quoter } from "../../uniswap-v3/UniswapV2Quoter";
+import { UniswapV2Quoter } from "../../uniswap-v3/UniswapV3QuoterV2";
 import { UniswapV3Factory } from "../../uniswap-v3/UniswapV3Factory";
 
 import { BuyTrade } from "../trades/BuyTrade";

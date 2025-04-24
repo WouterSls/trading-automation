@@ -11,7 +11,7 @@ import {
   QuoterExactOutputResponse,
 } from "./uniswap-v3-types";
 
-export class UniswapV2Quoter {
+export class UniswapV3QuoterV2 {
   //Addresses
   private wethAddress: string;
   private usdcAddress: string;
@@ -45,7 +45,7 @@ export class UniswapV2Quoter {
   getWethAddress = () => this.wethAddress;
   getUsdcAddress = () => this.usdcAddress;
 
-  async quoteExactInput(wallet: Wallet, path: string[], amountIn: bigint): Promise<QuoterExactInputResponse> {
+  async quoteExactInput(wallet: Wallet, path: string, amountIn: bigint): Promise<QuoterExactInputResponse> {
     this.quoterContract = this.quoterContract.connect(wallet) as Contract;
 
     await this._networkAndQuoterCheck(wallet);
@@ -67,7 +67,7 @@ export class UniswapV2Quoter {
     return { amountOut, sqrtPriceX96After, initializedTicksCrossed, gasEstimate };
   }
 
-  async quoteExactOutput(wallet: Wallet, path: string[], amountOut: bigint): Promise<QuoterExactOutputResponse> {
+  async quoteExactOutput(wallet: Wallet, path: string, amountOut: bigint): Promise<QuoterExactOutputResponse> {
     this.quoterContract = this.quoterContract.connect(wallet) as Contract;
 
     await this._networkAndQuoterCheck(wallet);

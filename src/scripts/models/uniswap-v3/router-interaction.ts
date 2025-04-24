@@ -9,7 +9,7 @@ import {
   FeeAmount,
 } from "../../../models/uniswap-v3/uniswap-v3-types";
 
-import { UniswapV3Router } from "../../../models/uniswap-v3/UniswapV3Router";
+import { UniswapV3SwapRouterV2 } from "../../../models/uniswap-v3/UniswapV3SwapRouterV2";
 import { UniswapV3Factory } from "../../../models/uniswap-v3/UniswapV3Factory";
 import { getEthWallet_1, getBaseWallet_1, getArbitrumWallet_2, getHardhatWallet_1 } from "../../../hooks/useSetup";
 import { createMinimalErc20, decodeLogs, validateNetwork } from "../../../lib/utils";
@@ -52,7 +52,7 @@ async function routerInteraction(chain: ChainType, wallet: Wallet) {
   const daiContract = await createMinimalErc20(DAI_ADDRESS, wallet.provider!);
   const gasBalance = await wallet.provider!.getBalance(wallet.address);
 
-  const router = new UniswapV3Router(chain);
+  const router = new UniswapV3SwapRouterV2(chain);
 
   console.log("--------------------------------");
   console.log("Chain", chain);
@@ -131,7 +131,7 @@ async function routerInteraction(chain: ChainType, wallet: Wallet) {
 
 async function exactInputSingleTrade(
   wallet: Wallet,
-  router: UniswapV3Router,
+  router: UniswapV3SwapRouterV2,
   tokenIn: ERC20,
   amountIn: number,
   tokenOut: ERC20,
@@ -168,7 +168,7 @@ async function exactInputSingleTrade(
 
 async function exactInputTrade(
   wallet: Wallet,
-  router: UniswapV3Router,
+  router: UniswapV3SwapRouterV2,
   tokensToTrade: ERC20[],
   feeAmounts: FeeAmount[],
   amountIn: number,
@@ -207,7 +207,7 @@ async function exactInputTrade(
 
 async function exactOutputSingleTrade(
   wallet: Wallet,
-  router: UniswapV3Router,
+  router: UniswapV3SwapRouterV2,
   tokenIn: ERC20,
   tokenOut: ERC20,
   amountOut: number,
@@ -251,7 +251,7 @@ async function exactOutputSingleTrade(
 
 async function exactOutputTrade(
   wallet: Wallet,
-  router: UniswapV3Router,
+  router: UniswapV3SwapRouterV2,
   tokensToTrade: ERC20[],
   feeAmounts: FeeAmount[],
   amountOut: number,
