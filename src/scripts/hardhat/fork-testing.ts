@@ -88,7 +88,7 @@ async function v3RouterTest(
     tokenOut: outputToken.getTokenAddress(),
     fee: 3000,
     amountIn: rawTradeAmount,
-    sqrtPriceLimitX96: 0,
+    sqrtPriceLimitX96: 0n,
   };
 
   const { amountOut, sqrtPriceX96After, initializedTicksCrossed, gasEstimate } = await quoter.quoteExactInputSingle(
