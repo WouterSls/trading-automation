@@ -1,6 +1,6 @@
 import { Contract, Wallet, ethers } from "ethers";
 import { ChainType, getChainConfig } from "../../config/chain-config";
-import { FACTORY_ABI } from "../../contract-abis/uniswap-v3";
+import { FACTORY_INTERFACE } from "../../contract-abis/uniswap-v3";
 import { validateNetwork } from "../../lib/utils";
 import { UniswapV3Pool } from "./UniswapV3Pool";
 
@@ -16,7 +16,6 @@ export class UniswapV3Factory {
     this.WETH_ADDRESS = chainConfig.tokenAddresses.weth;
     this.FACTORY_ADDRESS = chainConfig.uniswapV3.factoryAddress;
 
-
     if (!this.WETH_ADDRESS || this.WETH_ADDRESS.trim() === "") {
       throw new Error(`WETH address not defined for chain: ${chainConfig.name}`);
     }
@@ -25,7 +24,7 @@ export class UniswapV3Factory {
       throw new Error(`Factory address not defined for chain: ${chainConfig.name}`);
     }
 
-    this.factoryContract = new Contract(this.FACTORY_ADDRESS, FACTORY_ABI);
+    this.factoryContract = new Contract(this.FACTORY_ADDRESS, FACTORY_INTERFACE);
   }
 
   getFactoryAddress = (): string => this.FACTORY_ADDRESS;
@@ -56,19 +55,19 @@ export class UniswapV3Factory {
    * @returns The pool address for the given token and fee tier, or null if the pool does not exist
    */
   async getPoolAddress(wallet: Wallet, token0Address: string, token1Address: string, feeTier: number): Promise<string> {
-      this.factoryContract = this.factoryContract.connect(wallet) as Contract;
+    this.factoryContract = this.factoryContract.connect(wallet) as Contract;
 
-      const isValid = await this._networkAndFactoryCheck(wallet);
-      if (!isValid) {
-        throw new Error(`Address ${this.factoryContract.address} is not a valid Uniswap V3 Factory`);
-      }
+    const isValid = await this._networkAndFactoryCheck(wallet);
+    if (!isValid) {
+      throw new Error(`Address ${this.factoryContract.address} is not a valid Uniswap V3 Factory`);
+    }
 
-      const poolAddress = await this.factoryContract.getPool(token0Address, token1Address, feeTier);
-      if (poolAddress === ethers.ZeroAddress || poolAddress === undefined) {
-        return ethers.ZeroAddress;
-      }
+    const poolAddress = await this.factoryContract.getPool(token0Address, token1Address, feeTier);
+    if (poolAddress === ethers.ZeroAddress || poolAddress === undefined) {
+      return ethers.ZeroAddress;
+    }
 
-      return poolAddress;
+    return poolAddress;
   }
 
   /**
@@ -95,19 +94,19 @@ export class UniswapV3Factory {
    * @returns The pool address for the given token and fee tier, or null if the pool does not exist
    */
   async getTokenWETHPoolAddress(wallet: Wallet, tokenAddress: string, feeTier: number): Promise<string> {
-      this.factoryContract = this.factoryContract.connect(wallet) as Contract;
+    this.factoryContract = this.factoryContract.connect(wallet) as Contract;
 
-      const isValid = await this._networkAndFactoryCheck(wallet);
-      if (!isValid) {
-        throw new Error(`Address ${this.factoryContract.address} is not a valid Uniswap V3 Factory`);
-      }
+    const isValid = await this._networkAndFactoryCheck(wallet);
+    if (!isValid) {
+      throw new Error(`Address ${this.factoryContract.address} is not a valid Uniswap V3 Factory`);
+    }
 
-      const poolAddress = await this.factoryContract.getPool(tokenAddress, this.WETH_ADDRESS, feeTier);
+    const poolAddress = await this.factoryContract.getPool(tokenAddress, this.WETH_ADDRESS, feeTier);
 
-      if (poolAddress === ethers.ZeroAddress || poolAddress === undefined) {
-        return ethers.ZeroAddress;
-      }
-      return poolAddress;
+    if (poolAddress === ethers.ZeroAddress || poolAddress === undefined) {
+      return ethers.ZeroAddress;
+    }
+    return poolAddress;
   }
 
   /**

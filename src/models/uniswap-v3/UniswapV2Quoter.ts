@@ -2,7 +2,7 @@ import { Contract, ethers, Wallet } from "ethers";
 
 import { ChainType, getChainConfig } from "../../config/chain-config";
 
-import { QUOTER_ABI } from "../../contract-abis/uniswap-v3";
+import { QUOTER_INTERFACE } from "../../contract-abis/uniswap-v3";
 import { validateNetwork } from "../../lib/utils";
 import {
   QuoteExactInputSingleParams,
@@ -38,7 +38,7 @@ export class UniswapV2Quoter {
       throw new Error(`Quoter address not defined for chain: ${chainConfig.name}`);
     }
 
-    this.quoterContract = new ethers.Contract(this.quoterAddress, QUOTER_ABI);
+    this.quoterContract = new ethers.Contract(this.quoterAddress, QUOTER_INTERFACE);
   }
 
   getQuoterAddress = () => this.quoterAddress;

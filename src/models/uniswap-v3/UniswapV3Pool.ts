@@ -1,5 +1,5 @@
 import { Contract, Wallet } from "ethers";
-import { POOL_ABI } from "../../contract-abis/uniswap-v3";
+import { POOL_INTERFACE } from "../../contract-abis/uniswap-v3";
 
 export interface Slot0 {
   sqrtPriceX96: string;
@@ -19,16 +19,17 @@ export interface TickInfo {
   tickCumulativeOutside: string; // int56
   secondsPerLiquidityOutsideX128: string; // uint160
   secondsOutside: string; // uint32
-  initialized: boolean; // boolean 
+  initialized: boolean; // boolean
 }
 
 export class UniswapV3Pool {
   private poolContract: Contract;
 
-
-
-  constructor(private wallet: Wallet, private poolAddress: string) {
-    this.poolContract = new Contract(poolAddress, POOL_ABI, wallet);
+  constructor(
+    private wallet: Wallet,
+    private poolAddress: string,
+  ) {
+    this.poolContract = new Contract(poolAddress, POOL_INTERFACE, wallet);
   }
 
   // ----------- IMMUTABLES ------------
@@ -100,7 +101,7 @@ export class UniswapV3Pool {
       observationCardinalityNext: slot0[4],
       feeProtocol: slot0[5],
       unlocked: slot0[6],
-    }
+    };
     return slot0Object as Slot0;
   }
 
@@ -120,9 +121,7 @@ export class UniswapV3Pool {
       secondsPerLiquidityOutsideX128: tickInfo[5],
       secondsOutside: tickInfo[6],
       initialized: tickInfo[7],
-    }
+    };
     return tickInfoObject as TickInfo;
-  } 
-
-
+  }
 }
