@@ -1,4 +1,18 @@
 /**
+ * Fee amounts for Uniswap V3 pools
+ */
+export enum FeeAmount {
+  /** 0.01% pool fee */
+  LOWEST = 100,
+  /** 0.05% pool fee */
+  LOW = 500,
+  /** 0.30% pool fee */
+  MEDIUM = 3000,
+  /** 1.00% pool fee */
+  HIGH = 10000,
+}
+
+/**
  * Uniswap V3 Router contract parameter type definitions
  */
 
@@ -13,7 +27,7 @@ export interface ExactInputSingleParams {
   /** The contract address of the outbound token */
   tokenOut: string;
   /** The fee tier of the pool (in hundredths of a basis point) */
-  fee: number;
+  fee: FeeAmount;
   /** The destination address of the outbound token */
   recipient: string;
   /** The exact amount of the inbound token to swap */
@@ -33,12 +47,10 @@ export interface ExactInputParams {
   path: string;
   /** The destination address of the outbound token */
   recipient: string;
-  /** The unix time after which a swap will fail */
-  deadline: number;
   /** The exact amount of the inbound token to swap */
-  amountIn: string;
+  amountIn: bigint;
   /** The minimum amount of the outbound token to receive */
-  amountOutMinimum: string;
+  amountOutMinimum: bigint;
 }
 
 /**
@@ -51,17 +63,15 @@ export interface ExactOutputSingleParams {
   /** The contract address of the outbound token */
   tokenOut: string;
   /** The fee tier of the pool (in hundredths of a basis point) */
-  fee: number;
+  fee: FeeAmount;
   /** The destination address of the outbound token */
   recipient: string;
-  /** The unix time after which a swap will fail */
-  deadline: number;
   /** The exact amount of the outbound token to receive */
-  amountOut: string;
+  amountOut: bigint;
   /** The maximum amount of the inbound token to spend */
-  amountInMaximum: string;
+  amountInMaximum: bigint;
   /** Price limit for the swap */
-  sqrtPriceLimitX96: string;
+  sqrtPriceLimitX96: bigint;
 }
 
 /**
@@ -73,12 +83,10 @@ export interface ExactOutputParams {
   path: string;
   /** The destination address of the outbound token */
   recipient: string;
-  /** The unix time after which a swap will fail */
-  deadline: number;
   /** The exact amount of the outbound token to receive */
-  amountOut: string;
+  amountOut: bigint;
   /** The maximum amount of the inbound token to spend */
-  amountInMaximum: string;
+  amountInMaximum: bigint;
 }
 
 /**
@@ -97,9 +105,9 @@ export interface QuoteExactInputSingleParams {
   /** The exact amount of input tokens to swap */
   amountIn: bigint;
   /** The fee tier of the pool (in hundredths of a basis point) */
-  fee: number;
+  fee: FeeAmount;
   /** Price limit for the swap */
-  sqrtPriceLimitX96: number;
+  sqrtPriceLimitX96: bigint;
 }
 
 /**
@@ -114,9 +122,9 @@ export interface QuoteExactOutputSingleParams {
   /** The exact amount of output tokens to receive */
   amount: bigint;
   /** The fee tier of the pool (in hundredths of a basis point) */
-  fee: number;
+  fee: FeeAmount;
   /** Price limit for the swap */
-  sqrtPriceLimitX96: number;
+  sqrtPriceLimitX96: bigint;
 }
 
 export interface QuoterExactInputResponse {
