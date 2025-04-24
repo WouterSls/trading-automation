@@ -1,6 +1,7 @@
 import { ethers } from "ethers";
 
 const MINIMAL_ERC20_ABI = [
+  "event Transfer(address indexed from, address indexed to, uint256 amount)",
   "function name() view returns (string)",
   "function symbol() view returns (string)",
   "function decimals() view returns (uint8)",
@@ -11,6 +12,7 @@ const MINIMAL_ERC20_ABI = [
 ] as const;
 
 const WETH_ABI = [
+  "event Transfer(address indexed from, address indexed to, uint256 amount)",
   "function name() view returns (string)",
   "function symbol() view returns (string)",
   "function decimals() view returns (uint8)",
