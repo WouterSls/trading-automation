@@ -1,5 +1,10 @@
-import { getArbitrumWallet_1, getEthWallet_1, getOfflineSigner_1 } from "../../../src/hooks/useSetup";
-import { UniswapV3Factory, UniswapV3Pool } from "../../../src/models/uniswap-v3";
+import {
+  getArbitrumWallet_1,
+  getEthWallet_1,
+  getHardhatWallet_1,
+  getOfflineSigner_1,
+} from "../../../src/hooks/useSetup";
+import { FeeAmount, UniswapV3Factory, UniswapV3Pool } from "../../../src/models/uniswap-v3";
 import { ChainType } from "../../../src/config/chain-config";
 import {
   ETH_WETH_ADDRESS,
@@ -26,7 +31,9 @@ describe("ETH UniswapV3Factory Config", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     factory = new UniswapV3Factory(ChainType.ETH);
-    ethWallet = getEthWallet_1();
+    //ethWallet = getEthWallet_1();
+    //Make sure hardhat mainnet fork is running when testing
+    ethWallet = getHardhatWallet_1();
     arbWallet = getArbitrumWallet_1();
     offlineWallet = getOfflineSigner_1();
   });
@@ -58,7 +65,12 @@ describe("ETH UniswapV3Factory Config", () => {
       const expectedPoolAddress = ethers.ZeroAddress;
 
       // Act
-      const actualPoolAddress = await factory.getPoolAddress(ethWallet, ETH_WETH_ADDRESS, ETH_EOA_ACCOUNT_ADDRESS, 3000);
+      const actualPoolAddress = await factory.getPoolAddress(
+        ethWallet,
+        ETH_WETH_ADDRESS,
+        ETH_EOA_ACCOUNT_ADDRESS,
+        3000,
+      );
 
       // Assert
       expect(actualPoolAddress).toEqual(expectedPoolAddress);
@@ -80,7 +92,7 @@ describe("ETH UniswapV3Factory Config", () => {
     it("ethWallet_getPoolAddress_invalidInput_WETH_EOA-ADDRESS_3000_throws_POOL_NOT_FOUND_ERROR_MESSAGE", async () => {
       // Act / Assert
       await expect(factory.getPool(ethWallet, ETH_WETH_ADDRESS, ETH_EOA_ACCOUNT_ADDRESS, 3000)).rejects.toThrow(
-        new RegExp(POOL_NOT_FOUND_ERROR_PREFIX)
+        new RegExp(POOL_NOT_FOUND_ERROR_PREFIX),
       );
     });
 
@@ -94,81 +106,85 @@ describe("ETH UniswapV3Factory Config", () => {
   });
 
   describe("Get Token WETH Pool Address", () => {
-    it("ethWallet_getTokenWETHPoolAddress_invalidInput_WETH_returns_ethersZeroAddress", async () => {
+    it("ethWallet_getPoolAddress_invalidInput_WETH_returns_ethersZeroAddress", async () => {
       // Arrange
       const expectedPoolAddress = ethers.ZeroAddress;
 
       // Act
-      const actualPoolAddress = await factory.getTokenWETHPoolAddress(ethWallet, ETH_WETH_ADDRESS, 3000);
+      const actualPoolAddress = await factory.getPoolAddress(ethWallet, ETH_WETH_ADDRESS, ETH_WETH_ADDRESS, 3000);
 
       // Assert
       expect(actualPoolAddress).toEqual(expectedPoolAddress);
     });
 
-    it("ethWallet_getTokenWETHPoolAddress_invalidInput_EOA-ADDRESS_returns_ethersZeroAddress", async () => {
+    it("ethWallet_getPoolAddress_invalidInput_EOA-ADDRESS_returns_ethersZeroAddress", async () => {
       // Arrange
       const expectedPoolAddress = ethers.ZeroAddress;
 
       // Act
-      const actualPoolAddress = await factory.getTokenWETHPoolAddress(ethWallet, ETH_EOA_ACCOUNT_ADDRESS, 3000);
+      const actualPoolAddress = await factory.getPoolAddress(
+        ethWallet,
+        ETH_EOA_ACCOUNT_ADDRESS,
+        ETH_WETH_ADDRESS,
+        3000,
+      );
 
       // Assert
       expect(actualPoolAddress).toEqual(expectedPoolAddress);
     });
 
-    it("ethWallet_getTokenWETHPoolAddress_validERC20NoPoolExists_returns_ethersZeroAddress", async () => {
+    it("ethWallet_getPoolAddress_validERC20NoPoolExists_returns_ethersZeroAddress", async () => {
       // Arrange
       const expectedPoolAddress = ethers.ZeroAddress;
-      const feeTier = 500;
+      const feeTier = FeeAmount.LOW;
 
       // Act
-      const actualPoolAddress = await factory.getTokenWETHPoolAddress(ethWallet, ETH_FLAYER_ADDRESS, feeTier);
+      const actualPoolAddress = await factory.getPoolAddress(ethWallet, ETH_FLAYER_ADDRESS, ETH_WETH_ADDRESS, feeTier);
 
       // Assert
       expect(actualPoolAddress).toEqual(expectedPoolAddress);
     });
 
-    it("ethWallet_getTokenWETHPoolAddress_validERC20PoolExists_returns_V3_POOL_PEPE_ETH_3000_ADDRESS", async () => {
+    it("ethWallet_getPoolAddress_validERC20PoolExists_returns_V3_POOL_PEPE_ETH_3000_ADDRESS", async () => {
       // Arrange
       const expectedPoolAddress = V3_POOL_PEPE_ETH_3000_ADDRESS;
-      const feeTier = 3000;
+      const feeTier = FeeAmount.MEDIUM;
 
       // Act
-      const actualPoolAddress = await factory.getTokenWETHPoolAddress(ethWallet, ETH_PEPE_ADDRESS, feeTier);
+      const actualPoolAddress = await factory.getPoolAddress(ethWallet, ETH_PEPE_ADDRESS, ETH_WETH_ADDRESS, feeTier);
 
       // Assert
       expect(actualPoolAddress).toEqual(expectedPoolAddress);
     });
 
-    it("offlineWallet_getTokenWETHPoolAddress_throws_MISSING_PROVIDER_ERROR_MESSAGE", async () => {
+    it("offlineWallet_getPoolAddress_throws_MISSING_PROVIDER_ERROR_MESSAGE", async () => {
       // Act / Assert
-      await expect(factory.getTokenWETHPoolAddress(offlineWallet, ETH_WETH_ADDRESS, 3000)).rejects.toThrow(
+      await expect(factory.getPoolAddress(offlineWallet, ETH_WETH_ADDRESS, ETH_WETH_ADDRESS, 3000)).rejects.toThrow(
         MISSING_PROVIDER_ERROR_MESSAGE,
       );
     });
   });
 
   describe("Get Token WETH Pool", () => {
-    it("ethWallet_getTokenWETHPoolAddress_invalidInput_WETH_returns_ethersZeroAddress", async () => {
-      // Arrange    
-      const feeTier = 3000;
+    it("ethWallet_getPoolAddress_invalidInput_WETH_returns_ethersZeroAddress", async () => {
+      // Arrange
+      const feeTier = FeeAmount.MEDIUM;
 
       // Act / Assert
-      await expect(factory.getTokenWETHPool(ethWallet, ETH_WETH_ADDRESS, feeTier)).rejects.toThrow(
-        new RegExp(POOL_NOT_FOUND_ERROR_PREFIX)
+      await expect(factory.getPool(ethWallet, ETH_WETH_ADDRESS, ETH_WETH_ADDRESS, feeTier)).rejects.toThrow(
+        new RegExp(POOL_NOT_FOUND_ERROR_PREFIX),
       );
     });
 
-    it("ethWallet_getTokenWETHPoolAddress_validInput_PEPE_WETH_3000_returns_UniswapV3Pool", async () => {
-      // Arrange 
-      const feeTier = 3000;
+    it("ethWallet_getPool_validInput_PEPE_WETH_3000_returns_UniswapV3Pool", async () => {
+      // Arrange
+      const feeTier = FeeAmount.MEDIUM;
 
       // Act
-      const actualPool = await factory.getTokenWETHPool(ethWallet, ETH_PEPE_ADDRESS, feeTier);
+      const actualPool = await factory.getPool(ethWallet, ETH_PEPE_ADDRESS, ETH_WETH_ADDRESS, feeTier);
 
       // Assert
       expect(actualPool).toBeInstanceOf(UniswapV3Pool);
     });
   });
 });
-

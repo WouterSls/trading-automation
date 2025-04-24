@@ -152,7 +152,8 @@ export async function exactInputSingleTrade(
   console.log("Creating transaction...");
   const tx: TransactionRequest = await router.createExactInputSingleTransaction(wallet, exactInputTrade);
   try {
-    console.log("transaction created: ", JSON.stringify(tx, null, 2));
+    console.log("transaction request created:");
+    console.log(tx);
     console.log("sending transaction...");
     const txResponse = await wallet.sendTransaction(tx);
     const txReceipt = await txResponse.wait();
@@ -173,7 +174,6 @@ export async function exactInputTrade(
   feeAmounts: FeeAmount[],
   amountIn: number,
 ) {
-  const inputToken = tokensToTrade[0];
   const addresses = tokensToTrade.map((token) => token.getTokenAddress());
   const encodedPath = encodePath(addresses, feeAmounts);
 
@@ -186,18 +186,32 @@ export async function exactInputTrade(
     amountOutMinimum: 0n,
   };
 
-  await approveSending(wallet, inputToken, router.getRouterAddress(), amountIn);
+  const maxUint256 = ethers.MaxUint256;
+
+  for (const token of tokensToTrade) {
+    const routerAllowance = await token.getRawAllowance(wallet.address, router.getRouterAddress());
+    console.log("raw router allowance", routerAllowance);
+
+    if (routerAllowance <= maxUint256) {
+      console.log("Approving", token.getSymbol(), "to", router.getRouterAddress(), "...");
+      const approveTx = await token.createApproveTransaction(router.getRouterAddress(), maxUint256);
+      const approveTxHash = await wallet.sendTransaction(approveTx);
+      const approveTxReceipt = await approveTxHash.wait();
+      if (!approveTxReceipt) throw new Error("Approve transaction failed");
+      console.log("Approved!");
+    } else {
+      console.log("Token allowance is sufficient, skipping approve transaction");
+    }
+  }
 
   const tx: TransactionRequest = await router.createExactInputTransaction(wallet, exactInputTrade);
-  console.log("transaction created: ", JSON.stringify(tx, null, 2));
+  console.log("transaction request created: ");
+  console.log(tx);
   console.log("sending transaction...");
   const txResponse = await wallet.sendTransaction(tx);
   const txReceipt = await txResponse.wait();
-  /**
-   * Router Function
-   *   const txResponse = await router.exactInput(wallet, exactInputTrade);
-   *   const txReceipt = await txResponse.wait();
-   */
+  //const txResponse = await router.exactInput(wallet, exactInputTrade);
+  //const txReceipt = await txResponse.wait();
   if (!txReceipt) throw new Error("Transaction failed");
   const logs = txReceipt.logs;
   const decodedLogs = decodeLogs(logs);

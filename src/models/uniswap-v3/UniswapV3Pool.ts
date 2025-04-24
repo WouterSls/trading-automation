@@ -1,5 +1,6 @@
-import { Contract, Wallet } from "ethers";
+import { Contract, Provider, Wallet } from "ethers";
 import { POOL_INTERFACE } from "../../contract-abis/uniswap-v3";
+import { FeeAmount } from "./index";
 
 export interface Slot0 {
   sqrtPriceX96: string;
@@ -26,57 +27,23 @@ export class UniswapV3Pool {
   private poolContract: Contract;
 
   constructor(
-    private wallet: Wallet,
     private poolAddress: string,
+    private factoryAddress: string,
+    private token0Address: string,
+    private token1Address: string,
+    private tickSpacing: number,
+    private fee: FeeAmount,
+    wallet: Wallet,
   ) {
     this.poolContract = new Contract(poolAddress, POOL_INTERFACE, wallet);
   }
 
-  // ----------- IMMUTABLES ------------
-
-  /**
-   * Get the address of the pool
-   * @returns address of the pool
-   */
   getPoolAddress = (): string => this.poolAddress;
-
-  /**
-   * Get the address of the token0
-   * @returns address of the token0
-   */
-  async getToken0Address() {
-    const token0Address = await this.poolContract.token0();
-    return token0Address;
-  }
-
-  /**
-   * Get the address of the token1
-   * @returns address of the token1
-   */
-  async getToken1Address() {
-    const token1Address = await this.poolContract.token1();
-    return token1Address;
-  }
-
-  /**
-   * Get the fee
-   * @returns fee
-   */
-  async getFee() {
-    const fee = await this.poolContract.fee();
-    return fee;
-  }
-
-  /**
-   * Get the tick spacing
-   * @returns tick spacing
-   */
-  async getTickSpacing(): Promise<bigint> {
-    const tickSpacing = await this.poolContract.tickSpacing();
-    return tickSpacing;
-  }
-
-  // ----------- MUTABLES ------------
+  getFactoryAddress = (): string => this.factoryAddress;
+  getToken0Address = (): string => this.token0Address;
+  getToken1Address = (): string => this.token1Address;
+  getTickSpacing = (): number => this.tickSpacing;
+  getFee = (): FeeAmount => this.fee;
 
   /**
    * Get the liquidity

@@ -1,8 +1,8 @@
-import { Contract, Wallet, ethers } from "ethers";
+import { Contract, Provider, Wallet, ethers } from "ethers";
 import { ChainType, getChainConfig } from "../../config/chain-config";
 import { FACTORY_INTERFACE } from "../../contract-abis/uniswap-v3";
 import { validateNetwork } from "../../lib/utils";
-import { UniswapV3Pool } from "./UniswapV3Pool";
+import { UniswapV3Pool, FeeAmount, FeeToTickSpacing, createV3Pool } from "./index";
 
 export class UniswapV3Factory {
   private factoryContract: Contract;
@@ -54,7 +54,12 @@ export class UniswapV3Factory {
    * @param feeTier The fee tier to get the pool address for
    * @returns The pool address for the given token and fee tier, or null if the pool does not exist
    */
-  async getPoolAddress(wallet: Wallet, token0Address: string, token1Address: string, feeTier: number): Promise<string> {
+  async getPoolAddress(
+    wallet: Wallet,
+    token0Address: string,
+    token1Address: string,
+    feeTier: FeeAmount,
+  ): Promise<string> {
     this.factoryContract = this.factoryContract.connect(wallet) as Contract;
 
     const isValid = await this._networkAndFactoryCheck(wallet);
@@ -78,50 +83,23 @@ export class UniswapV3Factory {
    * @param feeTier The fee tier to get the pool for
    * @returns The pool for the given token and fee tier, or null if the pool does not exist
    */
-  async getPool(wallet: Wallet, token0Address: string, token1Address: string, feeTier: number): Promise<UniswapV3Pool> {
+  async getPool(
+    wallet: Wallet,
+    token0Address: string,
+    token1Address: string,
+    feeTier: FeeAmount,
+  ): Promise<UniswapV3Pool> {
     const poolAddress = await this.getPoolAddress(wallet, token0Address, token1Address, feeTier);
+    const provider = wallet.provider;
     if (poolAddress === ethers.ZeroAddress) {
       throw new Error(`Pool not found for ${token0Address} and ${token1Address} and ${feeTier}`);
     }
-    return new UniswapV3Pool(wallet, poolAddress);
-  }
-
-  /**
-   * Gets the pool address for a given token and fee tier
-   * @param wallet Wallet instance -> blockchain provider
-   * @param tokenAddress The address of the token to get the pool address for
-   * @param feeTier The fee tier to get the pool address for
-   * @returns The pool address for the given token and fee tier, or null if the pool does not exist
-   */
-  async getTokenWETHPoolAddress(wallet: Wallet, tokenAddress: string, feeTier: number): Promise<string> {
-    this.factoryContract = this.factoryContract.connect(wallet) as Contract;
-
-    const isValid = await this._networkAndFactoryCheck(wallet);
-    if (!isValid) {
-      throw new Error(`Address ${this.factoryContract.address} is not a valid Uniswap V3 Factory`);
+    if (!provider) {
+      throw new Error(`Provider not found for ${token0Address} and ${token1Address} and ${feeTier}`);
     }
 
-    const poolAddress = await this.factoryContract.getPool(tokenAddress, this.WETH_ADDRESS, feeTier);
-
-    if (poolAddress === ethers.ZeroAddress || poolAddress === undefined) {
-      return ethers.ZeroAddress;
-    }
-    return poolAddress;
-  }
-
-  /**
-   * Gets the pool address for a given token and fee tier
-   * @param wallet Wallet instance -> blockchain provider
-   * @param tokenAddress The address of the token to get the pool address for
-   * @param feeTier The fee tier to get the pool address for
-   * @returns The pool address for the given token and fee tier, or null if the pool does not exist
-   */
-  async getTokenWETHPool(wallet: Wallet, tokenAddress: string, feeTier: number): Promise<UniswapV3Pool> {
-    const poolAddress = await this.getTokenWETHPoolAddress(wallet, tokenAddress, feeTier);
-    if (poolAddress === ethers.ZeroAddress) {
-      throw new Error(`Pool not found for ${tokenAddress} and ${feeTier}`);
-    }
-    return new UniswapV3Pool(wallet, poolAddress);
+    const pool = await createV3Pool(wallet, this.FACTORY_ADDRESS, poolAddress, feeTier);
+    return pool;
   }
 
   /**

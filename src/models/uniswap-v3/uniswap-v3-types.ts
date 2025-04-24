@@ -12,6 +12,13 @@ export enum FeeAmount {
   HIGH = 10000,
 }
 
+export const FeeToTickSpacing = new Map<FeeAmount, number>([
+  [FeeAmount.LOWEST, 1],
+  [FeeAmount.LOW, 10],
+  [FeeAmount.MEDIUM, 60],
+  [FeeAmount.HIGH, 200],
+]);
+
 /**
  * Uniswap V3 Router contract parameter type definitions
  */

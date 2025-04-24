@@ -2,15 +2,15 @@ import { ERC20 } from "../../ERC/ERC20";
 import { ethers, Wallet } from "ethers";
 import { ChainType } from "../../../config/chain-config";
 
-import { UniswapV2Quoter } from "../../uniswap-v3/UniswapV3QuoterV2";
+import { UniswapV3QuoterV2 } from "../../uniswap-v3/UniswapV3QuoterV2";
 import { UniswapV3Factory } from "../../uniswap-v3/UniswapV3Factory";
 
 import { BuyTrade } from "../trades/BuyTrade";
 import { ITradingStrategy } from "../ITradingStrategy";
 import { ERC20_INTERFACE } from "../../../contract-abis/erc20";
-
+import { FeeAmount } from "../../uniswap-v3/uniswap-v3-types";
 export class UniswapV3Strategy implements ITradingStrategy {
-  private quoter: UniswapV2Quoter;
+  private quoter: UniswapV3QuoterV2;
   private factory: UniswapV3Factory;
 
   private strategyName: string;
@@ -19,7 +19,7 @@ export class UniswapV3Strategy implements ITradingStrategy {
   constructor(STRATEGY_NAME: string, chain: ChainType) {
     this.strategyName = STRATEGY_NAME;
     this.chain = chain;
-    this.quoter = new UniswapV2Quoter(chain);
+    this.quoter = new UniswapV3QuoterV2(chain);
     this.factory = new UniswapV3Factory(chain);
   }
 
@@ -31,12 +31,13 @@ export class UniswapV3Strategy implements ITradingStrategy {
 
   async getETHLiquidity(wallet: Wallet, tokenAddress: string): Promise<string> {
     try {
-      const feeTiers = [100, 500, 3000, 10000]; // 0.01%, 0.05%, 0.3%, 1%
+      const feeTiers = [FeeAmount.LOWEST, FeeAmount.LOW, FeeAmount.MEDIUM, FeeAmount.HIGH];
+      const wethAddress = this.factory.getWETHAddress();
 
       let bestLiquidity = 0n;
 
       for (const feeTier of feeTiers) {
-        const poolAddress = await this.factory.getTokenWETHPoolAddress(wallet, tokenAddress, feeTier);
+        const poolAddress = await this.factory.getPoolAddress(wallet, tokenAddress, wethAddress, feeTier);
         if (!poolAddress) continue;
 
         const weth = new ethers.Contract(this.factory!.getWETHAddress(), ERC20_INTERFACE, wallet);

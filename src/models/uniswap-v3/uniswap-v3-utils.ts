@@ -1,5 +1,8 @@
-import { FeeAmount } from "./uniswap-v3-types";
-
+import { Provider, Wallet } from "ethers";
+import { ethers } from "ethers";
+import { FeeAmount, FeeToTickSpacing } from "./uniswap-v3-types";
+import { UniswapV3Pool } from "./UniswapV3Pool";
+import { POOL_INTERFACE } from "../../contract-abis/uniswap-v3";
 /**
  * Converts sqrtPriceX96 to a human readable price
  * @param sqrtPriceX96 The sqrt price value from the pool
@@ -34,4 +37,28 @@ export function encodePath(path: string[], fees: FeeAmount[]): string {
   result += path[path.length - 1].slice(2);
 
   return result.toLowerCase();
+}
+
+/**
+ *
+ */
+export async function createV3Pool(
+  wallet: Wallet,
+  factoryAddress: string,
+  poolAddress: string,
+  feeTier: FeeAmount,
+): Promise<UniswapV3Pool> {
+  try {
+    const contract = new ethers.Contract(poolAddress, POOL_INTERFACE, wallet);
+    const [token0, token1] = await Promise.all([contract.token0(), contract.token1()]);
+
+    const tickSpacing = FeeToTickSpacing.get(feeTier);
+
+    if (!tickSpacing) throw new Error(`V3 Pool creation failed: Tick spacing not found for fee tier: ${feeTier}`);
+
+    return new UniswapV3Pool(poolAddress, factoryAddress, token0, token1, tickSpacing, feeTier, wallet);
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    throw new Error(`V3 Pool creation failed: ${errorMessage}`);
+  }
 }
