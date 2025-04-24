@@ -129,7 +129,7 @@ async function routerInteraction(chain: ChainType, wallet: Wallet) {
    */
 }
 
-async function exactInputSingleTrade(
+export async function exactInputSingleTrade(
   wallet: Wallet,
   router: UniswapV3SwapRouterV2,
   tokenIn: ERC20,
@@ -166,7 +166,7 @@ async function exactInputSingleTrade(
   }
 }
 
-async function exactInputTrade(
+export async function exactInputTrade(
   wallet: Wallet,
   router: UniswapV3SwapRouterV2,
   tokensToTrade: ERC20[],
@@ -310,7 +310,8 @@ async function approveSending(wallet: Wallet, token: ERC20, spender: string, amo
     const approveTx = await token.createApproveTransaction(spender, approveAmount);
     const approveTxHash = await wallet.sendTransaction(approveTx);
     const approveTxReceipt = await approveTxHash.wait();
-    console.log("Approve transaction receipt:", approveTxReceipt);
+    if (!approveTxReceipt) throw new Error("Approve transaction failed");
+    console.log("Approved!");
   } else {
     console.log("Token allowance is sufficient, skipping approve transaction");
   }
