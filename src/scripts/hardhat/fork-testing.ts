@@ -5,9 +5,8 @@ import { ERC20 } from "../../models/ERC/ERC20";
 import { createMinimalErc20 } from "../../lib/utils";
 import { UniswapV2Router } from "../../models/uniswap-v2/UniswapV2Router";
 import { WETH_INTERFACE } from "../../contract-abis/erc20";
-import { UniswapV3Router } from "../../models/uniswap-v3/UniswapV3SwapRouterV2";
+import { UniswapV3SwapRouterV2, UniswapV3QuoterV2 } from "../../models/uniswap-v3/index";
 import { ExactInputSingleParams, QuoteExactInputSingleParams } from "../../models/uniswap-v3/uniswap-v3-types";
-import { UniswapV2Quoter } from "../../models/uniswap-v3/UniswapV3QuoterV2";
 
 export async function forkTesting(wallet: Wallet, chain: ChainType) {
   const chainConfig = getChainConfig(chain);
@@ -78,8 +77,8 @@ async function v3RouterTest(
   outputToken: ERC20,
   tradeAmount: number,
 ) {
-  const v3Router = new UniswapV3Router(chain);
-  const quoter = new UniswapV2Quoter(chain);
+  const v3Router = new UniswapV3SwapRouterV2(chain);
+  const quoter = new UniswapV3QuoterV2(chain);
 
   const rawTradeAmount = ethers.parseUnits(tradeAmount.toString(), inputToken.getDecimals());
 
