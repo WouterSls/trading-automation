@@ -11,7 +11,7 @@ const config: HardhatUserConfig = {
       chainId: 1,
       forking: {
         url: process.env.ETH_RPC_URL!, // e.g. Alchemy/Infura
-        blockNumber: 22_332_168, // pin to a block for determinism & caching :contentReference[oaicite:1]{index=1}
+        blockNumber: 22_332_168, // pin to a block for determinism & caching
       },
     },
   },
