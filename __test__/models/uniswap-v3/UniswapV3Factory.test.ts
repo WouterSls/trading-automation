@@ -31,9 +31,10 @@ describe("ETH UniswapV3Factory Config", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     factory = new UniswapV3Factory(ChainType.ETH);
-    ethWallet = getEthWallet_1();
-    //Make sure hardhat mainnet fork is running when testing
-    //ethWallet = getHardhatWallet_1();
+    //ethWallet = getEthWallet_1();
+    // Make sure hardhat mainnet fork is running from block > 22_344_527
+    // This ensures all provided hardcoded pools addresses exist on the network
+    ethWallet = getHardhatWallet_1();
     arbWallet = getArbitrumWallet_1();
     offlineWallet = getOfflineSigner_1();
   });
