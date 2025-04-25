@@ -1,9 +1,9 @@
-import { Contract, Provider, Wallet } from "ethers";
+import { Contract, Wallet } from "ethers";
 import { POOL_INTERFACE } from "../../contract-abis/uniswap-v3";
 import { FeeAmount } from "./index";
 
 export interface Slot0 {
-  sqrtPriceX96: string;
+  sqrtPriceX96: bigint;
   tick: bigint;
   observationIndex: string;
   observationCardinality: string;
@@ -27,13 +27,13 @@ export class UniswapV3Pool {
   private poolContract: Contract;
 
   constructor(
+    wallet: Wallet,
     private poolAddress: string,
     private factoryAddress: string,
     private token0Address: string,
     private token1Address: string,
-    private tickSpacing: number,
     private fee: FeeAmount,
-    wallet: Wallet,
+    private tickSpacing: number,
   ) {
     this.poolContract = new Contract(poolAddress, POOL_INTERFACE, wallet);
   }
@@ -42,8 +42,8 @@ export class UniswapV3Pool {
   getFactoryAddress = (): string => this.factoryAddress;
   getToken0Address = (): string => this.token0Address;
   getToken1Address = (): string => this.token1Address;
-  getTickSpacing = (): number => this.tickSpacing;
   getFee = (): FeeAmount => this.fee;
+  getTickSpacing = (): number => this.tickSpacing;
 
   /**
    * Get the liquidity

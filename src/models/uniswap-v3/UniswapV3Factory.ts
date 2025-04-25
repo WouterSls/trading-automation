@@ -105,7 +105,7 @@ export class UniswapV3Factory {
 
     if (!tickSpacing) throw new Error(`V3 Pool creation failed: Tick spacing not found for fee tier: ${feeTier}`);
 
-    return new UniswapV3Pool(poolAddress, this.FACTORY_ADDRESS, token0, token1, tickSpacing, feeTier, wallet);
+    return new UniswapV3Pool(wallet, poolAddress, this.FACTORY_ADDRESS, token0, token1, tickSpacing, feeTier);
   }
 
   /**
