@@ -8,10 +8,8 @@ import { POOL_INTERFACE } from "../../contract-abis/uniswap-v3";
  * @param sqrtPriceX96 The sqrt price value from the pool
  * @returns The human readable price (token1/token0)
  */
-export function calculatePriceFromSqrtPriceX96(sqrtPriceX96: string): number {
-  const sqrtPriceX96BigInt = BigInt(sqrtPriceX96);
-
-  const numerator = sqrtPriceX96BigInt * sqrtPriceX96BigInt;
+export function calculatePriceFromSqrtPriceX96(sqrtPriceX96: bigint): number {
+  const numerator = sqrtPriceX96 * sqrtPriceX96;
   const denominator = 2n ** 192n;
 
   return Number((numerator * 10000000000n) / denominator) / 10000000000;

@@ -3,12 +3,6 @@ import { ChainType } from "../../../config/chain-config";
 import { getEthWallet_1 } from "../../../hooks/useSetup";
 import { calculatePriceFromSqrtPriceX96 } from "../../../models/uniswap-v3/uniswap-v3-utils";
 
-enum FeeTier {
-  "0.05%" = 500,
-  "0.3%" = 3000,
-  "1%" = 10000,
-}
-
 export async function factoryInteraction() {
   const wallet = getEthWallet_1();
   const DAI_ADDRESS = "0x6B175474E89094C44Da98b954EedeAC495271d0F";
