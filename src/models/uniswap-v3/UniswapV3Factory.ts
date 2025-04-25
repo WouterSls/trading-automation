@@ -1,8 +1,8 @@
 import { Contract, Provider, Wallet, ethers } from "ethers";
 import { ChainType, getChainConfig } from "../../config/chain-config";
-import { FACTORY_INTERFACE } from "../../contract-abis/uniswap-v3";
+import { FACTORY_INTERFACE, POOL_INTERFACE } from "../../contract-abis/uniswap-v3";
 import { validateNetwork } from "../../lib/utils";
-import { UniswapV3Pool, FeeAmount, FeeToTickSpacing, createV3Pool } from "./index";
+import { UniswapV3Pool, FeeAmount, FeeToTickSpacing } from "./index";
 
 export class UniswapV3Factory {
   private factoryContract: Contract;
@@ -98,8 +98,14 @@ export class UniswapV3Factory {
       throw new Error(`Provider not found for ${token0Address} and ${token1Address} and ${feeTier}`);
     }
 
-    const pool = await createV3Pool(wallet, this.FACTORY_ADDRESS, poolAddress, feeTier);
-    return pool;
+    const contract = new ethers.Contract(poolAddress, POOL_INTERFACE, wallet);
+    const [token0, token1] = await Promise.all([contract.token0(), contract.token1()]);
+
+    const tickSpacing = FeeToTickSpacing.get(feeTier);
+
+    if (!tickSpacing) throw new Error(`V3 Pool creation failed: Tick spacing not found for fee tier: ${feeTier}`);
+
+    return new UniswapV3Pool(poolAddress, this.FACTORY_ADDRESS, token0, token1, tickSpacing, feeTier, wallet);
   }
 
   /**
