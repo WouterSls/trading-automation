@@ -7,12 +7,12 @@ import {
   TransactionRequest,
 } from "ethers";
 
-import { ChainConfig, getChainConfig, ChainType } from "../../config/chain-config";
+import { getChainConfig, ChainType } from "../../config/chain-config";
 import { ERC20 } from "../ERC/ERC20";
 import { TradeSuccessInfo } from "../trading/trades/AbstractBaseTrade";
 
 import { UNISWAP_V2_ROUTER_INTERFACE } from "../../contract-abis/uniswap-v2";
-import { calculateSlippageAmount, extractRawTokenOutputFromLogs } from "../../lib/utils";
+import { extractRawTokenOutputFromLogs } from "../../lib/utils";
 import { TRADING_CONFIG } from "../../hooks/useSetup";
 
 export class UniswapV2Router {
@@ -35,7 +35,7 @@ export class UniswapV2Router {
 
     this.wethAddress = chainConfig.tokenAddresses.weth;
     this.udscAddress = chainConfig.tokenAddresses.usdc!;
-    this.routerAddress = chainConfig.uniswapV2.routerAddress;
+    this.routerAddress = chainConfig.uniswap.v2.routerAddress;
 
     if (!this.udscAddress || this.udscAddress.trim() === "") {
       throw new Error(`USDC address not defined for chain: ${chainConfig.name}`);

@@ -17,7 +17,7 @@ export async function quoterInteraction(chain: ChainType, wallet: Wallet) {
   const WETH_ADDRESS = chainConfig.tokenAddresses.weth;
   const DAI_ADDRESS = chainConfig.tokenAddresses.dai;
 
-  const quoterAddress = chainConfig.uniswapV3.quoterV2Address;
+  const quoterAddress = chainConfig.uniswap.v3.quoterV2Address;
 
   console.log("--------------------------------");
   console.log("Chain", chain);

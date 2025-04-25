@@ -12,7 +12,7 @@ export class UniswapV2Factory {
     const chainConfig = getChainConfig(chain);
     this.WETH_ADDRESS = chainConfig.tokenAddresses.weth;
 
-    this.factoryContract = new Contract(chainConfig.uniswapV2.factoryAddress, UNISWAP_V2_FACTORY_INTERFACE);
+    this.factoryContract = new Contract(chainConfig.uniswap.v2.factoryAddress, UNISWAP_V2_FACTORY_INTERFACE);
   }
 
   getWETHAddress = (): string => this.WETH_ADDRESS;

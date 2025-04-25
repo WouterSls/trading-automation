@@ -24,8 +24,8 @@ async function routerInteraction(chain: ChainType, wallet: Wallet) {
   const USDC_ADDRESS = chainConfig.tokenAddresses.usdc;
   const DAI_ADDRESS = chainConfig.tokenAddresses.dai;
   const WETH_ADDRESS = chainConfig.tokenAddresses.weth;
-  const ROUTER_ADDRESS = chainConfig.uniswapV3.swapRouterV2Address;
-  const FACTORY_ADDRESS = chainConfig.uniswapV3.factoryAddress;
+  const ROUTER_ADDRESS = chainConfig.uniswap.v3.swapRouterV2Address;
+  const FACTORY_ADDRESS = chainConfig.uniswap.v3.factoryAddress;
 
   if (!USDC_ADDRESS || USDC_ADDRESS.trim() === "") {
     throw new Error("Missing required USDC address");

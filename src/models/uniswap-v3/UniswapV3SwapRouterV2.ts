@@ -23,7 +23,7 @@ export class UniswapV3SwapRouterV2 {
 
     this.wethAddress = chainConfig.tokenAddresses.weth;
     this.usdcAddress = chainConfig.tokenAddresses.usdc!;
-    this.routerAddress = chainConfig.uniswapV3.swapRouterV2Address;
+    this.routerAddress = chainConfig.uniswap.v3.swapRouterV2Address;
 
     if (!this.usdcAddress || this.usdcAddress.trim() === "") {
       throw new Error(`USDC address not defined for chain: ${chainConfig.name}`);

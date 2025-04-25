@@ -1,4 +1,4 @@
-import { Contract, Provider, Wallet, ethers } from "ethers";
+import { Contract, Wallet, ethers } from "ethers";
 import { ChainType, getChainConfig } from "../../config/chain-config";
 import { FACTORY_INTERFACE, POOL_INTERFACE } from "../../contract-abis/uniswap-v3";
 import { validateNetwork } from "../../lib/utils";
@@ -14,7 +14,7 @@ export class UniswapV3Factory {
     const chainConfig = getChainConfig(chain);
 
     this.WETH_ADDRESS = chainConfig.tokenAddresses.weth;
-    this.FACTORY_ADDRESS = chainConfig.uniswapV3.factoryAddress;
+    this.FACTORY_ADDRESS = chainConfig.uniswap.v3.factoryAddress;
 
     if (!this.WETH_ADDRESS || this.WETH_ADDRESS.trim() === "") {
       throw new Error(`WETH address not defined for chain: ${chainConfig.name}`);
