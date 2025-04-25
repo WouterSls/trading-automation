@@ -1,0 +1,96 @@
+import { Contract, Wallet, ethers } from "ethers";
+import { ChainType, getChainConfig } from "../../config/chain-config";
+import { POOL_MANAGER_INTERFACE } from "../../contract-abis/uniswap-v4";
+import { validateNetwork } from "../../lib/utils";
+import { FeeToTickSpacing } from "../uniswap-v3/uniswap-v3-types";
+import { FeeAmount } from "../uniswap-v3/uniswap-v3-types";
+import { PoolKey, SwapParams } from "./uniswap-v4-types";
+
+export class UniswapV4PoolManager {
+  private poolManagerContract: Contract;
+
+  private POOL_MANAGER_ADDRESS: string;
+  private WETH_ADDRESS: string;
+
+  constructor(private chain: ChainType) {
+    const chainConfig = getChainConfig(chain);
+
+    this.WETH_ADDRESS = chainConfig.tokenAddresses.weth;
+    this.POOL_MANAGER_ADDRESS = chainConfig.uniswap.v4.poolManagerAddress;
+
+    if (!this.WETH_ADDRESS || this.WETH_ADDRESS.trim() === "") {
+      throw new Error(`WETH address not defined for chain: ${chainConfig.name}`);
+    }
+
+    if (!this.POOL_MANAGER_ADDRESS || this.POOL_MANAGER_ADDRESS.trim() === "") {
+      throw new Error(`Pool manager address not defined for chain: ${chainConfig.name}`);
+    }
+
+    this.poolManagerContract = new Contract(this.POOL_MANAGER_ADDRESS, POOL_MANAGER_INTERFACE);
+  }
+
+  getPoolManagerAddress = (): string => this.POOL_MANAGER_ADDRESS;
+  getWETHAddress = (): string => this.WETH_ADDRESS;
+
+  /**
+   * Validates that the address is actually a Uniswap V3 Factory by checking if it implements the required interface
+   * @param wallet Wallet instance -> blockchain provider
+   * @returns true if the initialized factory address is a valid Uniswap V3 Factory, false otherwise
+   */
+  async validateIsPoolManager(wallet: Wallet): Promise<boolean> {
+    this.poolManagerContract = this.poolManagerContract.connect(wallet) as Contract;
+
+    const isValid = await this._networkAndPoolManagerCheck(wallet);
+    if (!isValid) {
+      throw new Error(`Address ${this.poolManagerContract.address} is not a valid Uniswap V4 Pool Manager`);
+    }
+
+    return isValid;
+  }
+
+  /**
+   * Validates that the wallet is on the correct network and that the factory address is valid
+   * @param wallet Wallet instance -> blockchain provider
+   * @returns true if the wallet is on the correct network and that the factory address is valid, false otherwise
+   */
+  private async _networkAndPoolManagerCheck(wallet: Wallet): Promise<boolean> {
+    try {
+      await validateNetwork(wallet, this.chain);
+
+      const poolKey: PoolKey = {
+        currency0: "0x0000000000000000000000000000000000000001",
+        currency1: "0x0000000000000000000000000000000000000002",
+        fee: FeeAmount.MEDIUM,
+        tickSpacing: FeeToTickSpacing.get(FeeAmount.MEDIUM)!,
+        hooks: "0x",
+      };
+
+      const params: SwapParams = {
+        zeroForOne: true,
+        amountSpecified: 1000000000000000000n,
+        sqrtPriceLimitX96: 0n,
+      };
+
+      const hookData = "0x";
+
+      await this.poolManagerContract.swap.staticCall(poolKey, params, hookData);
+      return true;
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+
+      if (errorMessage.toLowerCase().includes("cannot read property")) {
+        throw new Error(`Wallet has missing provider: ${errorMessage}`);
+      }
+
+      if (errorMessage.toLowerCase().includes("cannot read properties")) {
+        throw new Error(`Wallet has missing provider: ${errorMessage}`);
+      }
+
+      if (errorMessage.includes("missing provider")) {
+        throw new Error(`Wallet has missing provider: ${errorMessage}`);
+      }
+
+      throw new Error(`${errorMessage}`);
+    }
+  }
+}
