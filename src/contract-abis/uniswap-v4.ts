@@ -38,9 +38,16 @@ const POOL_MANAGER_ABI = [
   "function updateDynamicLPFee((address,address,uint24,int24,address) key, uint24 newDynamicLPFee) external",
 ] as const;
 
+const POSITION_MANAGER_ABI = [
+  "function name() view returns (string)",
+  "function poolKeys(bytes32 poolId) view returns (bytes32[])",
+] as const;
+
 const STATE_MANAGER_ABI = [
+  "function poolManager() view returns (address)",
   "function getPoolKey(bytes32 poolId) external view returns (address currency0, address currency1, uint24 fee, int24 tickSpacing, address hooks)",
 ] as const;
 
 export const POOL_MANAGER_INTERFACE = new ethers.Interface(POOL_MANAGER_ABI);
+export const POSITION_MANAGER_INTERFACE = new ethers.Interface(POSITION_MANAGER_ABI);
 export const STATE_MANAGER_INTERFACE = new ethers.Interface(STATE_MANAGER_ABI);

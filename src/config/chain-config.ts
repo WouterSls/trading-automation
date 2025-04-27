@@ -29,6 +29,8 @@ export interface ChainConfig {
     };
     v4: {
       poolManagerAddress: string;
+      positionManagerAddress: string;
+      stateViewAddress: string;
       quoterAddress: string;
     };
     universalRouterAddress: string;
@@ -62,7 +64,9 @@ export const supportedChains: Record<ChainType, ChainConfig> = {
       },
       v4: {
         poolManagerAddress: "0x000000000004444c5dc75cB358380D2e3dE08A90",
+        positionManagerAddress: "0xbd216513d74c8cf14cf4747e6aaa6420ff64ee9e",
         quoterAddress: "0x52f0e24d1c21c8a0cb1e5a5dd6198556bd9e1203",
+        stateViewAddress: "0x7ffe42c4a5deea5b0fec41c94c136cf115597227",
       },
       universalRouterAddress: "0x66a9893cc07d91d95644aedd05d03f95e1dba8af",
     },
@@ -92,6 +96,8 @@ export const supportedChains: Record<ChainType, ChainConfig> = {
       },
       v4: {
         poolManagerAddress: "0x360e68faccca8ca495c1b759fd9eee466db9fb32",
+        positionManagerAddress: "	0xd88f38f930b7952f2db2432cb002e7abbf3dd869",
+        stateViewAddress: "0x76fd297e2d437cd7f76d50f01afe6160f86e9990",
         quoterAddress: "0x3972c00f7ed4885e145823eb7c655375d275a1c5",
       },
       universalRouterAddress: "0xa51afafe0263b40edaef0df8781ea9aa03e381a3",
@@ -122,6 +128,8 @@ export const supportedChains: Record<ChainType, ChainConfig> = {
       },
       v4: {
         poolManagerAddress: "0x498581ff718922c3f8e6a244956af099b2652b2b",
+        positionManagerAddress: "0x7c5f5a4bbd8fd63184577525326123b519429bdc",
+        stateViewAddress: "0xa3c0c9b65bad0b08107aa264b0f3db444b867a71",
         quoterAddress: "0x0d5e0f971ed27fbff6c2837bf31316121532048d",
       },
       universalRouterAddress: "0x6ff5693b99212da76ad316178a184ab56d299b43",
