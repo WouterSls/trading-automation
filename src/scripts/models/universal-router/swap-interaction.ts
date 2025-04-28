@@ -21,9 +21,15 @@ export async function v4SwapInteraction(chain: ChainType, wallet: Wallet) {
     inputAmount: bigint,
     minOutputAmount?: bigint,
   ) => {
+    console.log("inputCurrency:", inputCurrency);
+    console.log("outputCurrency:", outputCurrency);
+
     const { poolKey } = getPoolKeyAndId(inputCurrency, outputCurrency);
+    console.log("poolKey:", poolKey);
     const isInputCurrencyStringSmaller = inputCurrency < outputCurrency;
+    console.log("isInputCurrencyStringSmaller:", isInputCurrencyStringSmaller);
     const zeroForOne = isInputCurrencyStringSmaller;
+    console.log("zeroForOne:", zeroForOne);
     minOutputAmount = minOutputAmount ?? 0n;
     return {
       poolKey: poolKey,
@@ -40,17 +46,20 @@ export async function v4SwapInteraction(chain: ChainType, wallet: Wallet) {
   //const minOutputAmount = calculateSlippage(inputAmount);
 
   const swap1Params: IV4ExactInputSingle = createExactInputSingle(inputCurrency, outputCurrency, inputAmount);
-  const swap2Params: IV4ExactInputSingle = createExactInputSingle(usdcAddress, wagmiAddress, inputAmount);
+  //const swap2Params: IV4ExactInputSingle = createExactInputSingle(usdcAddress, wagmiAddress, inputAmount);
 
   const commandType = CommandType.V4_SWAP;
-  const cmd = router.createV4SwapExactInputSingleCommand(swap2Params);
-  const deadline = BigInt(Math.floor(Date.now() / 1000) + 1200);
+  const cmd = router.createV4ExactInputSingleCommand(swap1Params);
+  console.log("cmd:", cmd);
+  const deadline = Number(Math.floor(Date.now() / 1000) + 1200);
 
   const tx = await router.createExecuteTransaction(wallet, commandType, cmd, deadline);
-  tx.value = (inputAmount * 105n) / 100n;
-  const txResponse = await wallet.call(tx);
-  console.log("txResponse:");
-  console.log(txResponse);
+  console.log("tx:", tx);
+  //const txResponse = await wallet.sendTransaction(tx);
+  //console.log("txResponse:", txResponse);
+  //const txResponse = await wallet.call(tx);
+  //console.log("txResponse:");
+  //console.log(txResponse);
 }
 
 if (require.main === module) {

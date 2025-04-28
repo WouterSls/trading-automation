@@ -93,49 +93,23 @@ export class UniversalRouter {
     wallet: Wallet,
     commandType: CommandType,
     command: string,
-    deadline?: bigint,
+    deadline?: number,
   ): Promise<TransactionRequest> {
     this.routerContract = this.routerContract.connect(wallet) as Contract;
 
     await this._networkAndRouterCheck(wallet);
 
-    const dl = deadline ?? BigInt(Math.floor(Date.now() / 1000) + 1200);
+    const dl = deadline ?? Math.floor(Date.now() / 1000) + 1200;
 
     const encodedData = this.routerContract.interface.encodeFunctionData("execute", [commandType, command, dl]);
 
     const tx: TransactionRequest = {
       to: this.routerAddress,
       data: encodedData,
+      value: 1 * 10 ** 18,
     };
 
     return tx;
-  }
-
-  private getPoolKeys(inputCurrency: string, outputCurrency: string): Map<FeeAmount, PoolKey> {
-    const isInputCurrencyStringSmaller = inputCurrency < outputCurrency;
-    const currency0 = isInputCurrencyStringSmaller ? inputCurrency : outputCurrency;
-    const currency1 = isInputCurrencyStringSmaller ? outputCurrency : inputCurrency;
-    // TODO: get init event data  from the graph
-
-    const map: Map<FeeAmount, PoolKey> = new Map();
-
-    map.set(FeeAmount.LOW, {
-      currency0: currency0,
-      currency1: currency1,
-      fee: FeeAmount.LOW,
-      tickSpacing: FeeToTickSpacing.get(FeeAmount.LOW)!,
-      hooks: ethers.ZeroAddress,
-    });
-
-    map.set(FeeAmount.MEDIUM, {
-      currency0: currency0,
-      currency1: currency1,
-      fee: FeeAmount.MEDIUM,
-      tickSpacing: FeeToTickSpacing.get(FeeAmount.MEDIUM)!,
-      hooks: ethers.ZeroAddress,
-    });
-
-    return map;
   }
 
   /**
@@ -145,7 +119,7 @@ export class UniversalRouter {
    * @param hookData The hook data
    * @returns The encoded command
    */
-  public createV4SwapExactInputSingleCommand(exactInputSingle: IV4ExactInputSingle): string {
+  public createV4ExactInputSingleCommand(exactInputSingle: IV4ExactInputSingle): string {
     // Encode the 3 actions required to execute a V4 swap into a single command
     // actions can be found in Actions.sol in v4-periphery
     // 1) swap -> SWAP_EXACT_INPUT_SINGLE (0x06)
@@ -224,7 +198,8 @@ export class UniversalRouter {
     }
 
     try {
-      await this.routerContract.execute.staticCall("0x", [], { value: 0 });
+      const deadline = Math.floor(Date.now() / 1000) + 1200;
+      await this.routerContract.execute.staticCall("0x", [], deadline);
       return true;
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : "Unknown error";
