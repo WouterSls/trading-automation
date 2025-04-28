@@ -2,7 +2,7 @@ import { TransactionLike, TransactionRequest, Wallet, ethers } from "ethers";
 import { ChainType } from "../../../config/chain-config";
 import { UniswapV2Router, UniswapV2Factory } from "../../uniswap-v2/index";
 import { ERC20 } from "../../ERC/ERC20";
-import { BuyTrade } from "../trades/BuyTrade";
+import { BuyTrade, SellTrade, OutputToken } from "../types/_index";
 import { ERC20_INTERFACE } from "../../../contract-abis/erc20";
 import { ITradingStrategy } from "../ITradingStrategy";
 
@@ -57,6 +57,17 @@ export class UniswapV2Strategy implements ITradingStrategy {
   async simulateBuy(wallet: Wallet, token: ERC20, usdAmount: number): Promise<boolean> {
     await this.router.simulateBuySwap(wallet, token, usdAmount);
     return true;
+  }
+
+  async sell(wallet: Wallet, erc20: ERC20, tokenAmount: number, outputToken: OutputToken): Promise<SellTrade> {
+    return new Promise((resolve, reject) => {
+      reject(new Error("Not implemented"));
+    });
+  }
+  async simulateSell(wallet: Wallet, token: ERC20, tokenAmount: number): Promise<boolean> {
+    return new Promise((resolve, reject) => {
+      reject(new Error("Not implemented"));
+    });
   }
 
   private async getV2Reserves(wallet: Wallet, tokenAddress: string) {

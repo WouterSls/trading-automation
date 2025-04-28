@@ -1,7 +1,7 @@
 import { Wallet } from "ethers";
 import { ChainType } from "../../../config/chain-config";
 import { ERC20 } from "../../ERC/ERC20";
-import { BuyTrade } from "../trades/BuyTrade";
+import { BuyTrade, SellTrade, OutputToken } from "../types/_index";
 import { ITradingStrategy } from "../ITradingStrategy";
 
 export class AerodromeStrategy implements ITradingStrategy {
@@ -35,6 +35,17 @@ export class AerodromeStrategy implements ITradingStrategy {
   }
 
   async simulateBuy(wallet: Wallet, token: ERC20, usdAmount: number): Promise<boolean> {
+    return new Promise((resolve, reject) => {
+      reject(new Error("Not implemented"));
+    });
+  }
+
+  async sell(wallet: Wallet, erc20: ERC20, tokenAmount: number, outputToken: OutputToken): Promise<SellTrade> {
+    return new Promise((resolve, reject) => {
+      reject(new Error("Not implemented"));
+    });
+  }
+  async simulateSell(wallet: Wallet, token: ERC20, tokenAmount: number): Promise<boolean> {
     return new Promise((resolve, reject) => {
       reject(new Error("Not implemented"));
     });

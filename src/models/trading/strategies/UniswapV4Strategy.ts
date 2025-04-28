@@ -10,7 +10,7 @@ import { ERC20_INTERFACE } from "../../../contract-abis/erc20";
 import { FeeAmount } from "../../uniswap-v3/uniswap-v3-types";
 import { BuyTrade, SellTrade, OutputToken } from "../types/_index";
 
-export class UniswapV3Strategy implements ITradingStrategy {
+export class UniswapV4Strategy implements ITradingStrategy {
   private quoter: UniswapV3QuoterV2;
   private factory: UniswapV3Factory;
 
