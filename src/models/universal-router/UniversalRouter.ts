@@ -1,14 +1,18 @@
-import { Contract, ContractTransactionResponse, ethers, hexlify, TransactionRequest, Wallet } from "ethers";
+import { Contract, ContractTransactionResponse, ethers, hexlify, TransactionRequest, Wallet, AbiCoder } from "ethers";
 import { ChainType, getChainConfig } from "../../config/chain-config";
 import { UNIVERSAL_ROUTER_INTERFACE } from "../../contract-abis/universal-router";
 import { validateNetwork } from "../../lib/utils";
-import { Command } from "./commands";
-import { PoolKey, SwapParams } from "../uniswap-v4/uniswap-v4-types";
-
-export type CommandType = {
-  commands: string;
-  inputs: string[];
-};
+import { CommandType } from "./commands";
+import {
+  FeeAmount,
+  FeeToTickSpacing,
+  IV4ExactInputSingle,
+  PoolKey,
+  SettleParams,
+  SwapParams,
+} from "../uniswap-v4/uniswap-v4-types";
+import { encodeExactInputSingleSwapParams, encodeSettleParams, encodeTakeParams } from "./universal-router-utils";
+import { Action } from "./actions";
 
 export type V3SwapParams = {
   path: string;
@@ -58,13 +62,20 @@ export class UniversalRouter {
    * @param params The command parameters
    * @returns Transaction response
    */
-  async executeOld(wallet: Wallet, params: CommandType): Promise<ContractTransactionResponse> {
+  async execute(
+    wallet: Wallet,
+    commandType: CommandType,
+    command: string,
+    deadline?: bigint,
+  ): Promise<ContractTransactionResponse> {
     this.routerContract = this.routerContract.connect(wallet) as Contract;
 
     await this._networkAndRouterCheck(wallet);
 
+    const dl = deadline ?? BigInt(Math.floor(Date.now() / 1000) + 1200);
+
     try {
-      const txResponse: ContractTransactionResponse = await this.routerContract.execute(params.commands, params.inputs);
+      const txResponse: ContractTransactionResponse = await this.routerContract.execute(commandType, command, dl);
       return txResponse;
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : "Unknown error";
@@ -78,12 +89,19 @@ export class UniversalRouter {
    * @param params The command parameters
    * @returns Transaction request
    */
-  async createExecuteTransaction(wallet: Wallet, params: CommandType): Promise<TransactionRequest> {
+  async createExecuteTransaction(
+    wallet: Wallet,
+    commandType: CommandType,
+    command: string,
+    deadline?: bigint,
+  ): Promise<TransactionRequest> {
     this.routerContract = this.routerContract.connect(wallet) as Contract;
 
     await this._networkAndRouterCheck(wallet);
 
-    const encodedData = this.routerContract.interface.encodeFunctionData("execute", [params.commands, params.inputs]);
+    const dl = deadline ?? BigInt(Math.floor(Date.now() / 1000) + 1200);
+
+    const encodedData = this.routerContract.interface.encodeFunctionData("execute", [commandType, command, dl]);
 
     const tx: TransactionRequest = {
       to: this.routerAddress,
@@ -93,34 +111,84 @@ export class UniversalRouter {
     return tx;
   }
 
-  async execute(
-    wallet: Wallet,
-    cmd: CommandType & { value?: bigint },
-    deadline?: bigint,
-  ): Promise<ContractTransactionResponse> {
-    this.routerContract = this.routerContract.connect(wallet) as Contract;
-    await this._networkAndRouterCheck(wallet);
+  private getPoolKeys(inputCurrency: string, outputCurrency: string): Map<FeeAmount, PoolKey> {
+    const isInputCurrencyStringSmaller = inputCurrency < outputCurrency;
+    const currency0 = isInputCurrencyStringSmaller ? inputCurrency : outputCurrency;
+    const currency1 = isInputCurrencyStringSmaller ? outputCurrency : inputCurrency;
+    // TODO: get init event data  from the graph
 
-    const dl = deadline ?? BigInt(Math.floor(Date.now() / 1000) + 1200);
+    const map: Map<FeeAmount, PoolKey> = new Map();
 
-    return await this.routerContract.execute(cmd.commands, cmd.inputs, dl, { value: cmd.value ?? 0n });
+    map.set(FeeAmount.LOW, {
+      currency0: currency0,
+      currency1: currency1,
+      fee: FeeAmount.LOW,
+      tickSpacing: FeeToTickSpacing.get(FeeAmount.LOW)!,
+      hooks: ethers.ZeroAddress,
+    });
+
+    map.set(FeeAmount.MEDIUM, {
+      currency0: currency0,
+      currency1: currency1,
+      fee: FeeAmount.MEDIUM,
+      tickSpacing: FeeToTickSpacing.get(FeeAmount.MEDIUM)!,
+      hooks: ethers.ZeroAddress,
+    });
+
+    return map;
   }
 
-  public createV4SwapCommand(key: PoolKey, params: SwapParams, hookData = "0x"): CommandType {
-    const encodedInput = ethers.AbiCoder.defaultAbiCoder().encode(
-      ["tuple(address,address,uint24,int24,address)", "tuple(bool,int256,uint160)", "bytes"],
-      [
-        [key.currency0, key.currency1, key.fee, key.tickSpacing, key.hooks],
-        [params.zeroForOne, params.amountSpecified, params.sqrtPriceLimitX96],
-        hookData,
-      ],
+  /**
+   * Create a V4 swap exact input single command
+   * @param key The pool key
+   * @param params The swap parameters
+   * @param hookData The hook data
+   * @returns The encoded command
+   */
+  public createV4SwapExactInputSingleCommand(exactInputSingle: IV4ExactInputSingle): string {
+    // Encode the 3 actions required to execute a V4 swap into a single command
+    // actions can be found in Actions.sol in v4-periphery
+    // 1) swap -> SWAP_EXACT_INPUT_SINGLE (0x06)
+    // 2) settle ->
+    // 3) take ->
+
+    const swapParams: SwapParams = {
+      zeroForOne: exactInputSingle.zeroForOne,
+      amountIn: exactInputSingle.inputAmount,
+      amountOutMinimum: exactInputSingle.minOutputAmount ?? 0n,
+    };
+
+    const inputCurrency = exactInputSingle.zeroForOne
+      ? exactInputSingle.poolKey.currency0
+      : exactInputSingle.poolKey.currency1;
+
+    const encodedExactInputSingleParams = encodeExactInputSingleSwapParams(exactInputSingle.poolKey, swapParams);
+
+    const encodedSettleParams = encodeSettleParams(
+      inputCurrency,
+      exactInputSingle.inputAmount,
+      exactInputSingle.zeroForOne,
     );
 
-    // 0x10 is V4_SWAP
-    return {
-      commands: "0x10",
-      inputs: [encodedInput],
-    };
+    const encodedTakeParams = encodeTakeParams(
+      exactInputSingle.poolKey,
+      exactInputSingle.inputAmount,
+      exactInputSingle.zeroForOne,
+    );
+
+    console.log("encodedExactInputSingleParams:");
+    console.log(encodedExactInputSingleParams);
+    console.log();
+    console.log("encodedSettleParams:");
+    console.log(encodedSettleParams);
+    console.log();
+    console.log("encodedTakeParams:");
+    console.log(encodedTakeParams);
+    console.log();
+
+    const encodedCommand = [encodedExactInputSingleParams, encodedSettleParams, encodedTakeParams].join("");
+
+    return encodedCommand;
   }
 
   /**
@@ -128,7 +196,7 @@ export class UniversalRouter {
    * @param params V3 swap parameters
    * @returns Command and inputs for the execute method
    */
-  createV3ExactInputCommand(params: V3SwapParams): CommandType {
+  createV3ExactInputCommand(params: V3SwapParams): string {
     // This would encode the V3 exact input command
     // Command code for V3 exact input is typically 0x00 or similar
     const V3_EXACT_INPUT_COMMAND = "0x00";
@@ -139,10 +207,7 @@ export class UniversalRouter {
       [params.path, params.recipient, params.amountIn, params.amountOutMinimum],
     );
 
-    return {
-      commands: V3_EXACT_INPUT_COMMAND,
-      inputs: [encodedParams],
-    };
+    return "0x01";
   }
 
   /**

@@ -2,6 +2,7 @@ import { Contract, Wallet } from "ethers";
 import { ChainType, getChainConfig } from "../../config/chain-config";
 import { STATE_VIEW_INTERFACE } from "../../contract-abis/uniswap-v4";
 import { PoolKey } from "./uniswap-v4-types";
+import { computePoolId } from "./uniswap-v4-utils";
 
 export class UniswapV4StateView {
   private stateViewContract: Contract;
@@ -20,8 +21,11 @@ export class UniswapV4StateView {
     this.stateViewContract = new Contract(this.STATE_MANAGER_ADDRESS, STATE_VIEW_INTERFACE);
   }
 
-  async getSlot0(wallet: Wallet, poolId: string): Promise<PoolKey> {
+  async getSlot0(wallet: Wallet, poolKey: PoolKey): Promise<PoolKey> {
     this.stateViewContract = this.stateViewContract.connect(wallet) as Contract;
+
+    const poolId = computePoolId(poolKey);
+
     const slot0 = await this.stateViewContract.getSlot0(poolId);
     return slot0;
   }

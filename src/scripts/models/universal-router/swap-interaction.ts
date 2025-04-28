@@ -1,43 +1,56 @@
-import { Contract, ethers, Wallet } from "ethers";
+import { ethers, Wallet } from "ethers";
 import { getHardhatWallet_1 } from "../../../hooks/useSetup";
 import { ChainType, getChainConfig } from "../../../config/chain-config";
-import { UNIVERSAL_ROUTER_INTERFACE } from "../../../contract-abis/universal-router";
 import { UniversalRouter } from "../../../models/universal-router/UniversalRouter";
-import { SwapParams } from "../../../models/uniswap-v4/uniswap-v4-types";
-import { FeeToTickSpacing } from "../../../models/uniswap-v3/uniswap-v3-types";
-import { PoolKey } from "../../../models/uniswap-v4/uniswap-v4-types";
-import { FeeAmount } from "../../../models/uniswap-v3/uniswap-v3-types";
+import { IV4ExactInputSingle } from "../../../models/uniswap-v4/uniswap-v4-types";
+import { CommandType } from "../../../models/universal-router/commands";
+import { getPoolKeyAndId } from "../../../models/uniswap-v4/uniswap-v4-utils";
 
 export async function v4SwapInteraction(chain: ChainType, wallet: Wallet) {
   const chainConfig = getChainConfig(chain);
 
   const router = new UniversalRouter(chain);
+
   const usdcAddress = chainConfig.tokenAddresses.usdc;
-  const wethAddress = chainConfig.tokenAddresses.dai;
+  const ethAddress = ethers.ZeroAddress;
+  const wagmiAddress = "";
 
-  // 1) build your PoolKey
-  const key: PoolKey = {
-    currency0: usdcAddress,
-    currency1: wethAddress,
-    fee: FeeAmount.LOW,
-    tickSpacing: FeeToTickSpacing.get(FeeAmount.LOW)!,
-    hooks: ethers.ZeroAddress,
+  const createExactInputSingle = (
+    inputCurrency: string,
+    outputCurrency: string,
+    inputAmount: bigint,
+    minOutputAmount?: bigint,
+  ) => {
+    const { poolKey } = getPoolKeyAndId(inputCurrency, outputCurrency);
+    const isInputCurrencyStringSmaller = inputCurrency < outputCurrency;
+    const zeroForOne = isInputCurrencyStringSmaller;
+    minOutputAmount = minOutputAmount ?? 0n;
+    return {
+      poolKey: poolKey,
+      zeroForOne: zeroForOne,
+      inputAmount: inputAmount,
+      minOutputAmount: minOutputAmount,
+      hookData: poolKey.hooks,
+    };
   };
 
-  // 2) build your swap params
-  const params: SwapParams = {
-    zeroForOne: true,
-    amountSpecified: 1n * 10n ** 6n, // e.g. 1 USDC
-    sqrtPriceLimitX96: 0n, // no price limit
-  };
+  const inputCurrency = ethAddress;
+  const outputCurrency = usdcAddress;
+  const inputAmount = ethers.parseEther("1");
+  //const minOutputAmount = calculateSlippage(inputAmount);
 
-  // 3) create the single “unlock+swap” command
-  const cmd = router.createV4SwapCommand(key, params);
-  console.log("cmd:", cmd);
+  const swap1Params: IV4ExactInputSingle = createExactInputSingle(inputCurrency, outputCurrency, inputAmount);
+  const swap2Params: IV4ExactInputSingle = createExactInputSingle(usdcAddress, wagmiAddress, inputAmount);
 
-  // 4) execute it atomically
-  const tx = await router.execute(wallet, { ...cmd, value: 0n });
-  console.log("✅ atomic unlock+swap sent:", tx.hash);
+  const commandType = CommandType.V4_SWAP;
+  const cmd = router.createV4SwapExactInputSingleCommand(swap2Params);
+  const deadline = BigInt(Math.floor(Date.now() / 1000) + 1200);
+
+  const tx = await router.createExecuteTransaction(wallet, commandType, cmd, deadline);
+  tx.value = (inputAmount * 105n) / 100n;
+  const txResponse = await wallet.call(tx);
+  console.log("txResponse:");
+  console.log(txResponse);
 }
 
 if (require.main === module) {
