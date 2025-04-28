@@ -1,9 +1,9 @@
-import { Contract, ContractTransactionResponse, ethers, TransactionRequest, Wallet } from "ethers";
+import { Contract, ContractTransactionResponse, ethers, hexlify, TransactionRequest, Wallet } from "ethers";
 import { ChainType, getChainConfig } from "../../config/chain-config";
 import { UNIVERSAL_ROUTER_INTERFACE } from "../../contract-abis/universal-router";
 import { validateNetwork } from "../../lib/utils";
 import { Command } from "./commands";
-import { Action } from "./actions";
+import { PoolKey, SwapParams } from "../uniswap-v4/uniswap-v4-types";
 
 export type CommandType = {
   commands: string;
@@ -58,7 +58,7 @@ export class UniversalRouter {
    * @param params The command parameters
    * @returns Transaction response
    */
-  async execute(wallet: Wallet, params: CommandType): Promise<ContractTransactionResponse> {
+  async executeOld(wallet: Wallet, params: CommandType): Promise<ContractTransactionResponse> {
     this.routerContract = this.routerContract.connect(wallet) as Contract;
 
     await this._networkAndRouterCheck(wallet);
@@ -91,6 +91,36 @@ export class UniversalRouter {
     };
 
     return tx;
+  }
+
+  async execute(
+    wallet: Wallet,
+    cmd: CommandType & { value?: bigint },
+    deadline?: bigint,
+  ): Promise<ContractTransactionResponse> {
+    this.routerContract = this.routerContract.connect(wallet) as Contract;
+    await this._networkAndRouterCheck(wallet);
+
+    const dl = deadline ?? BigInt(Math.floor(Date.now() / 1000) + 1200);
+
+    return await this.routerContract.execute(cmd.commands, cmd.inputs, dl, { value: cmd.value ?? 0n });
+  }
+
+  public createV4SwapCommand(key: PoolKey, params: SwapParams, hookData = "0x"): CommandType {
+    const encodedInput = ethers.AbiCoder.defaultAbiCoder().encode(
+      ["tuple(address,address,uint24,int24,address)", "tuple(bool,int256,uint160)", "bytes"],
+      [
+        [key.currency0, key.currency1, key.fee, key.tickSpacing, key.hooks],
+        [params.zeroForOne, params.amountSpecified, params.sqrtPriceLimitX96],
+        hookData,
+      ],
+    );
+
+    // 0x10 is V4_SWAP
+    return {
+      commands: "0x10",
+      inputs: [encodedInput],
+    };
   }
 
   /**

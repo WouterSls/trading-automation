@@ -57,23 +57,7 @@ export class UniswapV4PoolManager {
     try {
       await validateNetwork(wallet, this.chain);
 
-      const poolKey: PoolKey = {
-        currency0: "0x0000000000000000000000000000000000000001",
-        currency1: "0x0000000000000000000000000000000000000002",
-        fee: FeeAmount.MEDIUM,
-        tickSpacing: FeeToTickSpacing.get(FeeAmount.MEDIUM)!,
-        hooks: "0x",
-      };
-
-      const params: SwapParams = {
-        zeroForOne: true,
-        amountSpecified: 1000000000000000000n,
-        sqrtPriceLimitX96: 0n,
-      };
-
-      const hookData = "0x";
-
-      await this.poolManagerContract.swap.staticCall(poolKey, params, hookData);
+      await this.poolManagerContract.protocolFeeController.staticCall();
       return true;
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : "Unknown error";

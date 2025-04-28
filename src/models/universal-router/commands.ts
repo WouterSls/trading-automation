@@ -8,6 +8,6 @@ export enum Command {
   PERMIT2_TRANSFER_FROM = 0x02,
   V2_SWAP_EXACT_IN = 0x08,
   V2_SWAP_EXACT_OUT = 0x09,
-  V4_SWAP = 0x10,
+  V4_SWAP = "0x10",
   // ... add other commands as needed
 }
