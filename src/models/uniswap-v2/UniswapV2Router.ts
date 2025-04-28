@@ -9,7 +9,7 @@ import {
 
 import { getChainConfig, ChainType } from "../../config/chain-config";
 import { ERC20 } from "../ERC/ERC20";
-import { TradeSuccessInfo } from "../trading/trades/AbstractBaseTrade";
+import { TradeSuccessInfo } from "../trading/types/AbstractBaseTrade";
 
 import { UNISWAP_V2_ROUTER_INTERFACE } from "../../contract-abis/uniswap-v2";
 import { extractRawTokenOutputFromLogs } from "../../lib/utils";
