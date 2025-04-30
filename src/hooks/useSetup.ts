@@ -13,6 +13,7 @@ import { ChainConfig, getChainConfig, ChainType } from "../config/chain-config";
 
 import { AlchemyApi } from "../services/AlchemyApi";
 import { GeckoTerminalApi } from "../services/GeckoTerminalApi";
+import { TheGraphApi } from "../services/TheGraphApi";
 
 export const TRADING_CONFIG = {
   USD_BUY_SIZE: 20,
@@ -149,4 +150,12 @@ export const getAlchemyApi = (): AlchemyApi => {
 
 export const getCoingeckoApi = (): GeckoTerminalApi => {
   return new GeckoTerminalApi();
+};
+
+export const getTheGraphApi = (): TheGraphApi => {
+  const apiKey = process.env.THE_GRAPH_API_KEY;
+  if (!apiKey) {
+    throw new Error("THE_GRAPH_API_KEY must be set");
+  }
+  return new TheGraphApi(apiKey);
 };
