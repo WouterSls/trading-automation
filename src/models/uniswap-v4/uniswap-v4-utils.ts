@@ -1,7 +1,8 @@
-import { PoolKey } from "./uniswap-v4-types";
+import { PoolKey, FeeAmount, FeeToTickSpacing } from "./uniswap-v4-types";
 import { keccak256, AbiCoder } from "ethers";
 import { ethers } from "ethers";
-import { FeeAmount, FeeToTickSpacing } from "../uniswap-v3/uniswap-v3-types";
+import { TheGraphApi } from "../../services/TheGraphApi";
+import { ChainType } from "../../config/chain-config";
 
 export function computePoolId(key: PoolKey): string {
   // ABI-encode exactly 5 slots (5 × 32 bytes = 0xa0 length in memory)
@@ -51,3 +52,10 @@ export function getPoolKeyAndId(
 
   return { poolKey, poolId };
 }
+
+/**
+ * Fetch all PoolKey objects for a given token pair.
+ */
+export async function getBestPoolKey(poolKeys: PoolKey[]): Promise<PoolKey> {
+  return poolKeys.sort((a, b) => a.fee - b.fee)[0];
+} 
