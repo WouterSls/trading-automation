@@ -1,5 +1,5 @@
-import { ChainType } from "../../config/chain-config";
-import { GeckoTerminalApi } from "../../services/GeckoTerminalApi";
+import { ChainType } from "../../src/config/chain-config";
+import { GeckoTerminalApi } from "../../src/services/GeckoTerminalApi";
 
 export async function getNewPools(chain: ChainType) {
   const api = new GeckoTerminalApi();

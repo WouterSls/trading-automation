@@ -1,6 +1,6 @@
-import { getEthWallet_1 } from "../../../hooks/useSetup";
-import { UniswapV3Factory, UniswapV3Pool, TickInfo, FeeAmount } from "../../../models/uniswap-v3";
-import { ChainType } from "../../../config/chain-config";
+import { getEthWallet_1 } from "../../../src/hooks/useSetup";
+import { UniswapV3Factory, UniswapV3Pool, TickInfo, FeeAmount } from "../../../src/models/uniswap-v3";
+import { ChainType } from "../../../src/config/chain-config";
 import { ethers } from "ethers";
 
 enum FeeTier {

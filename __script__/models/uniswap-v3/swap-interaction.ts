@@ -1,7 +1,7 @@
-import { ChainType, getChainConfig } from "../../../config/chain-config";
-import { getHardhatWallet_1 } from "../../../hooks/useSetup";
+import { ChainType, getChainConfig } from "../../../src/config/chain-config";
+import { getHardhatWallet_1 } from "../../../src/hooks/useSetup";
 import { Contract, ethers, Wallet } from "ethers";
-import { createMinimalErc20, validateNetwork } from "../../../lib/utils";
+import { createMinimalErc20, validateNetwork } from "../../../src/lib/utils";
 import {
   UniswapV3QuoterV2,
   UniswapV3Factory,
@@ -11,8 +11,8 @@ import {
   encodePath,
   ExactInputParams,
   UniswapV3Pool,
-} from "../../../models/uniswap-v3/index";
-import { WETH_INTERFACE } from "../../../contract-abis/erc20";
+} from "../../../src/models/uniswap-v3/index";
+import { WETH_INTERFACE } from "../../../src/contract-abis/erc20";
 import { exactInputSingleTrade, exactInputTrade } from "./router-interaction";
 
 async function singleTickSwapInteraction(chain: ChainType, wallet: Wallet) {

@@ -1,20 +1,20 @@
 import { ethers, Wallet, TransactionRequest } from "ethers";
 
-import { ChainType, getChainConfig } from "../../../config/chain-config";
+import { ChainType, getChainConfig } from "../../../src/config/chain-config";
 import {
   ExactInputParams,
   ExactInputSingleParams,
   ExactOutputParams,
   ExactOutputSingleParams,
   FeeAmount,
-} from "../../../models/uniswap-v3/uniswap-v3-types";
+} from "../../../src/models/uniswap-v3/uniswap-v3-types";
 
-import { UniswapV3SwapRouterV2 } from "../../../models/uniswap-v3/UniswapV3SwapRouterV2";
-import { UniswapV3Factory } from "../../../models/uniswap-v3/UniswapV3Factory";
-import { getEthWallet_1, getBaseWallet_1, getArbitrumWallet_2, getHardhatWallet_1 } from "../../../hooks/useSetup";
-import { createMinimalErc20, decodeLogs, validateNetwork } from "../../../lib/utils";
-import { ERC20 } from "../../../models/ERC/ERC20";
-import { encodePath } from "../../../models/uniswap-v3/uniswap-v3-utils";
+import { UniswapV3SwapRouterV2 } from "../../../src/models/uniswap-v3/UniswapV3SwapRouterV2";
+import { UniswapV3Factory } from "../../../src/models/uniswap-v3/UniswapV3Factory";
+import { getEthWallet_1, getBaseWallet_1, getArbitrumWallet_2, getHardhatWallet_1 } from "../../../src/hooks/useSetup";
+import { createMinimalErc20, decodeLogs, validateNetwork } from "../../../src/lib/utils";
+import { ERC20 } from "../../../src/models/ERC/ERC20";
+import { encodePath } from "../../../src/models/uniswap-v3/uniswap-v3-utils";
 
 async function routerInteraction(chain: ChainType, wallet: Wallet) {
   await validateNetwork(wallet, chain);

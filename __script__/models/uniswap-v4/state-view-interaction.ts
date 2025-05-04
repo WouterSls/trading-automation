@@ -1,11 +1,11 @@
 import { ethers, Wallet } from "ethers";
-import { ChainType, getChainConfig } from "../../../config/chain-config";
-import { getHardhatWallet_1 } from "../../../hooks/useSetup";
-import { PoolKey } from "../../../models/uniswap-v4/uniswap-v4-types";
-import { FeeAmount, FeeToTickSpacing } from "../../../models/uniswap-v3/uniswap-v3-types";
-import { validateNetwork } from "../../../lib/utils";
-import { computePoolId } from "../../../models/uniswap-v4/uniswap-v4-utils";
-import { UniswapV4StateView } from "../../../models/uniswap-v4/UniswapV4StateView";
+import { ChainType, getChainConfig } from "../../../src/config/chain-config";
+import { getHardhatWallet_1 } from "../../../src/hooks/useSetup";
+import { PoolKey } from "../../../src/models/uniswap-v4/uniswap-v4-types";
+import { FeeAmount, FeeToTickSpacing } from "../../../src/models/uniswap-v3/uniswap-v3-types";
+import { validateNetwork } from "../../../src/lib/utils";
+import { computePoolId } from "../../../src/models/uniswap-v4/uniswap-v4-utils";
+import { UniswapV4StateView } from "../../../src/models/uniswap-v4/UniswapV4StateView";
 
 export async function stateViewInteraction(chain: ChainType, wallet: Wallet) {
   await validateNetwork(wallet, chain);

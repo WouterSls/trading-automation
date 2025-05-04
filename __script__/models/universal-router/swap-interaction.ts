@@ -1,10 +1,10 @@
 import { ethers, Wallet } from "ethers";
-import { getHardhatWallet_1 } from "../../../hooks/useSetup";
-import { ChainType, getChainConfig } from "../../../config/chain-config";
-import { UniversalRouter } from "../../../models/universal-router/UniversalRouter";
-import { IV4ExactInputSingle } from "../../../models/uniswap-v4/uniswap-v4-types";
-import { CommandType } from "../../../models/universal-router/commands";
-import { getPoolKeyAndId } from "../../../models/uniswap-v4/uniswap-v4-utils";
+import { getHardhatWallet_1 } from "../../../src/hooks/useSetup";
+import { ChainType, getChainConfig } from "../../../src/config/chain-config";
+import { UniversalRouter } from "../../../src/models/universal-router/UniversalRouter";
+import { IV4ExactInputSingle } from "../../../src/models/uniswap-v4/uniswap-v4-types";
+import { CommandType } from "../../../src/models/universal-router/commands";
+import { getPoolKeyAndId } from "../../../src/models/uniswap-v4/uniswap-v4-utils";
 
 export async function v4SwapInteraction(chain: ChainType, wallet: Wallet) {
   const chainConfig = getChainConfig(chain);

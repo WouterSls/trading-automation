@@ -1,9 +1,9 @@
 import { Wallet } from "ethers";
-import { getArbitrumWallet_1, TRADING_CONFIG } from "../../hooks/useSetup";
-import { ARB_ARB_ADDRESS } from "../../lib/token-addresses";
-import { createMinimalErc20 } from "../../lib/utils";
-import { TraderFactory } from "../../models/trading/TraderFactory";
-import { GeckoTerminalApi } from "../../services/GeckoTerminalApi";
+import { getArbitrumWallet_1, TRADING_CONFIG } from "../../src/hooks/useSetup";
+import { ARB_ARB_ADDRESS } from "../../src/lib/token-addresses";
+import { createMinimalErc20 } from "../../src/lib/utils";
+import { TraderFactory } from "../../src/models/trading/TraderFactory";
+import { GeckoTerminalApi } from "../../src/services/GeckoTerminalApi";
 async function buyToken(usdAmount: number, _tokenAddress?: string, _wallet?: Wallet) {
   const wallet: Wallet = _wallet || (await getArbitrumWallet_1());
   const geckoTerminalApi = new GeckoTerminalApi();
