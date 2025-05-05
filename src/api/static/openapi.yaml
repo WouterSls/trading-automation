@@ -1,0 +1,105 @@
+openapi: 3.1.0
+info:
+  title: DeFi Typescript API
+  version: 1.0.0
+  description: Stateless API for interacting with common defi protocols using typescript abstractions 
+
+servers:
+  - url: /api/v1
+    description: API v1
+
+tags:
+  - name: System
+    description: System operations
+  - name: Data
+    description: Data operations
+  - name: Trader
+    description: Trader operations
+  - name: Wallet 
+    description: Wallet operations
+
+paths:
+  # System
+  /system/health:
+    get:
+      summary: Get system health
+      description: Returns the current system health
+      tags:
+        - System
+      responses:
+        "200":
+          description: System health
+          content:
+            application/json:
+              schema:
+                type: string
+                example: "OK"
+
+  # Trader
+  /trader/trade:
+    post:
+      summary: Get wallet info
+      description: Returns the current wallet info
+      tags:
+        - Trader
+      responses:
+        "200":
+          description: Wallet info
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  tradeDto:
+                    $ref: "#/components/schemas/TradeDto"
+
+  # Wallet
+  /wallet:
+    get:
+      summary: Get wallet info
+      description: Returns wallet info of all wallets
+      tags:
+        - Wallet
+      responses:
+        "200":
+          description: Wallet info
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  wallets:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/WalletDto"
+    post:
+      summary: Create wallet
+      description: Creates a new wallet
+      tags:
+        - Wallet
+      responses:
+        "200":
+          description: Wallet created
+          content:
+            application/json:
+              schema:
+                type: object
+
+components:
+  schemas:
+    TradeDto:
+      type: object
+      properties:
+        walletAddress:
+          type: string
+        tradeType:
+          type: string
+    WalletDto:
+      type: object
+      properties:
+        address:
+          type: string
