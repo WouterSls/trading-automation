@@ -4,7 +4,8 @@ import YAML from "yamljs";
 import path from "path";
 //import cors from "cors";
 
-import  SystemRouter  from "./api/system/SystemRouter";
+import SystemRouter from "./api/system/SystemRouter";
+import TraderRouter from "./api/trader/TraderRouter";
 
 //import { errorHandler, notFoundHandler } from "./lib/middlewares";
 
@@ -15,6 +16,7 @@ app.use(express.json());
 //app.use(cors({ origin: "*" }));
 
 app.use("/api/v1/system", SystemRouter);
+app.use("/api/v1/trader", TraderRouter);
 
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(openApiSpec));
 
