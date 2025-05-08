@@ -49,14 +49,25 @@ paths:
             application/json:
               schema:
                 type: object
+                properties:
+                  trades:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/TradeDto"
     post:
       summary: Create a new trade
       description: Creates a new trade
       tags:
         - Trades
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TradeCreationDto"
       responses:
         "200":
-          description: Wallet info
+          description: Trade created successfully
           content:
             application/json:
               schema:
@@ -204,3 +215,33 @@ components:
           type: array
           items:
             type: string
+
+    TradeCreationDto:
+      type: object
+      properties:
+        walletId:
+          type: number
+        chain:
+          type: string
+          enum: [BASE, ARB, ETH]
+          description: Blockchain network
+        inputTokenAddress:
+          type: string
+          description: Contract address of the input token
+        inputTokenAmount:
+          type: number
+          format: double
+          description: Amount of input token to trade
+        outputTokenAddress:
+          type: string
+          description: Contract address of the output token
+        outputToken:
+          type: string
+          enum: [USDC, WETH, ETH]
+          description: Output token symbol
+      required:
+        - walletId
+        - chain
+        - inputTokenAddress
+        - inputTokenAmount
+        - outputTokenAddress
