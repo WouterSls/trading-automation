@@ -13,8 +13,8 @@ tags:
     description: System operations
   - name: Data
     description: Data operations
-  - name: Trader
-    description: Trader operations
+  - name: Trades
+    description: Trades operations
   - name: Wallet 
     description: Wallet operations
 
@@ -35,13 +35,25 @@ paths:
                 type: string
                 example: "OK"
 
-  # Trader
-  /trader/trade:
-    post:
-      summary: Get wallet info
-      description: Returns the current wallet info
+  # Trades
+  /trades:
+    get:
+      summary: Get all trades
+      description: Returns all trades
       tags:
-        - Trader
+        - Trades
+      responses:
+        "200":
+          description: Trade info
+          content:
+            application/json:
+              schema:
+                type: object
+    post:
+      summary: Create a new trade
+      description: Creates a new trade
+      tags:
+        - Trades
       responses:
         "200":
           description: Wallet info
@@ -54,9 +66,48 @@ paths:
                     type: string
                   tradeDto:
                     $ref: "#/components/schemas/TradeDto"
+  /trades/uniV2:
+    post:
+      summary: Create a new trade using uniswap v2
+      description: Creates a new trade
+      tags:
+        - Trades
+      responses:
+        "200":
+          description: Wallet info
+          content:
+            application/json:
+              schema:
+                type: object
+  /trades/uniV3:
+    post:
+      summary: Create a new trade using uniswap v3
+      description: Creates a new trade
+      tags:
+        - Trades
+      responses:
+        "200":
+          description: Wallet info
+          content:
+            application/json:
+              schema:
+                type: object
+  /trades/uniV4:
+    post:
+      summary: Create a new trade using uniswap v4
+      description: Creates a new trade
+      tags:
+        - Trades
+      responses:
+        "200":
+          description: Wallet info
+          content:
+            application/json:
+              schema:
+                type: object
 
   # Wallet
-  /wallet:
+  /wallets:
     get:
       summary: Get wallet info
       description: Returns wallet info of all wallets
@@ -88,9 +139,43 @@ paths:
             application/json:
               schema:
                 type: object
+                properties:
+                  message:
+                    type: string
+                  wallet:
+                    $ref: "#/components/schemas/WalletDto"
 
+  /wallets/{id}:
+    get:
+      summary: Get wallet info
+      description: Returns wallet info of a specific wallet
+      tags:
+        - Wallet
+      responses:
+        "200":
+          description: Wallet info
+          content:
+            application/json:
+              schema:
+                type: object
+    put:
+      summary: Update wallet
+      description: Updates a wallet
+      tags:
+        - Wallet
+      responses:
+        "201":
+          description: Wallet updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
 components:
   schemas:
+    # Trader
     TradeDto:
       type: object
       properties:
@@ -98,8 +183,24 @@ components:
           type: string
         tradeType:
           type: string
+
+    # Wallet
+    WalletCreationDto:
+      type: object
+      properties:
+        name:
+          type: string
+        rpcUrl:
+          type: string
+        privateKey:
+          type: string
+
     WalletDto:
       type: object
       properties:
         address:
           type: string
+        chains:
+          type: array
+          items:
+            type: string

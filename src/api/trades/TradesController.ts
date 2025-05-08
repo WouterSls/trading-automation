@@ -25,4 +25,18 @@ export class TraderController {
       }
     }
   }
+
+  public static async tradeV2(req: Request, res: Response<TradeResponse>): Promise<void> {
+
+  }
+
+
+  public static async tradeV3(req: Request, res: Response<TradeResponse>): Promise<void> {
+
+  }
+
+
+  public static async tradeV4(req: Request, res: Response<TradeResponse>): Promise<void> {
+
+  }
 }
