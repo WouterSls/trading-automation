@@ -3,6 +3,29 @@ export enum ChainType {
   ARB = "arbitrum",
   BASE = "base",
 }
+export interface ChainMetadata {
+  envVar: string;
+  chainId: number;
+  forkBlockNumber: number;
+}
+
+export const CHAIN_METADATA: Record<ChainType, ChainMetadata> = {
+  [ChainType.ETH]: {
+    envVar: "ETH_RPC_URL",
+    chainId: 1,
+    forkBlockNumber: 22_344_527,
+  },
+  [ChainType.ARB]: {
+    envVar: "ARB_RPC_URL",
+    chainId: 42161,
+    forkBlockNumber: 334_908_297,
+  },
+  [ChainType.BASE]: {
+    envVar: "BASE_RPC_URL",
+    chainId: 8453,
+    forkBlockNumber: 30_005_952,
+  },
+};
 
 export interface ChainConfig {
   id: bigint;

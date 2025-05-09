@@ -43,20 +43,18 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/trader/trade": {
+    "/trades": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        get?: never;
-        put?: never;
         /**
-         * Get wallet info
-         * @description Returns the current wallet info
+         * Get all trades
+         * @description Returns all trades
          */
-        post: {
+        get: {
             parameters: {
                 query?: never;
                 header?: never;
@@ -65,7 +63,38 @@ export interface paths {
             };
             requestBody?: never;
             responses: {
-                /** @description Wallet info */
+                /** @description Trade info */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            trades?: components["schemas"]["TradeDto"][];
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        /**
+         * Create a new trade
+         * @description Creates a new trade
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["TradeCreationDto"];
+                };
+            };
+            responses: {
+                /** @description Trade created successfully */
                 200: {
                     headers: {
                         [name: string]: unknown;
@@ -85,7 +114,124 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/wallet": {
+    "/trades/uniV2": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Create a new trade using uniswap v2
+         * @description Creates a new trade
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Wallet info */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": Record<string, never>;
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/trades/uniV3": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Create a new trade using uniswap v3
+         * @description Creates a new trade
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Wallet info */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": Record<string, never>;
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/trades/uniV4": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Create a new trade using uniswap v4
+         * @description Creates a new trade
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Wallet info */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": Record<string, never>;
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/wallets": {
         parameters: {
             query?: never;
             header?: never;
@@ -139,11 +285,78 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
+                        "application/json": {
+                            message?: string;
+                            wallet?: components["schemas"]["WalletDto"];
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/wallets/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get wallet info
+         * @description Returns wallet info of a specific wallet
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Wallet info */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
                         "application/json": Record<string, never>;
                     };
                 };
             };
         };
+        /**
+         * Update wallet
+         * @description Updates a wallet
+         */
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Wallet updated */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            message?: string;
+                        };
+                    };
+                };
+            };
+        };
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -158,8 +371,36 @@ export interface components {
             walletAddress?: string;
             tradeType?: string;
         };
+        WalletCreationDto: {
+            name?: string;
+            rpcUrl?: string;
+            privateKey?: string;
+        };
         WalletDto: {
             address?: string;
+            chains?: string[];
+        };
+        TradeCreationDto: {
+            walletId: number;
+            /**
+             * @description Blockchain network
+             * @enum {string}
+             */
+            chain: "BASE" | "ARB" | "ETH";
+            /** @description Contract address of the input token */
+            inputTokenAddress: string;
+            /**
+             * Format: double
+             * @description Amount of input token to trade
+             */
+            inputTokenAmount: number;
+            /** @description Contract address of the output token */
+            outputTokenAddress: string;
+            /**
+             * @description Output token symbol
+             * @enum {string}
+             */
+            outputToken?: "USDC" | "WETH" | "ETH";
         };
     };
     responses: never;

@@ -14,6 +14,25 @@ const config: HardhatUserConfig = {
         blockNumber: 22_344_527, // pin to a block for determinism & caching
       },
     },
+    hardhat_arb: {
+      chainId: 42161,
+      url: process.env.ARB_RPC_URL!,
+      forking: {
+        url: process.env.ARB_RPC_URL!,
+        blockNumber: 334_908_297,
+      },
+    },
+    hardhat_base: {
+      chainId: 8453,
+      url: process.env.BASE_RPC_URL!,
+      forking: {
+        url: process.env.BASE_RPC_URL!,
+        blockNumber: 30_005_952,
+      },
+    },
+  },
+  mocha: {
+    timeout: 100000, // Longer timeout for fork tests
   },
 };
 export default config;

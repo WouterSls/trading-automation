@@ -192,6 +192,8 @@ export class UniversalRouter {
   private async _networkAndRouterCheck(wallet: Wallet): Promise<boolean> {
     await validateNetwork(wallet, this.chain);
 
+    this.routerContract = this.routerContract.connect(wallet) as Contract;
+
     const code = await wallet.provider!.getCode(this.routerAddress);
     if (code === "0x" || code === "0x0") {
       throw new Error(`No contract found at router address: ${this.routerAddress}`);
