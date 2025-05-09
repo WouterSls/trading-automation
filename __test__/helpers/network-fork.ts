@@ -6,23 +6,18 @@ dotenv.config({ path: path.resolve(__dirname, "../../.env") });
 import { ChainType, CHAIN_METADATA } from "../../src/config/chain-config";
 import { spawn, ChildProcess } from "child_process";
 
-/**
- * Helper class to manage network forks for testing
- */
 export class NetworkForkManager {
   private static hardhatProcess: ChildProcess | null = null;
 
-  /**
-   * Create a forked network for testing
-   * @param chain The blockchain to fork
-   * @returns Promise resolving when the fork is ready
-   */
   static async startHardhatFork(chain: ChainType): Promise<void> {
     if (this.hardhatProcess) {
       await this.cleanupHardhatFork();
     }
 
     const rpcEnvVar = CHAIN_METADATA[chain].envVar;
+    const rpcUrl = process.env[rpcEnvVar];
+    console.log("rpcEnvVar", rpcEnvVar);
+    console.log("rpcUrl", rpcUrl);
     if (!process.env[rpcEnvVar]) {
       throw new Error(`Missing RPC URL for chain ${chain}. Set ${rpcEnvVar} in your .env file.`);
     }
@@ -43,9 +38,6 @@ export class NetworkForkManager {
     });
   }
 
-  /**
-   * Cleanup and shutdown the fork
-   */
   static async cleanupHardhatFork(): Promise<void> {
     if (!this.hardhatProcess) return;
     const pid = this.hardhatProcess.pid!;

@@ -57,6 +57,22 @@ export class UniversalRouter {
   getUsdcAddress = () => this.usdcAddress;
 
   /**
+   * Validates that the address is actually a Universal Router by checking if it implements the required interface
+   * @param wallet Wallet instance -> blockchain provider
+   * @returns true if the initialized router address is a valid Universal Router, false otherwise
+   */
+  async validateIsRouter(wallet: Wallet): Promise<boolean> {
+    this.routerContract = this.routerContract.connect(wallet) as Contract;
+
+    const isValid = await this._networkAndRouterCheck(wallet);
+    if (!isValid) {
+      throw new Error(`Address ${this.routerContract.address} is not a valid Uniswap V4 Universal Router`);
+    }
+
+    return isValid;
+  }
+
+  /**
    * Execute commands on the Universal Router
    * @param wallet The wallet to execute the commands with
    * @param params The command parameters
@@ -190,16 +206,14 @@ export class UniversalRouter {
    * @returns true if the wallet is on the correct network and the router address is valid
    */
   private async _networkAndRouterCheck(wallet: Wallet): Promise<boolean> {
-    await validateNetwork(wallet, this.chain);
-
-    this.routerContract = this.routerContract.connect(wallet) as Contract;
-
-    const code = await wallet.provider!.getCode(this.routerAddress);
-    if (code === "0x" || code === "0x0") {
-      throw new Error(`No contract found at router address: ${this.routerAddress}`);
-    }
-
     try {
+      await validateNetwork(wallet, this.chain);
+
+      const code = await wallet.provider!.getCode(this.routerAddress);
+      if (code === "0x" || code === "0x0") {
+        throw new Error(`No contract found at router address: ${this.routerAddress}`);
+      }
+
       const deadline = Math.floor(Date.now() / 1000) + 1200;
       await this.routerContract.execute.staticCall("0x", [], deadline);
       return true;
