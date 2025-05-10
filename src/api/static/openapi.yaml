@@ -223,14 +223,15 @@ components:
           type: number
         chain:
           type: string
-          enum: [BASE, ARB, ETH]
+          enum: [ETH, ARB, BASE]
           description: Blockchain network
-        inputTokenAddress:
+        inputToken:
           type: string
-          description: Contract address of the input token
-        inputTokenAmount:
-          type: number
-          format: double
+          description: Address of the input token
+        rawInputAmount:
+          type: string
+          #type: number
+          #format: double
           description: Amount of input token to trade
         outputToken:
           type: string
@@ -239,6 +240,6 @@ components:
       required:
         - walletId
         - chain
-        - inputTokenAddress
-        - inputTokenAmount
+        - inputToken
+        - rawInputAmount
         - outputToken
