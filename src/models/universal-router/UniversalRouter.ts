@@ -2,17 +2,16 @@ import { Contract, ContractTransactionResponse, ethers, hexlify, TransactionRequ
 import { ChainType, getChainConfig } from "../../config/chain-config";
 import { UNIVERSAL_ROUTER_INTERFACE } from "../../contract-abis/universal-router";
 import { validateNetwork } from "../../lib/utils";
-import { CommandType } from "./commands";
 import {
-  FeeAmount,
-  FeeToTickSpacing,
-  IV4ExactInputSingle,
-  PoolKey,
-  SettleParams,
-  SwapParams,
-} from "../uniswap-v4/uniswap-v4-types";
+  CommandType,
+  IV4ExactInputSingleParams,
+  IV4SettleParams,
+  IV4TakeParams,
+  V4PoolAction,
+  V4PoolActionConstants,
+} from "./universal-router-types";
+import { PoolKey } from "../uniswap-v4/uniswap-v4-types";
 import { encodeExactInputSingleSwapParams, encodeSettleParams, encodeTakeParams } from "./universal-router-utils";
-import { Action } from "./actions";
 
 export type V3SwapParams = {
   path: string;
@@ -129,54 +128,68 @@ export class UniversalRouter {
   }
 
   /**
-   * Create a V4 swap exact input single command
+   * Create a bytes input for a V4_SWAP command using SWAP_EXACT_INPUT_SINGLE
    * @param key The pool key
    * @param params The swap parameters
    * @param hookData The hook data
-   * @returns The encoded command
+   * @returns The encoded bytes input
    */
-  public createV4ExactInputSingleCommand(exactInputSingle: IV4ExactInputSingle): string {
-    // Encode the 3 actions required to execute a V4 swap into a single command
-    // actions can be found in Actions.sol in v4-periphery
+  encodeV4SwapInput(
+    poolKey: PoolKey,
+    zeroForOne: boolean,
+    rawInputAmount: string,
+    minOutputAmount: bigint,
+    recipient: string,
+  ): string {
+    // Encode the 3 actions required to execute a V4 swap into a single input
     // 1) swap -> SWAP_EXACT_INPUT_SINGLE (0x06)
-    // 2) settle ->
-    // 3) take ->
+    // 2) settle -> SETTLE_ALL (0x0c)
+    // 3) take -> TAKE_ALL (0x0f)
 
-    const swapParams: SwapParams = {
-      zeroForOne: exactInputSingle.zeroForOne,
-      amountIn: exactInputSingle.inputAmount,
-      amountOutMinimum: exactInputSingle.minOutputAmount ?? 0n,
+    const inputAmount = BigInt(rawInputAmount);
+    const inputCurrency = zeroForOne ? poolKey.currency0 : poolKey.currency1;
+    const outputCurrency = zeroForOne ? poolKey.currency1 : poolKey.currency0;
+
+    const swapAction: V4PoolAction = V4PoolAction.SWAP_EXACT_IN_SINGLE;
+    const swapParams: IV4ExactInputSingleParams = {
+      poolKey: poolKey,
+      zeroForOne: zeroForOne,
+      amountIn: inputAmount,
+      amountOutMinimum: minOutputAmount ?? 0n,
+      hookData: ethers.ZeroAddress,
     };
-
-    const inputCurrency = exactInputSingle.zeroForOne
-      ? exactInputSingle.poolKey.currency0
-      : exactInputSingle.poolKey.currency1;
-
-    const encodedExactInputSingleParams = encodeExactInputSingleSwapParams(exactInputSingle.poolKey, swapParams);
-
-    const encodedSettleParams = encodeSettleParams(
-      inputCurrency,
-      exactInputSingle.inputAmount,
-      exactInputSingle.zeroForOne,
-    );
-
-    const encodedTakeParams = encodeTakeParams(
-      exactInputSingle.poolKey,
-      exactInputSingle.inputAmount,
-      exactInputSingle.zeroForOne,
-    );
-
-    console.log("encodedExactInputSingleParams:");
-    console.log(encodedExactInputSingleParams);
+    const encodedSwapParams = encodeExactInputSingleSwapParams(swapParams);
+    console.log("swap exact input single action:", swapAction);
+    console.log("encodedSwapParams:");
+    console.log(encodedSwapParams);
     console.log();
+
+    const settleAction: V4PoolAction = V4PoolAction.SETTLE;
+    const settleParams: IV4SettleParams = {
+      inputCurrency: inputCurrency,
+      amountIn: inputAmount,
+      bool: zeroForOne,
+    };
+    const encodedSettleParams = encodeSettleParams(settleParams);
+    console.log("settle action:", settleAction);
     console.log("encodedSettleParams:");
     console.log(encodedSettleParams);
     console.log();
+
+    const takeAction: V4PoolAction = V4PoolAction.TAKE;
+    const takeParams: IV4TakeParams = {
+      outputCurrency: outputCurrency,
+      //recipient: recipient,
+      recipient: this.routerAddress,
+      amount: V4PoolActionConstants.OPEN_DELTA,
+    };
+    const encodedTakeParams = encodeTakeParams(takeParams);
+    console.log("take action:", takeAction);
     console.log("encodedTakeParams:");
     console.log(encodedTakeParams);
     console.log();
 
-    const encodedCommand = [encodedExactInputSingleParams, encodedSettleParams, encodedTakeParams].join("");
+    const encodedCommand = [encodedSwapParams, encodedSettleParams, encodedTakeParams].join("");
 
     return encodedCommand;
   }
@@ -186,7 +199,7 @@ export class UniversalRouter {
    * @param params V3 swap parameters
    * @returns Command and inputs for the execute method
    */
-  createV3ExactInputCommand(params: V3SwapParams): string {
+  createV3SwapExactInputCommand(params: V3SwapParams): string {
     // This would encode the V3 exact input command
     // Command code for V3 exact input is typically 0x00 or similar
     const V3_EXACT_INPUT_COMMAND = "0x00";

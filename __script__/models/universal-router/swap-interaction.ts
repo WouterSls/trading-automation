@@ -1,69 +1,60 @@
 import { ethers, Wallet } from "ethers";
 import { getHardhatWallet_1 } from "../../../src/hooks/useSetup";
-import { ChainType, getChainConfig } from "../../../src/config/chain-config";
+import { ChainType, getChainConfig, getOutputTokenAddress } from "../../../src/config/chain-config";
 import { UniversalRouter } from "../../../src/models/universal-router/UniversalRouter";
-import { IV4ExactInputSingle } from "../../../src/models/uniswap-v4/uniswap-v4-types";
-import { CommandType } from "../../../src/models/universal-router/commands";
-import { getPoolKeyAndId } from "../../../src/models/uniswap-v4/uniswap-v4-utils";
+import { CommandType } from "../../../src/models/universal-router/universal-router-types";
+import { TradeCreationDto } from "../../../src/api/trades/TradesController";
+import { prepareV4SwapInput } from "../../../src/models/universal-router/universal-router-utils";
+import { OutputToken } from "../../../src/lib/types";
 
-export async function v4SwapInteraction(chain: ChainType, wallet: Wallet) {
-  const chainConfig = getChainConfig(chain);
+export async function v4SwapInteraction(wallet: Wallet, tradeCreationDto: TradeCreationDto) {
+  const router = new UniversalRouter(tradeCreationDto.chain as ChainType);
 
-  const router = new UniversalRouter(chain);
+  const { poolKey, zeroForOne } = await prepareV4SwapInput(tradeCreationDto);
+  const inputAmount = tradeCreationDto.rawInputAmount;
+  const minOutputAmount = 0n;
+  const recipient = wallet.address;
+  console.log("poolKey:", poolKey);
+  console.log("zeroForOne:", zeroForOne);
+  console.log();
 
-  const usdcAddress = chainConfig.tokenAddresses.usdc;
-  const ethAddress = ethers.ZeroAddress;
-  const wagmiAddress = "";
+  const command: CommandType = CommandType.V4_SWAP;
+  const input = router.encodeV4SwapInput(poolKey, zeroForOne, inputAmount, minOutputAmount, recipient);
 
-  const createExactInputSingle = (
-    inputCurrency: string,
-    outputCurrency: string,
-    inputAmount: bigint,
-    minOutputAmount?: bigint,
-  ) => {
-    console.log("inputCurrency:", inputCurrency);
-    console.log("outputCurrency:", outputCurrency);
-
-    const { poolKey } = getPoolKeyAndId(inputCurrency, outputCurrency);
-    console.log("poolKey:", poolKey);
-    const isInputCurrencyStringSmaller = inputCurrency < outputCurrency;
-    console.log("isInputCurrencyStringSmaller:", isInputCurrencyStringSmaller);
-    const zeroForOne = isInputCurrencyStringSmaller;
-    console.log("zeroForOne:", zeroForOne);
-    minOutputAmount = minOutputAmount ?? 0n;
-    return {
-      poolKey: poolKey,
-      zeroForOne: zeroForOne,
-      inputAmount: inputAmount,
-      minOutputAmount: minOutputAmount,
-      hookData: poolKey.hooks,
-    };
-  };
-
-  const inputCurrency = ethAddress;
-  const outputCurrency = usdcAddress;
-  const inputAmount = ethers.parseEther("1");
-  //const minOutputAmount = calculateSlippage(inputAmount);
-
-  const swap1Params: IV4ExactInputSingle = createExactInputSingle(inputCurrency, outputCurrency, inputAmount);
-  //const swap2Params: IV4ExactInputSingle = createExactInputSingle(usdcAddress, wagmiAddress, inputAmount);
-
-  const commandType = CommandType.V4_SWAP;
-  const cmd = router.createV4ExactInputSingleCommand(swap1Params);
-  console.log("cmd:", cmd);
   const deadline = Number(Math.floor(Date.now() / 1000) + 1200);
 
-  const tx = await router.createExecuteTransaction(wallet, commandType, cmd, deadline);
+  console.log("command:", command);
+  console.log("input:", input);
+  throw new Error("stop");
+  const tx = await router.createExecuteTransaction(wallet, command, input, deadline);
   console.log("tx:", tx);
-  //const txResponse = await wallet.sendTransaction(tx);
-  //console.log("txResponse:", txResponse);
-  //const txResponse = await wallet.call(tx);
-  //console.log("txResponse:");
-  //console.log(txResponse);
+  const txResponse = await wallet.call(tx);
+  console.log("txResponse:", txResponse);
 }
 
 if (require.main === module) {
   const wallet = getHardhatWallet_1();
   const chain = ChainType.ETH;
-  v4SwapInteraction(chain, wallet).catch(console.error);
+  const chainConfig = getChainConfig(chain);
+  const usdcAddress = chainConfig.tokenAddresses.usdc;
+
+  const rawInputAmount = ethers.parseEther("1");
+
+  const tradeCreationDto1: TradeCreationDto = {
+    walletId: 1,
+    chain: chain,
+    inputToken: ethers.ZeroAddress,
+    rawInputAmount: rawInputAmount.toString(),
+    outputToken: OutputToken.USDC,
+  };
+  v4SwapInteraction(wallet, tradeCreationDto1).catch(console.error);
+
+  const tradeCreationDto2: TradeCreationDto = {
+    walletId: 1,
+    chain: chain,
+    inputToken: usdcAddress,
+    rawInputAmount: rawInputAmount.toString(),
+    outputToken: OutputToken.ETH,
+  };
+  //v4SwapInteraction(wallet, tradeCreationDto2).catch(console.error);
 }

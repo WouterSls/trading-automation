@@ -4,6 +4,7 @@ import { BadRequestError, InternalServerError } from "../../lib/errors";
 
 type TradeResponse = paths["/trades"]["post"]["responses"][200]["content"]["application/json"];
 export type TradeDto = components["schemas"]["TradeDto"];
+export type TradeCreationDto = components["schemas"]["TradeCreationDto"];
 
 export class TraderController {
   public static async trade(req: Request, res: Response<TradeResponse>): Promise<void> {

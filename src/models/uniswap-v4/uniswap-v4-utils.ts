@@ -22,12 +22,12 @@ export function computePoolId(key: PoolKey): string {
  * @param hooks Optional hooks address (defaults to ZeroAddress)
  * @returns An object containing the pool key and its computed ID
  */
-export function getPoolKeyAndId(
+export function getPoolKey(
   tokenA: string,
   tokenB: string,
   fee: FeeAmount = FeeAmount.MEDIUM,
   hooks: string = ethers.ZeroAddress,
-): { poolKey: PoolKey; poolId: string } {
+): PoolKey {
   // Sort token addresses (lower address should be currency0)
   const [currency0, currency1] = tokenA.toLowerCase() < tokenB.toLowerCase() ? [tokenA, tokenB] : [tokenB, tokenA];
 
@@ -47,10 +47,7 @@ export function getPoolKeyAndId(
     hooks,
   };
 
-  // Compute pool ID
-  const poolId = computePoolId(poolKey);
-
-  return { poolKey, poolId };
+  return poolKey;
 }
 
 /**
@@ -58,4 +55,4 @@ export function getPoolKeyAndId(
  */
 export async function getBestPoolKey(poolKeys: PoolKey[]): Promise<PoolKey> {
   return poolKeys.sort((a, b) => a.fee - b.fee)[0];
-} 
+}

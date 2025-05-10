@@ -3,7 +3,7 @@ import path from "path";
 
 dotenv.config({ path: path.resolve(__dirname, "../../.env") });
 
-import { ChainType, CHAIN_METADATA } from "../../src/config/chain-config";
+import { ChainType } from "../../src/config/chain-config";
 import { spawn, ChildProcess } from "child_process";
 
 export class NetworkForkManager {
@@ -14,15 +14,31 @@ export class NetworkForkManager {
       await this.cleanupHardhatFork();
     }
 
-    const rpcEnvVar = CHAIN_METADATA[chain].envVar;
-    const rpcUrl = process.env[rpcEnvVar];
-    console.log("rpcEnvVar", rpcEnvVar);
-    console.log("rpcUrl", rpcUrl);
+    let rpcEnvVar: string = "";
+    let forkBlockNumber: number = 0;
+
+    switch (chain) {
+      case ChainType.ETH:
+        rpcEnvVar = "ETH_RPC_URL";
+        forkBlockNumber = 22_344_527;
+        break;
+      case ChainType.ARB:
+        rpcEnvVar = "ARB_RPC_URL";
+        forkBlockNumber = 334_908_297;
+        break;
+      case ChainType.BASE:
+        rpcEnvVar = "BASE_RPC_URL";
+        forkBlockNumber = 30_005_952;
+        break;
+      default:
+        throw new Error(`Unsupported chain: ${chain}`);
+    }
+
     if (!process.env[rpcEnvVar]) {
       throw new Error(`Missing RPC URL for chain ${chain}. Set ${rpcEnvVar} in your .env file.`);
     }
 
-    this.hardhatProcess = spawn("npx", ["hardhat", "node", "--fork", process.env[rpcEnvVar]], {
+    this.hardhatProcess = spawn("npx", ["hardhat", "node", "--fork", process.env[rpcEnvVar]!], {
       stdio: ["ignore", "pipe", "pipe"],
       detached: true,
     });

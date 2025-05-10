@@ -31,23 +31,3 @@ export interface PoolKey {
   tickSpacing: number; //uint24
   hooks: string;
 }
-
-export interface SwapParams {
-  zeroForOne: boolean;
-  amountIn: bigint;
-  amountOutMinimum: bigint;
-}
-
-export interface SettleParams {
-  inputCurrency: string;
-  amountIn: bigint;
-  bool: boolean;
-}
-
-export interface IV4ExactInputSingle {
-  poolKey: PoolKey;
-  zeroForOne: boolean;
-  inputAmount: bigint;
-  minOutputAmount: bigint;
-  hookData: string;
-}

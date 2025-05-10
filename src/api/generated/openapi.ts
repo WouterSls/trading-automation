@@ -387,20 +387,15 @@ export interface components {
              * @enum {string}
              */
             chain: "BASE" | "ARB" | "ETH";
-            /** @description Contract address of the input token */
-            inputTokenAddress: string;
-            /**
-             * Format: double
-             * @description Amount of input token to trade
-             */
-            inputTokenAmount: number;
-            /** @description Contract address of the output token */
-            outputTokenAddress: string;
+            /** @description Address of the input token */
+            inputToken: string;
+            /** @description Amount of input token to trade */
+            rawInputAmount: string;
             /**
              * @description Output token symbol
              * @enum {string}
              */
-            outputToken?: "USDC" | "WETH" | "ETH";
+            outputToken: "USDC" | "WETH" | "ETH";
         };
     };
     responses: never;

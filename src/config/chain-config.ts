@@ -1,31 +1,11 @@
-export enum ChainType {
-  ETH = "eth",
-  ARB = "arbitrum",
-  BASE = "base",
-}
-export interface ChainMetadata {
-  envVar: string;
-  chainId: number;
-  forkBlockNumber: number;
-}
+import { ethers } from "ethers";
+import { OutputToken } from "../lib/types";
 
-export const CHAIN_METADATA: Record<ChainType, ChainMetadata> = {
-  [ChainType.ETH]: {
-    envVar: "ETH_RPC_URL",
-    chainId: 1,
-    forkBlockNumber: 22_344_527,
-  },
-  [ChainType.ARB]: {
-    envVar: "ARB_RPC_URL",
-    chainId: 42161,
-    forkBlockNumber: 334_908_297,
-  },
-  [ChainType.BASE]: {
-    envVar: "BASE_RPC_URL",
-    chainId: 8453,
-    forkBlockNumber: 30_005_952,
-  },
-};
+export enum ChainType {
+  ETH = "ETH",
+  ARB = "ARB",
+  BASE = "BASE",
+}
 
 export interface ChainConfig {
   id: bigint;
@@ -200,4 +180,23 @@ export function mapNetworkNameToChainType(networkName: string): ChainType | unde
   }
 
   return undefined;
+}
+
+/**
+ * Get output token address for a given chain
+ * @param chain The chain type
+ * @param outputToken the output token Enum value
+ * @returns The output token address
+ */
+export function getOutputTokenAddress(chain: ChainType, outputToken: OutputToken): string {
+  const chainConfig = getChainConfig(chain);
+  if (outputToken === OutputToken.USDC) {
+    return chainConfig.tokenAddresses.usdc;
+  } else if (outputToken === OutputToken.WETH) {
+    return chainConfig.tokenAddresses.weth;
+  } else if (outputToken === OutputToken.ETH) {
+    return ethers.ZeroAddress;
+  } else {
+    throw new Error(`Unsupported output token: ${outputToken}`);
+  }
 }
