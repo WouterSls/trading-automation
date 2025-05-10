@@ -14,8 +14,6 @@ import {
 } from "../../../src/lib/token-addresses";
 import { ethers, Wallet } from "ethers";
 
-global.fetch = jest.fn();
-
 const MISSING_PROVIDER_ERROR_MESSAGE = "Wallet has missing provider";
 const INVALID_NETWORK_ERROR_MESSAGE = "Wallet and factory are on different networks";
 
@@ -26,7 +24,6 @@ describe("ETH UniswapV2Factory Config", () => {
   let offlineWallet: Wallet;
 
   beforeEach(() => {
-    jest.clearAllMocks();
     factory = new UniswapV2Factory(ChainType.ETH);
     ethWallet = getEthWallet_1();
     arbWallet = getArbitrumWallet_1();
