@@ -372,7 +372,6 @@ export interface components {
             tradeType?: string;
         };
         WalletCreationDto: {
-            name?: string;
             rpcUrl?: string;
             privateKey?: string;
         };
@@ -381,12 +380,12 @@ export interface components {
             chains?: string[];
         };
         TradeCreationDto: {
-            walletId: number;
+            wallet?: components["schemas"]["WalletCreationDto"];
             /**
              * @description Blockchain network
              * @enum {string}
              */
-            chain: "BASE" | "ARB" | "ETH";
+            chain: "ETH" | "ARB" | "BASE";
             /** @description Address of the input token */
             inputToken: string;
             /** @description Amount of input token to trade */

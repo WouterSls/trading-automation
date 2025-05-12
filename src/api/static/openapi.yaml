@@ -199,8 +199,6 @@ components:
     WalletCreationDto:
       type: object
       properties:
-        name:
-          type: string
         rpcUrl:
           type: string
         privateKey:
@@ -219,8 +217,9 @@ components:
     TradeCreationDto:
       type: object
       properties:
-        walletId:
-          type: number
+        wallet:
+          type: object
+          $ref: "#/components/schemas/WalletCreationDto"
         chain:
           type: string
           enum: [ETH, ARB, BASE]
