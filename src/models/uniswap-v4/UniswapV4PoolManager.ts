@@ -1,10 +1,7 @@
-import { Contract, Wallet, ethers } from "ethers";
+import { Contract, Wallet } from "ethers";
 import { ChainType, getChainConfig } from "../../config/chain-config";
 import { POOL_MANAGER_INTERFACE } from "../../contract-abis/uniswap-v4";
 import { validateNetwork } from "../../lib/utils";
-import { FeeToTickSpacing } from "../uniswap-v3/uniswap-v3-types";
-import { FeeAmount } from "../uniswap-v3/uniswap-v3-types";
-import { PoolKey, SwapParams } from "./uniswap-v4-types";
 
 export class UniswapV4PoolManager {
   private poolManagerContract: Contract;

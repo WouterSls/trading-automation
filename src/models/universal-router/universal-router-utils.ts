@@ -1,10 +1,10 @@
 import { AbiCoder, ethers } from "ethers";
 import { PoolKey } from "../uniswap-v4/uniswap-v4-types";
-import { getPoolKey } from "../uniswap-v4/uniswap-v4-utils";
+import { getLowPoolKey } from "../uniswap-v4/uniswap-v4-utils";
 import { TradeCreationDto } from "../../api/trades/TradesController";
 import { ChainType, getOutputTokenAddress } from "../../config/chain-config";
 import { OutputToken } from "../../lib/types";
-import { IV4ExactInputSingleParams, IV4SettleParams, IV4TakeParams } from "./universal-router-types";
+import { IV4ExactInputSingleParams, IV4SettleParams, IV4TakeParams, V4PoolAction } from "./universal-router-types";
 
 export function encodeExactInputSingleSwapParams(swapParams: IV4ExactInputSingleParams) {
   const poolKeyTuple = [
@@ -17,7 +17,7 @@ export function encodeExactInputSingleSwapParams(swapParams: IV4ExactInputSingle
 
   const encodedParams = AbiCoder.defaultAbiCoder().encode(
     [
-      "tuple(address,address,uint24,int24,address)", // your PoolKey
+      "tuple(address,address,uint24,int24,address)", // PoolKey
       "bool", // zeroForOne
       "uint128", // amountIn
       "uint128", // amountOutMinimum
@@ -44,6 +44,28 @@ export function encodeTakeParams(takeParams: IV4TakeParams) {
   return encodedParams;
 }
 
+export function encodeSwapCommandInput(
+  actions: string,
+  encodedSwapParams: string,
+  encodedSettleParams: string,
+  encodedTakeParams: string,
+) {
+  const encodedParams = AbiCoder.defaultAbiCoder().encode(
+    ["bytes", "bytes[]"],
+    [actions, [encodedSwapParams, encodedSettleParams, encodedTakeParams]],
+  );
+  return encodedParams;
+}
+
+export function createConcatenatedActions(actions: V4PoolAction[]) {
+  let result = "0x";
+  for (const action of actions) {
+    const hexAction = action.split("0x")[1];
+    result += hexAction;
+  }
+  return result;
+}
+
 export async function prepareV4SwapInput(tradeCreationDto: TradeCreationDto): Promise<{
   poolKey: PoolKey;
   zeroForOne: boolean;
@@ -52,7 +74,7 @@ export async function prepareV4SwapInput(tradeCreationDto: TradeCreationDto): Pr
     tradeCreationDto.chain as ChainType,
     tradeCreationDto.outputToken as OutputToken,
   );
-  const poolKey = getPoolKey(tradeCreationDto.inputToken, outputToken);
+  const poolKey = getLowPoolKey(tradeCreationDto.inputToken, outputToken);
   const zeroForOne = poolKey.currency0 === tradeCreationDto.inputToken;
 
   return { poolKey, zeroForOne };

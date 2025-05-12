@@ -11,7 +11,13 @@ import {
   V4PoolActionConstants,
 } from "./universal-router-types";
 import { PoolKey } from "../uniswap-v4/uniswap-v4-types";
-import { encodeExactInputSingleSwapParams, encodeSettleParams, encodeTakeParams } from "./universal-router-utils";
+import {
+  createConcatenatedActions,
+  encodeExactInputSingleSwapParams,
+  encodeSettleParams,
+  encodeSwapCommandInput,
+  encodeTakeParams,
+} from "./universal-router-utils";
 
 export type V3SwapParams = {
   path: string;
@@ -106,8 +112,8 @@ export class UniversalRouter {
    */
   async createExecuteTransaction(
     wallet: Wallet,
-    commandType: CommandType,
-    command: string,
+    commands: string,
+    inputs: string[],
     deadline?: number,
   ): Promise<TransactionRequest> {
     this.routerContract = this.routerContract.connect(wallet) as Contract;
@@ -116,12 +122,11 @@ export class UniversalRouter {
 
     const dl = deadline ?? Math.floor(Date.now() / 1000) + 1200;
 
-    const encodedData = this.routerContract.interface.encodeFunctionData("execute", [commandType, command, dl]);
+    const encodedData = this.routerContract.interface.encodeFunctionData("execute", [commands, inputs, dl]);
 
     const tx: TransactionRequest = {
       to: this.routerAddress,
       data: encodedData,
-      value: 1 * 10 ** 18,
     };
 
     return tx;
@@ -159,10 +164,6 @@ export class UniversalRouter {
       hookData: ethers.ZeroAddress,
     };
     const encodedSwapParams = encodeExactInputSingleSwapParams(swapParams);
-    console.log("swap exact input single action:", swapAction);
-    console.log("encodedSwapParams:");
-    console.log(encodedSwapParams);
-    console.log();
 
     const settleAction: V4PoolAction = V4PoolAction.SETTLE;
     const settleParams: IV4SettleParams = {
@@ -171,27 +172,19 @@ export class UniversalRouter {
       bool: zeroForOne,
     };
     const encodedSettleParams = encodeSettleParams(settleParams);
-    console.log("settle action:", settleAction);
-    console.log("encodedSettleParams:");
-    console.log(encodedSettleParams);
-    console.log();
 
     const takeAction: V4PoolAction = V4PoolAction.TAKE;
     const takeParams: IV4TakeParams = {
       outputCurrency: outputCurrency,
-      //recipient: recipient,
-      recipient: this.routerAddress,
+      recipient: recipient,
       amount: V4PoolActionConstants.OPEN_DELTA,
     };
     const encodedTakeParams = encodeTakeParams(takeParams);
-    console.log("take action:", takeAction);
-    console.log("encodedTakeParams:");
-    console.log(encodedTakeParams);
-    console.log();
 
-    const encodedCommand = [encodedSwapParams, encodedSettleParams, encodedTakeParams].join("");
+    const actions = createConcatenatedActions([swapAction, settleAction, takeAction]);
+    const encodedInput = encodeSwapCommandInput(actions, encodedSwapParams, encodedSettleParams, encodedTakeParams);
 
-    return encodedCommand;
+    return encodedInput;
   }
 
   /**
