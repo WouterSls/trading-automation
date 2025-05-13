@@ -1,12 +1,12 @@
 import { ethers, Wallet } from "ethers";
 import { getHardhatWallet_1 } from "../../../src/hooks/useSetup";
-import { ChainType, getChainConfig, getOutputTokenAddress } from "../../../src/config/chain-config";
+import { ChainType, getChainConfig } from "../../../src/config/chain-config";
 import { UniversalRouter } from "../../../src/models/universal-router/UniversalRouter";
 import { CommandType } from "../../../src/models/universal-router/universal-router-types";
 import { TradeCreationDto } from "../../../src/api/trades/TradesController";
-import { prepareV4SwapInput } from "../../../src/models/universal-router/universal-router-utils";
 import { OutputToken } from "../../../src/lib/types";
 import { createMinimalErc20, decodeLogs } from "../../../src/lib/utils";
+import { getLowPoolKey } from "../../../src/models/uniswap-v4/uniswap-v4-utils";
 
 export async function v4SwapInteraction(wallet: Wallet, tradeCreationDto: TradeCreationDto) {
   const chain: ChainType = tradeCreationDto.chain as ChainType;
@@ -32,7 +32,8 @@ export async function v4SwapInteraction(wallet: Wallet, tradeCreationDto: TradeC
   console.log(`\t${weth.getSymbol()} balance: ${wethBalance}`);
   console.log();
 
-  const { poolKey, zeroForOne } = await prepareV4SwapInput(tradeCreationDto);
+  const poolKey = getLowPoolKey(tradeCreationDto.inputToken, tradeCreationDto.outputToken);
+  const zeroForOne = poolKey.currency0 === tradeCreationDto.inputToken;
   const inputAmount = tradeCreationDto.rawInputAmount;
   const minOutputAmount = 0n;
   const recipient = wallet.address;
@@ -74,7 +75,7 @@ if (require.main === module) {
 
   const ethInputAmount = ethers.parseEther("1");
 
-  const tradeCreationDto1: TradeCreationDto = {
+  const tradeCreationDto: TradeCreationDto = {
     // Equivalent to getHardhatWallet_1()
     wallet: {
       rpcUrl: process.env.HARDHAT_RPC_URL,
@@ -85,5 +86,5 @@ if (require.main === module) {
     rawInputAmount: ethInputAmount.toString(),
     outputToken: OutputToken.USDC,
   };
-  v4SwapInteraction(wallet, tradeCreationDto1).catch(console.error);
+  v4SwapInteraction(wallet, tradeCreationDto).catch(console.error);
 }
