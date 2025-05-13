@@ -28,7 +28,6 @@ export interface ChainConfig {
       quoterV2Address: string;
       tickLensAddress: string;
       swapRouterV2Address: string;
-      permit2Address?: string;
     };
     v4: {
       poolManagerAddress: string;
@@ -36,6 +35,7 @@ export interface ChainConfig {
       stateViewAddress: string;
       quoterAddress: string;
     };
+    permit2Address: string;
     universalRouterAddress: string;
   };
   velo?: {};
@@ -63,7 +63,6 @@ export const supportedChains: Record<ChainType, ChainConfig> = {
         quoterV2Address: "0x61fFE014bA17989E743c5F6cB21bF9697530B21e",
         tickLensAddress: "0xbfd8137f7d1516D3ea5cA83523914859ec47F573",
         swapRouterV2Address: "0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45",
-        permit2Address: "0x000000000022D473030F116dDEE9F6B43aC78BA3",
       },
       v4: {
         poolManagerAddress: "0x000000000004444c5dc75cB358380D2e3dE08A90",
@@ -71,6 +70,7 @@ export const supportedChains: Record<ChainType, ChainConfig> = {
         quoterAddress: "0x52f0e24d1c21c8a0cb1e5a5dd6198556bd9e1203",
         stateViewAddress: "0x7ffe42c4a5deea5b0fec41c94c136cf115597227",
       },
+      permit2Address: "0x000000000022D473030F116dDEE9F6B43aC78BA3",
       universalRouterAddress: "0x66a9893cc07d91d95644aedd05d03f95e1dba8af",
     },
   },
@@ -95,7 +95,6 @@ export const supportedChains: Record<ChainType, ChainConfig> = {
         quoterV2Address: "0x61fFE014bA17989E743c5F6cB21bF9697530B21e",
         tickLensAddress: "0xbfd8137f7d1516D3ea5cA83523914859ec47F573",
         swapRouterV2Address: "0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45",
-        permit2Address: "0x000000000022D473030F116dDEE9F6B43aC78BA3",
       },
       v4: {
         poolManagerAddress: "0x360e68faccca8ca495c1b759fd9eee466db9fb32",
@@ -103,6 +102,7 @@ export const supportedChains: Record<ChainType, ChainConfig> = {
         stateViewAddress: "0x76fd297e2d437cd7f76d50f01afe6160f86e9990",
         quoterAddress: "0x3972c00f7ed4885e145823eb7c655375d275a1c5",
       },
+      permit2Address: "0x000000000022D473030F116dDEE9F6B43aC78BA3",
       universalRouterAddress: "0xa51afafe0263b40edaef0df8781ea9aa03e381a3",
     },
   },
@@ -127,7 +127,6 @@ export const supportedChains: Record<ChainType, ChainConfig> = {
         quoterV2Address: "0x3d4e44Eb1374240CE5F1B871ab261CD16335B76a",
         tickLensAddress: "0x0CdeE061c75D43c82520eD998C23ac2991c9ac6d",
         swapRouterV2Address: "0x2626664c2603336E57B271c5C0b26F421741e481",
-        permit2Address: "0x000000000022D473030F116dDEE9F6B43aC78BA3",
       },
       v4: {
         poolManagerAddress: "0x498581ff718922c3f8e6a244956af099b2652b2b",
@@ -135,6 +134,7 @@ export const supportedChains: Record<ChainType, ChainConfig> = {
         stateViewAddress: "0xa3c0c9b65bad0b08107aa264b0f3db444b867a71",
         quoterAddress: "0x0d5e0f971ed27fbff6c2837bf31316121532048d",
       },
+      permit2Address: "0x000000000022D473030F116dDEE9F6B43aC78BA3",
       universalRouterAddress: "0x6ff5693b99212da76ad316178a184ab56d299b43",
     },
   },
