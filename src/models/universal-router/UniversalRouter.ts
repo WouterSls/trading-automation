@@ -1,4 +1,4 @@
-import { Contract, ContractTransactionResponse, ethers, hexlify, TransactionRequest, Wallet, AbiCoder } from "ethers";
+import { Contract, ContractTransactionResponse, ethers, TransactionRequest, Wallet, AbiCoder } from "ethers";
 import { ChainType, getChainConfig } from "../../config/chain-config";
 import { UNIVERSAL_ROUTER_INTERFACE } from "../../contract-abis/universal-router";
 import { validateNetwork } from "../../lib/utils";
@@ -12,7 +12,6 @@ import {
 } from "./universal-router-types";
 import { PoolKey } from "../uniswap-v4/uniswap-v4-types";
 import {
-  createConcatenatedActions,
   encodeExactInputSingleSwapParams,
   encodeSettleParams,
   encodeSwapCommandInput,
@@ -181,7 +180,7 @@ export class UniversalRouter {
     };
     const encodedTakeParams = encodeTakeParams(takeParams);
 
-    const actions = createConcatenatedActions([swapAction, settleAction, takeAction]);
+    const actions = ethers.concat([swapAction, settleAction, takeAction]);
     const encodedInput = encodeSwapCommandInput(actions, encodedSwapParams, encodedSettleParams, encodedTakeParams);
 
     return encodedInput;
