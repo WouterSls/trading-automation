@@ -95,3 +95,11 @@ export interface IV3SwapExactOutput {
   encodedPath: string; //bytes
   tokensFromSender: boolean;
 }
+
+// ---------------------------- PERMIT2 ----------------------------
+export interface IPermitSingle {
+  token: string;
+  amount: number;
+  deadline: number;
+  nonce: number;
+}
