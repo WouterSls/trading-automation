@@ -1,5 +1,5 @@
 import { AbiCoder } from "ethers";
-import { IV4ExactInputSingleParams, IV4SettleParams, IV4TakeParams } from "./universal-router-types";
+import { IPermitSingle, IV4ExactInputSingleParams, IV4SettleParams, IV4TakeParams } from "./universal-router-types";
 
 export function encodeExactInputSingleSwapParams(swapParams: IV4ExactInputSingleParams) {
   const poolKeyTuple = [
@@ -45,9 +45,18 @@ export function encodeSwapCommandInput(
   encodedSettleParams: string,
   encodedTakeParams: string,
 ) {
-  const encodedParams = AbiCoder.defaultAbiCoder().encode(
+  const encodedSwapCommandInput = AbiCoder.defaultAbiCoder().encode(
     ["bytes", "bytes[]"],
     [actions, [encodedSwapParams, encodedSettleParams, encodedTakeParams]],
   );
-  return encodedParams;
+  return encodedSwapCommandInput;
+}
+
+export function encodePermitInput(owner: string, permitSingle: IPermitSingle, signature: string) {
+  const permitSingleTuple = [permitSingle.token, permitSingle.amount, permitSingle.expiration, permitSingle.nonce];
+  const encodedPermitInput = AbiCoder.defaultAbiCoder().encode(
+    ["address", "tuple(address,uint160,uint48,uint48)", "string"],
+    [owner, permitSingleTuple, signature],
+  );
+  return encodedPermitInput;
 }

@@ -1,18 +1,21 @@
 import { ethers, Wallet } from "ethers";
 import { getHardhatWallet_1 } from "../../../src/hooks/useSetup";
-import { ChainType, getChainConfig, getOutputTokenAddress } from "../../../src/config/chain-config";
+import { ChainConfig, ChainType, getChainConfig, getOutputTokenAddress } from "../../../src/config/chain-config";
 import { UniversalRouter } from "../../../src/models/universal-router/UniversalRouter";
-import { CommandType } from "../../../src/models/universal-router/universal-router-types";
+import { CommandType, IPermitSingle } from "../../../src/models/universal-router/universal-router-types";
 import { TradeCreationDto } from "../../../src/api/trades/TradesController";
 import { OutputToken } from "../../../src/lib/types";
 import { createMinimalErc20, decodeLogs } from "../../../src/lib/utils";
 import { UniswapV2Router } from "../../../src/models/uniswap-v2/UniswapV2Router";
 import { getLowPoolKey } from "../../../src/models/uniswap-v4/uniswap-v4-utils";
-import { PERMIT2_INTERFACE } from "../../../src/contract-abis/permit2";
+import { encodePermitInput } from "../../../src/models/universal-router/universal-router-utils";
+import { UNIVERSAL_ROUTER_INTERFACE } from "../../../src/contract-abis/universal-router";
+import { Permit2 } from "../../../src/models/permit2/Permit2";
 
 export async function v4SwapInteraction(wallet: Wallet, tradeCreationDto: TradeCreationDto) {
   const chain: ChainType = tradeCreationDto.chain as ChainType;
-  const chainConfig = getChainConfig(chain);
+  const chainConfig: ChainConfig = getChainConfig(chain);
+  const chainId = Number(chainConfig.id);
   const outputTokenAddress = getOutputTokenAddress(chain, tradeCreationDto.outputToken as OutputToken);
 
   const router = new UniversalRouter(chain);
@@ -40,74 +43,96 @@ export async function v4SwapInteraction(wallet: Wallet, tradeCreationDto: TradeC
   console.log(`\t${weth.getSymbol()} balance: ${wethBalance}`);
   console.log();
 
-  const poolKey = getLowPoolKey(tradeCreationDto.inputToken, outputTokenAddress);
-  const zeroForOne = poolKey.currency0 === tradeCreationDto.inputToken;
-  const inputAmount = tradeCreationDto.rawInputAmount;
-  const minOutputAmount = 0n;
-  const recipient = wallet.address;
+  // Permit2 interaction
+  const permit2 = new Permit2(chain);
 
-  console.log("Checking Permit2 allowance...");
-  const permit2Address = chainConfig.uniswap.permit2Address;
-  const permit2Allowance = await usdc.getRawAllowance(wallet.address, permit2Address);
-  console.log(`Permit2 allowance: ${permit2Allowance}`);
+  const nonce = await permit2.getPermitNonce(wallet, wallet.address, usdc.getTokenAddress(), router.getRouterAddress());
+  await permit2.displayAllowance(wallet, wallet.address, usdc.getTokenAddress(), router.getRouterAddress());
 
-  if (permit2Allowance < inputAmount) {
-    console.log(`Permit2 allowance is insufficient for trade amount ${inputAmount}`);
-    console.log(`Approving Permit2...`);
-    const approveTx = await usdc.createApproveTransaction(permit2Address, ethers.MaxUint256);
-    const approveTxResponse = await wallet.sendTransaction(approveTx);
-    const approveTxReceipt = await approveTxResponse.wait();
-    if (!approveTxReceipt) {
-      throw new Error("Transaction failed");
-    }
-    console.log("Approved!");
-  }
+  // Build inputs
+  const permitSingle: IPermitSingle = {
+    token: usdc.getTokenAddress(),
+    amount: BigInt(tradeCreationDto.rawInputAmount),
+    expiration: BigInt(Math.floor(Date.now() / 1000) + 1200),
+    nonce,
+  };
 
-  const swapCommand: CommandType = CommandType.V4_SWAP;
-  const permitCommand: CommandType = CommandType.PERMIT2_PERMIT;
-  const commands = ethers.concat([swapCommand, permitCommand]);
-  console.log("commands:", commands);
+  const signature = await permit2.getPermitSingleSignature(wallet, permitSingle);
 
-  const permit2 = new ethers.Contract(permit2Address, PERMIT2_INTERFACE, wallet);
-  const universalRouterAddress = router.getRouterAddress();
-  console.log("wallet.address:", wallet.address);
-  console.log("usdcAddress:", usdcAddress);
-  console.log("universalRouterAddress:", universalRouterAddress);
-  const [allowance, expiration, nonce] = await permit2.allowance(wallet.address, usdcAddress, universalRouterAddress);
-  console.log("allowance:", allowance);
-  console.log("expiration:", expiration);
-  console.log("nonce:", nonce);
+  const permit2Command = CommandType.PERMIT2_PERMIT;
+  const permit2Input = encodePermitInput(wallet.address, permitSingle, signature);
 
+  const tx = await router.createExecuteTransaction(wallet, permit2Command, [permit2Input]);
+  const txResponse = await wallet.sendTransaction(tx);
+  const txReceipt = await txResponse.wait();
+  if (txReceipt) throw new Error("Transaction failed");
+  console.log("Transaction succeeded");
+
+  // const signatureLike = (await wallet.signTypedData(domain, types, permitSingle)) as SignatureLike
+  // const signature = Signature.from(signatureLike);
   throw new Error("Stop");
 
-  const permitInput = encodePermitInput(permitSingle);
-  const swapInput = router.encodeV4SwapInput(poolKey, zeroForOne, inputAmount, minOutputAmount, recipient);
+  const poolKey = getLowPoolKey(tradeCreationDto.inputToken, outputTokenAddress);
+  const isZeroForOne = poolKey.currency0 === tradeCreationDto.inputToken;
+  const minOutputAmount = 0n;
 
-  const deadline = Number(Math.floor(Date.now() / 1000) + 1200);
-  const ethValue = "10";
+  const swapInput = router.encodeV4SwapInput(
+    poolKey,
+    isZeroForOne,
+    tradeCreationDto.rawInputAmount,
+    minOutputAmount,
+    wallet.address,
+  );
 
-  console.log("Trade request:");
-  console.log(tradeCreationDto);
-  console.log();
+  // Debug: decode the packed actions locally
+  const deadline = Math.floor(Date.now() / 1000) + 1200;
+  const commands = ethers.concat([CommandType.PERMIT2_PERMIT, CommandType.V4_SWAP]);
 
-  console.log("Creating V4 swap execute transaction...");
-  const tx = await router.createExecuteTransaction(wallet, commands, [input], deadline);
-  tx.value = ethers.parseEther(ethValue);
-  console.log("Transaction request:");
-  console.log(tx);
+  console.log("commands:", ethers.hexlify(commands));
+  console.log("Decoding actions locally for sanity check...");
+  try {
+    // commands: BytesLike (Uint8Array or hex string)
+    // permitInput, swapInput: each a hex string
+    const iface = UNIVERSAL_ROUTER_INTERFACE;
+    const encodedData = iface.encodeFunctionData("execute", [commands, [permitInput, swapInput], deadline]);
 
-  const txResponse = await wallet.sendTransaction(tx);
-  console.log("txResponse:", txResponse);
-  const txReceipt = await txResponse.wait();
-  if (!txReceipt) {
-    throw new Error("Transaction failed");
+    // 2) decode it back immediately
+    const decoded = iface.decodeFunctionData("execute", encodedData);
+    console.log("Decoded execute arguments:", {
+      commands: decoded[0],
+      inputs: decoded[1],
+      deadline: decoded[2],
+    });
+  } catch (err) {
+    console.error("Local decode error:", err);
   }
-  console.log("txReceipt:", txReceipt);
-  const logs = txReceipt.logs;
-  console.log("logs:", logs);
-  console.log();
+
+  // Create transaction
+
+  const txRequest = await router.createExecuteTransaction(wallet, commands, [permitInput, swapInput], deadline);
+
+  // Estimate gas to catch slice errors
+  try {
+    const gasEstimate = await wallet.provider!.estimateGas({
+      to: txRequest.to,
+      data: txRequest.data,
+    });
+    console.log("Gas estimate successful:", gasEstimate.toString());
+  } catch (err) {
+    console.error("Gas estimate revert:", err);
+  }
+
+  throw new Error("Stop");
+  // Send TX
+  const txResponse1 = await wallet.sendTransaction(txRequest);
+  console.log("txResponse:", txResponse.hash);
+  const receipt = await txResponse.wait();
+  if (!receipt) throw new Error("Transaction failed");
+  console.log("txReceipt:", receipt.hash);
+
+  // Decode logs
   console.log("Decoding logs...");
-  const decodedLogs = decodeLogs(logs);
+  const decodedLogs = decodeLogs(receipt.logs);
   console.log("decodedLogs:", decodedLogs);
 }
 
@@ -117,7 +142,7 @@ if (require.main === module) {
   const chainConfig = getChainConfig(chain);
   const usdcAddress = chainConfig.tokenAddresses.usdc;
 
-  const usdcInputAmount = ethers.parseUnits("1000", 6);
+  const usdcInputAmount = ethers.parseUnits("100", 6);
 
   const tradeCreationDto: TradeCreationDto = {
     // Equivalent to getHardhatWallet_1()

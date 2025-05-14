@@ -106,7 +106,8 @@ export class UniversalRouter {
   /**
    * Create an execute transaction
    * @param wallet The wallet to execute the commands with
-   * @param params The command parameters
+   * @param commands concatenated commands to execute in order
+   * @param inputs list of encoded inputs for each command
    * @returns Transaction request
    */
   async createExecuteTransaction(
@@ -133,9 +134,11 @@ export class UniversalRouter {
 
   /**
    * Create a bytes input for a V4_SWAP command using SWAP_EXACT_INPUT_SINGLE
-   * @param key The pool key
-   * @param params The swap parameters
-   * @param hookData The hook data
+   * @param poolKey The pool key for the swap
+   * @param zeroForOne trade first for second token | boolean
+   * @param rawInputAmount input amount parsed with tokens decimals
+   * @param minOutputAmount minimum output amount wanted for the trade
+   * @param recipient recipient of output tokens
    * @returns The encoded bytes input
    */
   encodeV4SwapInput(

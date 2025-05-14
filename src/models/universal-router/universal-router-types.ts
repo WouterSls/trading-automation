@@ -99,7 +99,7 @@ export interface IV3SwapExactOutput {
 // ---------------------------- PERMIT2 ----------------------------
 export interface IPermitSingle {
   token: string;
-  amount: number;
-  deadline: number;
-  nonce: number;
+  amount: bigint;
+  expiration: bigint;
+  nonce: bigint;
 }
