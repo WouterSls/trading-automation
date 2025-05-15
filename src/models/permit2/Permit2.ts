@@ -1,4 +1,4 @@
-import { Contract, ethers, Wallet } from "ethers";
+import { Contract, ethers, Signature, Wallet } from "ethers";
 import { ChainType, getChainConfig } from "../../config/chain-config";
 import { PERMIT2_INTERFACE } from "../../contract-abis/permit2";
 import { IPermitSingle } from "../universal-router/universal-router-types";
