@@ -1,5 +1,11 @@
 import { AbiCoder } from "ethers";
-import { IPermitSingle, IV4ExactInputSingleParams, IV4SettleParams, IV4TakeParams } from "./universal-router-types";
+import {
+  IPermitSingle,
+  IPermitTransferFrom,
+  IV4ExactInputSingleParams,
+  IV4SettleParams,
+  IV4TakeParams,
+} from "./universal-router-types";
 
 export function encodeExactInputSingleSwapParams(swapParams: IV4ExactInputSingleParams) {
   const poolKeyTuple = [
@@ -52,11 +58,29 @@ export function encodeSwapCommandInput(
   return encodedSwapCommandInput;
 }
 
-export function encodePermitInput(owner: string, permitSingle: IPermitSingle, signature: string) {
-  const permitSingleTuple = [permitSingle.token, permitSingle.amount, permitSingle.expiration, permitSingle.nonce];
+export function encodePermitSingleInput(permitSingle: IPermitSingle, signature: string) {
+  const permitDetailsTuple = [
+    permitSingle.details.token,
+    permitSingle.details.amount,
+    permitSingle.details.expiration,
+    permitSingle.details.nonce,
+  ] as const;
+  const permitTuple = [permitDetailsTuple, permitSingle.spender, permitSingle.sigDeadline] as const;
+
   const encodedPermitInput = AbiCoder.defaultAbiCoder().encode(
-    ["address", "tuple(address,uint160,uint48,uint48)", "string"],
-    [owner, permitSingleTuple, signature],
+    [
+      "tuple(tuple(address token,uint160 amount,uint48 expiration,uint48 nonce) details,address spender,uint256 sigDeadline)", // PermitSingle
+      "bytes", // signature
+    ],
+    [permitTuple, signature],
   );
   return encodedPermitInput;
+}
+
+export function encodePermitTransferFromInput(permitTransferFrom: IPermitTransferFrom) {
+  const transferFromInput = AbiCoder.defaultAbiCoder().encode(
+    ["address token", "address recipient", "uint256 amount"],
+    [permitTransferFrom.token, permitTransferFrom.recipient, permitTransferFrom.amount],
+  );
+  return transferFromInput;
 }

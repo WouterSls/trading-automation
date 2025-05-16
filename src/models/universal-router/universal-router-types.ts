@@ -98,8 +98,18 @@ export interface IV3SwapExactOutput {
 
 // ---------------------------- PERMIT2 ----------------------------
 export interface IPermitSingle {
+  details: {
+    token: string;
+    amount: bigint;
+    expiration: number;
+    nonce: bigint;
+  };
+  spender: string;
+  sigDeadline: number;
+}
+
+export interface IPermitTransferFrom {
   token: string;
+  recipient: string;
   amount: bigint;
-  expiration: bigint;
-  nonce: bigint;
 }
