@@ -23,14 +23,6 @@ export class Permit2 {
 
   getPermit2Address = () => this.permit2Address;
 
-  async displayAllowance(wallet: Wallet, owner: string, token: string, spender: string) {
-    this.permit2Contract = this.permit2Contract.connect(wallet) as Contract;
-    const [allowanceRaw, expiration, nonce] = await this.permit2Contract.allowance(owner, token, spender);
-    console.log("Allowance: ", allowanceRaw);
-    console.log("Expiration: ", expiration);
-    console.log("Nonce: ", nonce);
-  }
-
   async getPermitNonce(wallet: Wallet, owner: string, token: string, spender: string) {
     this.permit2Contract = this.permit2Contract.connect(wallet) as Contract;
     const [allowanceRaw, expiration, nonce] = await this.permit2Contract.allowance(owner, token, spender);
@@ -39,19 +31,28 @@ export class Permit2 {
 
   async getPermitSingleSignature(wallet: Wallet, permitSingle: IPermitSingle) {
     this.permit2Contract = this.permit2Contract.connect(wallet) as Contract;
+    const provider = wallet.provider;
+    if (!provider) throw new Error("No provider linked to wallet");
+
+    const chainId = (await provider.getNetwork()).chainId;
 
     const domain = {
       name: "Permit2",
-      version: "1",
-      chainId: this.chainId,
+      chainId: chainId,
       verifyingContract: this.permit2Address,
     };
+
     const types = {
-      PermitSingle: [
+      PermitDetails: [
         { name: "token", type: "address" },
         { name: "amount", type: "uint160" },
         { name: "expiration", type: "uint48" },
         { name: "nonce", type: "uint48" },
+      ],
+      PermitSingle: [
+        { name: "details", type: "PermitDetails" },
+        { name: "spender", type: "address" },
+        { name: "sigDeadline", type: "uint256" },
       ],
     };
 
