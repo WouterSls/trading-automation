@@ -73,8 +73,8 @@ export async function v4SwapInteraction(wallet: Wallet, tradeCreationDto: TradeC
   const usdc = await createMinimalErc20(usdcAddress, wallet.provider!);
   const weth = await createMinimalErc20(wethAddress, wallet.provider!);
 
-  //console.log("Swapping ETH for USDC...");
-  //await v2Router.swapEthInUsdForToken(wallet, usdc, 200);
+  console.log("Swapping ETH for USDC...");
+  await v2Router.swapEthInUsdForToken(wallet, usdc, 200);
 
   const usdcBalance = await usdc.getFormattedTokenBalance(wallet.address);
   const wethBalance = await weth.getFormattedTokenBalance(wallet.address);
