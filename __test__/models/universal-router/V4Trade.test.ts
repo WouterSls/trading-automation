@@ -5,8 +5,7 @@ import { ChainType, getChainConfig } from "../../../src/config/chain-config";
 import { getHardhatWallet_1 } from "../../../src/hooks/useSetup";
 import { getLowPoolKey } from "../../../src/models/uniswap-v4/uniswap-v4-utils";
 import { CommandType } from "../../../src/models/universal-router/universal-router-types";
-import { createMinimalErc20, decodeLogs } from "../../../src/lib/utils";
-import { ERC20 } from "../../../src/models/ERC/ERC20";
+import { createMinimalErc20 } from "../../../src/lib/utils";
 import { UniswapV2Router } from "../../../src/models/uniswap-v2/UniswapV2Router";
 describe("UniversalRouter V4 Trade Tests | ETH", () => {
   const chain = ChainType.ETH;
@@ -27,8 +26,8 @@ describe("UniversalRouter V4 Trade Tests | ETH", () => {
     await NetworkForkManager.cleanupHardhatFork();
   });
 
-  describe("Trades", () => {
-    it("ETH -> USDC trade", async () => {
+  describe("Execute", () => {
+    it("should buy USDC when swapping ETH for USDC via V4 swap", async () => {
       // Arrange
       const usdc = await createMinimalErc20(chainConfig.tokenAddresses.usdc, wallet.provider!);
 
@@ -58,7 +57,13 @@ describe("UniversalRouter V4 Trade Tests | ETH", () => {
       expect(usdcBalance).toBeGreaterThan(0n);
     });
 
-    it("USDC -> ETH trade", async () => {
+    it("should throw error when using Permit without PermitTransferFrom", async () => {
+      // Arrange
+      // Act
+      // Assert
+    });
+
+    it("should throw error when using PermitTransferFrom without Permit", async () => {
       // Arrange
       const usdc = await createMinimalErc20(chainConfig.tokenAddresses.usdc, wallet.provider!);
       const uniswapV2Router = new UniswapV2Router(chain);
@@ -74,6 +79,36 @@ describe("UniversalRouter V4 Trade Tests | ETH", () => {
 
       const poolKey = getLowPoolKey(inputToken, outputToken);
       const zeroForOne = poolKey.currency0 === inputToken;
+    });
+
+    it("should throw error when swapping USDC to ETH with correct execute inputs and no USDC balance", async () => {
+      // Arrange
+      const usdc = await createMinimalErc20(chainConfig.tokenAddresses.usdc, wallet.provider!);
+      const uniswapV2Router = new UniswapV2Router(chain);
+      await uniswapV2Router.swapEthInUsdForToken(wallet, usdc, 200);
+      const usdcBalanceBefore = await usdc.getFormattedTokenBalance(wallet.address);
+      expect(usdcBalanceBefore).toBeGreaterThan(0n);
+
+      const inputToken = usdc.getTokenAddress();
+      const outputToken = ethers.ZeroAddress;
+      const inputAmount = ethers.parseUnits("150", usdc.getDecimals());
+      const minOutputAmount = 0n;
+      const recipient = wallet.address;
+
+      const poolKey = getLowPoolKey(inputToken, outputToken);
+      const zeroForOne = poolKey.currency0 === inputToken;
+    });
+
+    it("should throw error when swapping USDC to ETH with correct execute inputs and no permit allowance", async () => {
+      // Arrange
+      // Act
+      // Assert
+    });
+
+    it("should sell USDC when swapping USDC for ETH with Permit and PermitTransferFrom and V4 Swap", async () => {
+      // Arrange
+      // Act
+      // Assert
     });
   });
 });
