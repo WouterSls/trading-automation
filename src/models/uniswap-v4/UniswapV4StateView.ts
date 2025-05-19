@@ -30,20 +30,29 @@ export class UniswapV4StateView {
     return slot0;
   }
 
-  async getLiquidity(wallet: Wallet, poolId: string): Promise<bigint> {
+  async getLiquidity(wallet: Wallet, poolKey: PoolKey): Promise<bigint> {
     this.stateViewContract = this.stateViewContract.connect(wallet) as Contract;
+
+    const poolId = computePoolId(poolKey);
+
     const liquidity = await this.stateViewContract.getLiquidity(poolId);
     return liquidity;
   }
 
-  async getTickInfo(wallet: Wallet, poolId: string, tick: number): Promise<any> {
+  async getTickInfo(wallet: Wallet, poolKey: PoolKey, tick: number): Promise<any> {
     this.stateViewContract = this.stateViewContract.connect(wallet) as Contract;
+
+    const poolId = computePoolId(poolKey);
+
     const tickInfo = await this.stateViewContract.getTickInfo(poolId, tick);
     return tickInfo;
   }
 
-  async getTickLiquidity(wallet: Wallet, poolId: string, tick: number): Promise<any> {
+  async getTickLiquidity(wallet: Wallet, poolKey: PoolKey, tick: number): Promise<any> {
     this.stateViewContract = this.stateViewContract.connect(wallet) as Contract;
+
+    const poolId = computePoolId(poolKey);
+
     const tickLiquidity = await this.stateViewContract.getTickLiquidity(poolId, tick);
     return tickLiquidity;
   }
