@@ -38,7 +38,10 @@ export interface ChainConfig {
     permit2Address: string;
     universalRouterAddress: string;
   };
-  velo?: {};
+  aerodrome: {
+    poolFactoryAddress: string;
+    routerAddress: string;
+  };
 }
 
 export const supportedChains: Record<ChainType, ChainConfig> = {
@@ -73,6 +76,10 @@ export const supportedChains: Record<ChainType, ChainConfig> = {
       permit2Address: "0x000000000022D473030F116dDEE9F6B43aC78BA3",
       universalRouterAddress: "0x66a9893cc07d91d95644aedd05d03f95e1dba8af",
     },
+    aerodrome: {
+      poolFactoryAddress: ethers.ZeroAddress,
+      routerAddress: ethers.ZeroAddress,
+    },
   },
   [ChainType.ARB]: {
     id: 42161n,
@@ -105,6 +112,10 @@ export const supportedChains: Record<ChainType, ChainConfig> = {
       permit2Address: "0x000000000022D473030F116dDEE9F6B43aC78BA3",
       universalRouterAddress: "0xa51afafe0263b40edaef0df8781ea9aa03e381a3",
     },
+    aerodrome: {
+      poolFactoryAddress: ethers.ZeroAddress,
+      routerAddress: ethers.ZeroAddress,
+    },
   },
   [ChainType.BASE]: {
     id: 8453n,
@@ -115,7 +126,7 @@ export const supportedChains: Record<ChainType, ChainConfig> = {
     tokenAddresses: {
       weth: "0x4200000000000000000000000000000000000006",
       usdc: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
-      dai: "",
+      dai: "0x50c5725949a6f0c72e6c4a641f24049a917db0cb",
     },
     uniswap: {
       v2: {
@@ -136,6 +147,10 @@ export const supportedChains: Record<ChainType, ChainConfig> = {
       },
       permit2Address: "0x000000000022D473030F116dDEE9F6B43aC78BA3",
       universalRouterAddress: "0x6ff5693b99212da76ad316178a184ab56d299b43",
+    },
+    aerodrome: {
+      poolFactoryAddress: "0x420DD381b31aEf6683db6B902084cB0FFECe40Da",
+      routerAddress: "0xcF77a3Ba9A5CA399B7c97c74d54e5b1Beb874E43",
     },
   },
 };

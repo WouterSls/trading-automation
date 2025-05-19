@@ -1,18 +1,59 @@
-import { Contract } from "ethers";
+import { Contract, TransactionRequest, Wallet } from "ethers";
 import { ChainConfig, ChainType, getChainConfig } from "../../config/chain-config";
-import { ROUTER_INTERFACE } from "../../contract-abis/uniswap-v3";
+import { AERODROME_ROUTER_INTERFACE } from "../../contract-abis/aerodrome";
+import { ExactETHForTokensParams, TradeRoute } from "./aerodrome-types";
 
 export class AerodromeRouter {
-    private routerContract: Contract;
+  private routerContract: Contract;
 
-    constructor(chain: ChainType) {
-        const chainConfig = getChainConfig(chain);
+  private routerAddress: string;
+  private factoryAddress: string;
 
-        const routerAddress = chainConfig.uniswap.universalRouterAddress;
+  constructor(chain: ChainType) {
+    const chainConfig = getChainConfig(chain);
 
-        this.routerContract = new Contract(routerAddress, ROUTER_INTERFACE );
+    this.routerAddress = chainConfig.aerodrome.routerAddress;
+    this.factoryAddress = chainConfig.aerodrome.poolFactoryAddress;
+
+    if (!this.routerAddress || this.routerAddress.trim() === "") {
+      throw new Error(`Aerodrome Router address not defined for chain: ${chainConfig.name}`);
     }
 
-    
-    
+    this.routerContract = new Contract(this.routerAddress, AERODROME_ROUTER_INTERFACE);
+  }
+
+  getRouterAddress = (): string => this.routerAddress;
+  getFactoryAddress = (): string => this.factoryAddress;
+
+  async getAmountsOut(wallet: Wallet, amountIn: bigint, routes: TradeRoute[]) {
+    this.routerContract = this.routerContract.connect(wallet) as Contract;
+
+    const amountsOut = await this.routerContract.getAmountsOut(amountIn, routes);
+    const amountOut = amountsOut[amountsOut.length - 1];
+    return amountOut;
+  }
+
+  async createSwapExactETHForTokensTransaction(
+    wallet: Wallet,
+    amountOutMin: bigint,
+    routes: TradeRoute[],
+    to: string,
+    deadline: number,
+  ): Promise<TransactionRequest> {
+    this.routerContract = this.routerContract.connect(wallet) as Contract;
+
+    const encodedData = this.routerContract.interface.encodeFunctionData("swapExactETHForTokens", [
+      amountOutMin,
+      routes,
+      to,
+      deadline,
+    ]);
+
+    const tx: TransactionRequest = {
+      to: this.routerAddress,
+      data: encodedData,
+    };
+
+    return tx;
+  }
 }
