@@ -6,16 +6,28 @@ import { UniswapV2Pair } from "./UniswapV2Pair";
 
 export class UniswapV2Factory {
   private factoryContract: Contract;
-  private WETH_ADDRESS: string;
+  private wethAddress: string;
+  private factoryAddress: string;
 
   constructor(private chain: ChainType) {
     const chainConfig = getChainConfig(chain);
-    this.WETH_ADDRESS = chainConfig.tokenAddresses.weth;
 
-    this.factoryContract = new Contract(chainConfig.uniswap.v2.factoryAddress, UNISWAP_V2_FACTORY_INTERFACE);
+    this.wethAddress = chainConfig.tokenAddresses.weth;
+    this.factoryAddress = chainConfig.uniswap.v2.factoryAddress;
+
+    if (!this.factoryAddress || this.factoryAddress.trim() == "") {
+      throw new Error(`No Uniswap V2 factory address defined for chain ${chain}`);
+    }
+
+    if (!this.wethAddress || this.wethAddress.trim() == "") {
+      throw new Error(`No WETH address defined for chain ${chain}`);
+    }
+
+    this.factoryContract = new Contract(this.factoryAddress, UNISWAP_V2_FACTORY_INTERFACE);
   }
 
-  getWETHAddress = (): string => this.WETH_ADDRESS;
+  getWETHAddress = (): string => this.wethAddress;
+  getFactoryAddress = (): string => this.factoryAddress;
 
   /**
    * Validates that the address is actually a Uniswap V2 Factory by checking if it implements the required interface
@@ -51,7 +63,7 @@ export class UniswapV2Factory {
       throw new Error(`Address ${this.factoryContract.address} is not a valid Uniswap V2 Factory`);
     }
 
-    const pairAddress = await this.factoryContract.getPair.staticCall(tokenAddress, this.WETH_ADDRESS);
+    const pairAddress = await this.factoryContract.getPair.staticCall(tokenAddress, this.wethAddress);
 
     if (pairAddress === ethers.ZeroAddress) {
       return ethers.ZeroAddress;

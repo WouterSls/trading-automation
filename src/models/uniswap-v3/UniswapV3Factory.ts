@@ -7,43 +7,40 @@ import { UniswapV3Pool, FeeAmount, FeeToTickSpacing } from "./index";
 export class UniswapV3Factory {
   private factoryContract: Contract;
 
-  private FACTORY_ADDRESS: string;
-  private WETH_ADDRESS: string;
+  private factoryAddress: string;
+  private wethAddress: string;
 
   constructor(private chain: ChainType) {
     const chainConfig = getChainConfig(chain);
 
-    this.WETH_ADDRESS = chainConfig.tokenAddresses.weth;
-    this.FACTORY_ADDRESS = chainConfig.uniswap.v3.factoryAddress;
+    this.wethAddress = chainConfig.tokenAddresses.weth;
+    this.factoryAddress = chainConfig.uniswap.v3.factoryAddress;
 
-    if (!this.WETH_ADDRESS || this.WETH_ADDRESS.trim() === "") {
+    if (!this.wethAddress || this.wethAddress.trim() === "") {
       throw new Error(`WETH address not defined for chain: ${chainConfig.name}`);
     }
 
-    if (!this.FACTORY_ADDRESS || this.FACTORY_ADDRESS.trim() === "") {
+    if (!this.factoryAddress || this.factoryAddress.trim() === "") {
       throw new Error(`Factory address not defined for chain: ${chainConfig.name}`);
     }
 
-    this.factoryContract = new Contract(this.FACTORY_ADDRESS, FACTORY_INTERFACE);
+    this.factoryContract = new Contract(this.factoryAddress, FACTORY_INTERFACE);
   }
 
-  getFactoryAddress = (): string => this.FACTORY_ADDRESS;
-  getWETHAddress = (): string => this.WETH_ADDRESS;
+  getFactoryAddress = (): string => this.factoryAddress;
+  getWETHAddress = (): string => this.wethAddress;
 
   /**
    * Validates that the address is actually a Uniswap V3 Factory by checking if it implements the required interface
    * @param wallet Wallet instance -> blockchain provider
-   * @returns true if the initialized factory address is a valid Uniswap V3 Factory, false otherwise
+   * @returns true if the initialized factory address is a valid Uniswap V3 Factory, throws error if otherwise
    */
   async validateIsFactory(wallet: Wallet): Promise<boolean> {
     this.factoryContract = this.factoryContract.connect(wallet) as Contract;
 
-    const isValid = await this._networkAndFactoryCheck(wallet);
-    if (!isValid) {
-      throw new Error(`Address ${this.factoryContract.address} is not a valid Uniswap V3 Factory`);
-    }
+    await this._networkAndFactoryCheck(wallet);
 
-    return isValid;
+    return true;
   }
 
   /**
@@ -62,10 +59,7 @@ export class UniswapV3Factory {
   ): Promise<string> {
     this.factoryContract = this.factoryContract.connect(wallet) as Contract;
 
-    const isValid = await this._networkAndFactoryCheck(wallet);
-    if (!isValid) {
-      throw new Error(`Address ${this.factoryContract.address} is not a valid Uniswap V3 Factory`);
-    }
+    await this._networkAndFactoryCheck(wallet);
 
     const poolAddress = await this.factoryContract.getPool(token0Address, token1Address, feeTier);
     if (poolAddress === ethers.ZeroAddress || poolAddress === undefined) {
@@ -105,7 +99,7 @@ export class UniswapV3Factory {
 
     if (!tickSpacing) throw new Error(`V3 Pool creation failed: Tick spacing not found for fee tier: ${feeTier}`);
 
-    return new UniswapV3Pool(wallet, poolAddress, this.FACTORY_ADDRESS, token0, token1, tickSpacing, feeTier);
+    return new UniswapV3Pool(wallet, poolAddress, this.factoryAddress, token0, token1, tickSpacing, feeTier);
   }
 
   /**
@@ -113,7 +107,7 @@ export class UniswapV3Factory {
    * @param wallet Wallet instance -> blockchain provider
    * @returns true if the wallet is on the correct network and that the factory address is valid, false otherwise
    */
-  private async _networkAndFactoryCheck(wallet: Wallet): Promise<boolean> {
+  private async _networkAndFactoryCheck(wallet: Wallet): Promise<void> {
     try {
       await validateNetwork(wallet, this.chain);
 
@@ -122,7 +116,6 @@ export class UniswapV3Factory {
         "0x0000000000000000000000000000000000000002",
         3000,
       );
-      return true;
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : "Unknown error";
 
