@@ -1,5 +1,5 @@
 import { Contract, Wallet } from "ethers";
-import { UNISWAP_V2_PAIR_INTERFACE } from "../../contract-abis/uniswap-v2";
+import { UNISWAP_V2_PAIR_INTERFACE } from "../../../lib/contract-abis/uniswap-v2";
 
 export class UniswapV2Pair {
   private pairContract: Contract | null = null;

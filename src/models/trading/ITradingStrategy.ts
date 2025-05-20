@@ -1,6 +1,6 @@
 import { Wallet } from "ethers";
 import { ChainType } from "../../config/chain-config";
-import { ERC20 } from "../ERC/ERC20";
+import { ERC20 } from "../blockchain/ERC/ERC20";
 import { BuyTrade, SellTrade, OutputToken } from "./types/_index";
 
 export interface ITradingStrategy {

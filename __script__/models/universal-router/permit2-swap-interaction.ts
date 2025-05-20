@@ -1,23 +1,23 @@
 import { Contract, ethers, Wallet } from "ethers";
 import { getHardhatWallet_1 } from "../../../src/hooks/useSetup";
 import { ChainConfig, ChainType, getChainConfig, getOutputTokenAddress } from "../../../src/config/chain-config";
-import { UniversalRouter } from "../../../src/models/universal-router/UniversalRouter";
+import { UniversalRouter } from "../../../src/models/blockchain/universal-router/UniversalRouter";
 import {
   CommandType,
   IPermitSingle,
   IPermitTransferFrom,
-} from "../../../src/models/universal-router/universal-router-types";
+} from "../../../src/models/blockchain/universal-router/universal-router-types";
 import { TradeCreationDto } from "../../../src/api/trades/TradesController";
-import { OutputToken } from "../../../src/lib/types";
+import { OutputToken } from "../../../src/models/trading/types/OutputToken";
 import { createMinimalErc20, decodeLogs } from "../../../src/lib/utils";
-import { UniswapV2Router } from "../../../src/models/uniswap-v2/UniswapV2Router";
-import { getLowPoolKey } from "../../../src/models/uniswap-v4/uniswap-v4-utils";
+import { UniswapV2Router } from "../../../src/models/blockchain/uniswap-v2/UniswapV2Router";
+import { getLowPoolKey } from "../../../src/models/blockchain/uniswap-v4/uniswap-v4-utils";
 import {
   encodePermitSingleInput,
   encodePermitTransferFromInput,
-} from "../../../src/models/universal-router/universal-router-utils";
-import { Permit2 } from "../../../src/models/permit2/Permit2";
-import { ERC20 } from "../../../src/models/ERC/ERC20";
+} from "../../../src/models/blockchain/universal-router/universal-router-utils";
+import { Permit2 } from "../../../src/models/blockchain/permit2/Permit2";
+import { ERC20 } from "../../../src/models/blockchain/ERC/ERC20";
 
 async function verifyOrGrantMaxUnitAllowance(wallet: Wallet, token: ERC20, spender: string) {
   const permit2Allowance = await token.getRawAllowance(wallet.address, spender);

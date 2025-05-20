@@ -1,9 +1,9 @@
 import { Contract, ethers, Wallet } from "ethers";
 
-import { ChainType, getChainConfig } from "../../config/chain-config";
+import { ChainType, getChainConfig } from "../../../config/chain-config";
 
-import { QUOTER_INTERFACE } from "../../contract-abis/uniswap-v3";
-import { validateNetwork } from "../../lib/utils";
+import { QUOTER_INTERFACE } from "../../../lib/contract-abis/uniswap-v3";
+import { validateNetwork } from "../../../lib/utils";
 import {
   QuoteExactInputSingleParams,
   QuoterExactInputResponse,

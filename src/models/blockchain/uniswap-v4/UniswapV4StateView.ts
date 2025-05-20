@@ -1,6 +1,6 @@
 import { Contract, Wallet } from "ethers";
-import { ChainType, getChainConfig } from "../../config/chain-config";
-import { STATE_VIEW_INTERFACE } from "../../contract-abis/uniswap-v4";
+import { ChainType, getChainConfig } from "../../../config/chain-config";
+import { STATE_VIEW_INTERFACE } from "../../../lib/contract-abis/uniswap-v4";
 import { PoolKey } from "./uniswap-v4-types";
 import { computePoolId } from "./uniswap-v4-utils";
 

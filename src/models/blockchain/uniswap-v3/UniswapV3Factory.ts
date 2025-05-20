@@ -1,7 +1,7 @@
 import { Contract, Wallet, ethers } from "ethers";
-import { ChainType, getChainConfig } from "../../config/chain-config";
-import { FACTORY_INTERFACE, POOL_INTERFACE } from "../../contract-abis/uniswap-v3";
-import { validateNetwork } from "../../lib/utils";
+import { ChainType, getChainConfig } from "../../../config/chain-config";
+import { FACTORY_INTERFACE, POOL_INTERFACE } from "../../../lib/contract-abis/uniswap-v3";
+import { validateNetwork } from "../../../lib/utils";
 import { UniswapV3Pool, FeeAmount, FeeToTickSpacing } from "./index";
 
 export class UniswapV3Factory {

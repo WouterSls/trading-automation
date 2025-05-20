@@ -1,7 +1,7 @@
-import { UniswapV3Factory, UniswapV3Pool, Slot0, FeeAmount } from "../../../src/models/uniswap-v3";
+import { UniswapV3Factory, UniswapV3Pool, Slot0, FeeAmount } from "../../../src/models/blockchain/uniswap-v3";
 import { ChainType } from "../../../src/config/chain-config";
 import { getEthWallet_1 } from "../../../src/hooks/useSetup";
-import { calculatePriceFromSqrtPriceX96 } from "../../../src/models/uniswap-v3/uniswap-v3-utils";
+import { calculatePriceFromSqrtPriceX96 } from "../../../src/models/blockchain/uniswap-v3/uniswap-v3-utils";
 
 export async function factoryInteraction() {
   const wallet = getEthWallet_1();

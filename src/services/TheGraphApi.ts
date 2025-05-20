@@ -1,5 +1,5 @@
 import { ChainType } from "../config/chain-config";
-import { PoolKey } from "../models/uniswap-v4/uniswap-v4-types";
+import { PoolKey } from "../models/blockchain/uniswap-v4/uniswap-v4-types";
 
 export class TheGraphApi {
   constructor(private readonly apiKey: string) {}
@@ -25,12 +25,7 @@ export class TheGraphApi {
    * @param first - The number of pools to fetch.
    * @returns The pool for the token pair.
    */
-  async fetchV4PoolKeysByTokens(
-    chain: ChainType,
-    token0: string,
-    token1: string,
-    first = 1000
-  ): Promise<PoolKey[]> {
+  async fetchV4PoolKeysByTokens(chain: ChainType, token0: string, token1: string, first = 1000): Promise<PoolKey[]> {
     const gql = `
       query PoolsByTokens($t0: String!, $t1: String!) {
         pools(where: { token0: $t0, token1: $t1 }, first: ${first}) {
@@ -42,9 +37,9 @@ export class TheGraphApi {
     `;
 
     const url = this.getV4SubgraphUrl(chain);
-    const authHeaders: Record<string, string> = { 
+    const authHeaders: Record<string, string> = {
       "content-type": "application/json",
-      "Authorization": `Bearer ${this.apiKey}` 
+      Authorization: `Bearer ${this.apiKey}`,
     };
 
     const res = await fetch(url, {
@@ -60,7 +55,7 @@ export class TheGraphApi {
       console.error(errors);
       throw new Error("Subgraph returned errors");
     }
-    const result: PoolKey[] =[]; 
+    const result: PoolKey[] = [];
     return result;
   }
 }

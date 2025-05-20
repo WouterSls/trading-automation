@@ -1,12 +1,12 @@
 import { ethers, Wallet } from "ethers";
 import { getHardhatWallet_1 } from "../../../src/hooks/useSetup";
 import { ChainType, getChainConfig } from "../../../src/config/chain-config";
-import { UniversalRouter } from "../../../src/models/universal-router/UniversalRouter";
-import { CommandType } from "../../../src/models/universal-router/universal-router-types";
+import { UniversalRouter } from "../../../src/models/blockchain/universal-router/UniversalRouter";
+import { CommandType } from "../../../src/models/blockchain/universal-router/universal-router-types";
 import { TradeCreationDto } from "../../../src/api/trades/TradesController";
-import { OutputToken } from "../../../src/lib/types";
+import { OutputToken } from "../../../src/models/trading/types/OutputToken";
 import { createMinimalErc20, decodeLogs } from "../../../src/lib/utils";
-import { getLowPoolKey } from "../../../src/models/uniswap-v4/uniswap-v4-utils";
+import { getLowPoolKey } from "../../../src/models/blockchain/uniswap-v4/uniswap-v4-utils";
 
 export async function v4SwapInteraction(wallet: Wallet, tradeCreationDto: TradeCreationDto) {
   const chain: ChainType = tradeCreationDto.chain as ChainType;

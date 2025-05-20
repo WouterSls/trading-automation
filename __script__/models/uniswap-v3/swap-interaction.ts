@@ -11,8 +11,8 @@ import {
   encodePath,
   ExactInputParams,
   UniswapV3Pool,
-} from "../../../src/models/uniswap-v3/index";
-import { WETH_INTERFACE } from "../../../src/contract-abis/erc20";
+} from "../../../src/models/blockchain/uniswap-v3/index";
+import { WETH_INTERFACE } from "../../../src/lib/contract-abis/erc20";
 import { exactInputSingleTrade, exactInputTrade } from "./router-interaction";
 
 async function singleTickSwapInteraction(chain: ChainType, wallet: Wallet) {

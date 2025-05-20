@@ -4,15 +4,9 @@ import {
   getHardhatWallet_1,
   getOfflineSigner_1,
 } from "../../../src/hooks/useSetup";
-import { FeeAmount, UniswapV3Factory, UniswapV3Pool } from "../../../src/models/uniswap-v3";
+import { FeeAmount, UniswapV3Factory, UniswapV3Pool } from "../../../src/models/blockchain/uniswap-v3";
 import { ChainType } from "../../../src/config/chain-config";
-import {
-  ETH_WETH_ADDRESS,
-  ETH_PEPE_ADDRESS,
-  V3_POOL_PEPE_ETH_3000_ADDRESS,
-  ETH_EOA_ACCOUNT_ADDRESS,
-  ETH_FLAYER_ADDRESS,
-} from "../../../src/lib/token-addresses";
+import { V3_POOL_PEPE_ETH_3000_ADDRESS, ETH_FLAYER_ADDRESS } from "../../../src/lib/token-addresses";
 import { ethers, Wallet } from "ethers";
 import { NetworkForkManager } from "../../../__test__/helpers/network-fork";
 

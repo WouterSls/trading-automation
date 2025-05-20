@@ -1,13 +1,13 @@
-import { ERC20 } from "../../ERC/ERC20";
+import { ERC20 } from "../../blockchain/ERC/ERC20";
 import { ethers, Wallet } from "ethers";
 import { ChainType } from "../../../config/chain-config";
 
-import { UniswapV3QuoterV2 } from "../../uniswap-v3/UniswapV3QuoterV2";
-import { UniswapV3Factory } from "../../uniswap-v3/UniswapV3Factory";
+import { UniswapV3QuoterV2 } from "../../blockchain/uniswap-v3/UniswapV3QuoterV2";
+import { UniswapV3Factory } from "../../blockchain/uniswap-v3/UniswapV3Factory";
 
 import { ITradingStrategy } from "../ITradingStrategy";
-import { ERC20_INTERFACE } from "../../../contract-abis/erc20";
-import { FeeAmount } from "../../uniswap-v3/uniswap-v3-types";
+import { ERC20_INTERFACE } from "../../../lib/contract-abis/erc20";
+import { FeeAmount } from "../../blockchain/uniswap-v3/uniswap-v3-types";
 import { BuyTrade, SellTrade, OutputToken } from "../types/_index";
 
 export class UniswapV3Strategy implements ITradingStrategy {

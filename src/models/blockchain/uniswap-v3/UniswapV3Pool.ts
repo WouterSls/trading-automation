@@ -1,5 +1,5 @@
 import { Contract, Wallet } from "ethers";
-import { POOL_INTERFACE } from "../../contract-abis/uniswap-v3";
+import { POOL_INTERFACE } from "../../../lib/contract-abis/uniswap-v3";
 import { FeeAmount } from "./index";
 
 export interface Slot0 {

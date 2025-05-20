@@ -1,12 +1,12 @@
 import { ethers, Wallet } from "ethers";
-import { UniversalRouter } from "../../../src/models/universal-router/UniversalRouter";
+import { UniversalRouter } from "../../../src/models/blockchain/universal-router/UniversalRouter";
 import { NetworkForkManager } from "../../helpers/network-fork";
 import { ChainType, getChainConfig } from "../../../src/config/chain-config";
 import { getHardhatWallet_1 } from "../../../src/hooks/useSetup";
-import { getLowPoolKey } from "../../../src/models/uniswap-v4/uniswap-v4-utils";
-import { CommandType } from "../../../src/models/universal-router/universal-router-types";
+import { getLowPoolKey } from "../../../src/models/blockchain/uniswap-v4/uniswap-v4-utils";
+import { CommandType } from "../../../src/models/blockchain/universal-router/universal-router-types";
 import { createMinimalErc20 } from "../../../src/lib/utils";
-import { UniswapV2Router } from "../../../src/models/uniswap-v2/UniswapV2Router";
+import { UniswapV2Router } from "../../../src/models/blockchain/uniswap-v2/UniswapV2Router";
 describe("UniversalRouter V4 Trade Tests | ETH", () => {
   const chain = ChainType.ETH;
   const router: UniversalRouter = new UniversalRouter(chain);

@@ -1,8 +1,8 @@
 import { ethers } from "ethers";
 import { ChainType, getChainConfig } from "../../../src/config/chain-config";
 import { getHardhatWallet_1 } from "../../../src/hooks/useSetup";
-import { TradeRoute } from "../../../src/models/aerodrome/aerodrome-types";
-import { AerodromeRouter } from "../../../src/models/aerodrome/AerodromeRouter";
+import { TradeRoute } from "../../../src/models/blockchain/aerodrome/aerodrome-types";
+import { AerodromeRouter } from "../../../src/models/blockchain/aerodrome/AerodromeRouter";
 import { createMinimalErc20 } from "../../../src/lib/utils";
 
 export async function swapInteraction() {

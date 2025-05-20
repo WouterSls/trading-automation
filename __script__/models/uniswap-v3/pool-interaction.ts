@@ -1,5 +1,5 @@
 import { getEthWallet_1 } from "../../../src/hooks/useSetup";
-import { UniswapV3Factory, UniswapV3Pool, TickInfo, FeeAmount } from "../../../src/models/uniswap-v3";
+import { UniswapV3Factory, UniswapV3Pool, TickInfo, FeeAmount } from "../../../src/models/blockchain/uniswap-v3";
 import { ChainType } from "../../../src/config/chain-config";
 import { ethers } from "ethers";
 

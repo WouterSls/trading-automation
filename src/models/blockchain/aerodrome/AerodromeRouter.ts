@@ -1,6 +1,6 @@
 import { Contract, TransactionRequest, Wallet } from "ethers";
-import { ChainConfig, ChainType, getChainConfig } from "../../config/chain-config";
-import { AERODROME_ROUTER_INTERFACE } from "../../contract-abis/aerodrome";
+import { ChainConfig, ChainType, getChainConfig } from "../../../config/chain-config";
+import { AERODROME_ROUTER_INTERFACE } from "../../../lib/contract-abis/aerodrome";
 import { ExactETHForTokensParams, TradeRoute } from "./aerodrome-types";
 
 export class AerodromeRouter {

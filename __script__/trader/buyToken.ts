@@ -1,6 +1,5 @@
 import { Wallet } from "ethers";
 import { getArbitrumWallet_1, TRADING_CONFIG } from "../../src/hooks/useSetup";
-import { ARB_ARB_ADDRESS } from "../../src/lib/token-addresses";
 import { createMinimalErc20 } from "../../src/lib/utils";
 import { TraderFactory } from "../../src/models/trading/TraderFactory";
 import { GeckoTerminalApi } from "../../src/services/GeckoTerminalApi";
@@ -11,7 +10,7 @@ async function buyToken(usdAmount: number, _tokenAddress?: string, _wallet?: Wal
   const trader = await TraderFactory.createTrader(wallet);
 
   const receiverAddress = wallet.address;
-  const tokenAddress = _tokenAddress || ARB_ARB_ADDRESS;
+  const tokenAddress = _tokenAddress!;
 
   const erc20 = await createMinimalErc20(tokenAddress, wallet.provider!);
 

@@ -1,7 +1,7 @@
 import { Contract, Wallet } from "ethers";
-import { ChainType, getChainConfig } from "../../config/chain-config";
-import { POOL_MANAGER_INTERFACE } from "../../contract-abis/uniswap-v4";
-import { validateNetwork } from "../../lib/utils";
+import { ChainType, getChainConfig } from "../../../config/chain-config";
+import { POOL_MANAGER_INTERFACE } from "../../../lib/contract-abis/uniswap-v4";
+import { validateNetwork } from "../../../lib/utils";
 
 export class UniswapV4PoolManager {
   private poolManagerContract: Contract;

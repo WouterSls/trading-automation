@@ -1,10 +1,10 @@
 import { ethers, Provider, Wallet } from "ethers";
 
-import { ERC20_INTERFACE } from "../contract-abis/erc20";
-import { ERC20 } from "../models/ERC/ERC20";
+import { ERC20_INTERFACE } from "./contract-abis/erc20";
+import { ERC20 } from "../models/blockchain/ERC/ERC20";
 import { ChainType, mapNetworkNameToChainType } from "../config/chain-config";
-import { POOL_INTERFACE } from "../contract-abis/uniswap-v3";
-import { calculatePriceFromSqrtPriceX96 } from "../models/uniswap-v3/uniswap-v3-utils";
+import { POOL_INTERFACE } from "./contract-abis/uniswap-v3";
+import { calculatePriceFromSqrtPriceX96 } from "../models/blockchain/uniswap-v3/uniswap-v3-utils";
 
 export async function createMinimalErc20(address: string, provider: Provider): Promise<ERC20> {
   const contract = new ethers.Contract(address, ERC20_INTERFACE, provider);

@@ -7,13 +7,13 @@ import {
   TransactionRequest,
 } from "ethers";
 
-import { getChainConfig, ChainType } from "../../config/chain-config";
+import { getChainConfig, ChainType } from "../../../config/chain-config";
 import { ERC20 } from "../ERC/ERC20";
-import { TradeSuccessInfo } from "../trading/types/AbstractBaseTrade";
+import { TradeSuccessInfo } from "../../trading/types/AbstractBaseTrade";
 
-import { UNISWAP_V2_ROUTER_INTERFACE } from "../../contract-abis/uniswap-v2";
-import { extractRawTokenOutputFromLogs } from "../../lib/utils";
-import { TRADING_CONFIG } from "../../hooks/useSetup";
+import { UNISWAP_V2_ROUTER_INTERFACE } from "../../../lib/contract-abis/uniswap-v2";
+import { extractRawTokenOutputFromLogs } from "../../../lib/utils";
+import { TRADING_CONFIG } from "../../../hooks/useSetup";
 
 export class UniswapV2Router {
   //Addresses

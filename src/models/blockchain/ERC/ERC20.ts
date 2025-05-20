@@ -1,6 +1,6 @@
 import { ethers, Contract } from "ethers";
 import { TransactionRequest } from "ethers";
-import { UserError } from "../../lib/errors";
+import { UserError } from "../../../lib/errors";
 
 export class ERC20 {
   constructor(

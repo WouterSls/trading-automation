@@ -1,7 +1,7 @@
 import { ChainType, getChainConfig } from "../../../src/config/chain-config";
 import { getHardhatWallet_1 } from "../../../src/hooks/useSetup";
 import { createMinimalErc20 } from "../../../src/lib/utils";
-import { AerodromePoolFactory } from "../../../src/models/aerodrome/AerodromePoolFactory";
+import { AerodromePoolFactory } from "../../../src/models/blockchain/aerodrome/AerodromePoolFactory";
 
 export async function factoryInteraction() {
   const chain = ChainType.BASE;
