@@ -32,7 +32,7 @@ switch (forkNetwork) {
   case "arbitrum":
     networkConfig = {
       forking: {
-        url: process.env.ARB_MAINNET_RPC_URL || process.env.ARB_RPC_URL!,
+        url: process.env.ARB_RPC_URL!,
         blockNumber: 334_908_297,
       },
       chainId: 42161,
@@ -43,11 +43,13 @@ switch (forkNetwork) {
             london: 0,
             merge: 15537393,
             shanghai: 17034870,
-            cancun: 19426589,
-            prague: 22431084,
+            //TODO: blob-gas header issues introduced with cancun / prague hardforks
+            //cancun: 19426589,
+            //prague: 22431084,
           },
         },
       },
+      initialBaseFeePerGas: 0, // disable EIP-1559 baseFee errors
     };
     break;
   default:
