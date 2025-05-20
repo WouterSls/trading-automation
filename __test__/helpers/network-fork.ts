@@ -14,33 +14,28 @@ export class NetworkForkManager {
       await this.cleanupHardhatFork();
     }
 
-    let rpcEnvVar: string = "";
-    let forkBlockNumber: number = 0;
+    let forkNetwork: string;
 
     switch (chain) {
       case ChainType.ETH:
-        rpcEnvVar = "ETH_RPC_URL";
-        forkBlockNumber = 22_344_527;
+        forkNetwork = "ethereum";
         break;
       case ChainType.ARB:
-        rpcEnvVar = "ARB_RPC_URL";
-        forkBlockNumber = 334_908_297;
+        forkNetwork = "arbitrum";
         break;
       case ChainType.BASE:
-        rpcEnvVar = "BASE_RPC_URL";
-        forkBlockNumber = 30_005_952;
+        forkNetwork = "base";
         break;
       default:
         throw new Error(`Unsupported chain: ${chain}`);
     }
 
-    if (!process.env[rpcEnvVar]) {
-      throw new Error(`Missing RPC URL for chain ${chain}. Set ${rpcEnvVar} in your .env file.`);
-    }
+    const env = { ...process.env, FORK_NETWORK: forkNetwork };
 
-    this.hardhatProcess = spawn("npx", ["hardhat", "node", "--fork", process.env[rpcEnvVar]!], {
+    this.hardhatProcess = spawn("npx", ["hardhat", "node"], {
       stdio: ["ignore", "pipe", "pipe"],
       detached: true,
+      env,
     });
 
     await new Promise<void>((resolve, reject) => {
@@ -58,5 +53,6 @@ export class NetworkForkManager {
     if (!this.hardhatProcess) return;
     const pid = this.hardhatProcess.pid!;
     process.kill(-pid, "SIGKILL");
+    this.hardhatProcess = null;
   }
 }
