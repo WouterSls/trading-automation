@@ -1,4 +1,4 @@
-# DeFi TypeScript
+# EVM Trading Engine
 
 A TypeScript library for interacting with various DeFi protocols across multiple blockchains (Ethereum, Arbitrum, Base).
 
