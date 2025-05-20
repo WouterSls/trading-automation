@@ -1,5 +1,5 @@
 import { ethers } from "ethers";
-import { OutputToken } from "../lib/types";
+import { OutputToken } from "../models/trading/types/OutputToken";
 
 export enum ChainType {
   ETH = "ETH",

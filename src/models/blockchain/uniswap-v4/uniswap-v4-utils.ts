@@ -1,8 +1,8 @@
 import { PoolKey, FeeAmount, FeeToTickSpacing } from "./uniswap-v4-types";
 import { keccak256, AbiCoder } from "ethers";
 import { ethers } from "ethers";
-import { TheGraphApi } from "../../services/TheGraphApi";
-import { ChainType } from "../../config/chain-config";
+import { TheGraphApi } from "../../../services/TheGraphApi";
+import { ChainType } from "../../../config/chain-config";
 
 export function computePoolId(key: PoolKey): string {
   // ABI-encode exactly 5 slots (5 × 32 bytes = 0xa0 length in memory)
