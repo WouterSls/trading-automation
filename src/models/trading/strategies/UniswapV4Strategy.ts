@@ -1,5 +1,5 @@
 import { ERC20 } from "../../blockchain/ERC/ERC20";
-import { ethers, Wallet } from "ethers";
+import { ethers, TransactionRequest, Wallet } from "ethers";
 import { ChainType } from "../../../config/chain-config";
 
 import { UniswapV3QuoterV2 } from "../../blockchain/uniswap-v3/UniswapV3QuoterV2";
@@ -9,6 +9,7 @@ import { ITradingStrategy } from "../ITradingStrategy";
 import { ERC20_INTERFACE } from "../../../lib/contract-abis/erc20";
 import { FeeAmount } from "../../blockchain/uniswap-v3/uniswap-v3-types";
 import { BuyTrade, SellTrade, OutputToken } from "../types/_index";
+import { BuyTradeCreationDto, SellTradeCreationDto } from "../../../api/trades/TradesController";
 
 export class UniswapV4Strategy implements ITradingStrategy {
   private quoter: UniswapV3QuoterV2;
@@ -24,13 +25,11 @@ export class UniswapV4Strategy implements ITradingStrategy {
     this.factory = new UniswapV3Factory(chain);
   }
 
-  /**
-   * Getters
-   */
   getName = (): string => this.strategyName;
-  getChain = (): ChainType => this.chain;
-
-  async getETHLiquidity(wallet: Wallet, tokenAddress: string): Promise<string> {
+  async getEthUsdcPrice(wallet: Wallet): Promise<string> {
+    throw new Error("Not implemented");
+  }
+  async getTokenEthLiquidity(wallet: Wallet, tokenAddress: string): Promise<string> {
     try {
       const feeTiers = [FeeAmount.LOWEST, FeeAmount.LOW, FeeAmount.MEDIUM, FeeAmount.HIGH];
       const wethAddress = this.factory.getWETHAddress();
@@ -58,34 +57,17 @@ export class UniswapV4Strategy implements ITradingStrategy {
       return "0";
     }
   }
-
-  async getUsdcPrice(wallet: Wallet, tokenAddress: string): Promise<string> {
+  async getTokenUsdcPrice(wallet: Wallet, tokenAddress: string): Promise<string> {
     throw new Error("Not implemented");
   }
 
-  /**
-   * Buy
-   */
-  async buy(wallet: Wallet, erc20: ERC20, usdAmount: number): Promise<BuyTrade> {
-    return new Promise((resolve, reject) => {
-      reject(new Error("Not implemented"));
-    });
-  }
-  async simulateBuy(wallet: Wallet, token: ERC20, usdAmount: number): Promise<boolean> {
+  async createBuyTransaction(wallet: Wallet, trade: BuyTradeCreationDto): Promise<TransactionRequest> {
     return new Promise((resolve, reject) => {
       reject(new Error("Not implemented"));
     });
   }
 
-  /**
-   * Sell
-   */
-  async sell(wallet: Wallet, erc20: ERC20, tokenAmount: number, outputToken: OutputToken): Promise<SellTrade> {
-    return new Promise((resolve, reject) => {
-      reject(new Error("Not implemented"));
-    });
-  }
-  async simulateSell(wallet: Wallet, token: ERC20, tokenAmount: number): Promise<boolean> {
+  async createSellTransaction(wallet: Wallet, trade: SellTradeCreationDto): Promise<TransactionRequest> {
     return new Promise((resolve, reject) => {
       reject(new Error("Not implemented"));
     });

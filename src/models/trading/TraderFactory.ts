@@ -1,12 +1,6 @@
 import { Wallet } from "ethers";
 import { ChainType } from "../../config/chain-config";
-import {
-  AerodromeStrategy,
-  BalancerStrategy,
-  SushiswapV2Strategy,
-  UniswapV2Strategy,
-  UniswapV3Strategy,
-} from "./strategies/_index";
+import { AerodromeStrategy, UniswapV2Strategy, UniswapV3Strategy, UniswapV4Strategy } from "./strategies/_index";
 import { ITradingStrategy } from "./ITradingStrategy";
 import { Trader } from "./Trader";
 import { mapNetworkNameToChainType } from "../../config/chain-config";
@@ -21,11 +15,16 @@ export class TraderFactory {
 
     const strategies: ITradingStrategy[] = [];
 
+    //TODO: add a check & test strategy per token address
+
     switch (chain) {
       case ChainType.ETH:
         strategies.push(new UniswapV2Strategy(`UniswapV2-${chain}`, chain));
+        strategies.push(new UniswapV3Strategy(`UniswapV2-${chain}`, chain));
+        strategies.push(new UniswapV4Strategy(`UniswapV2-${chain}`, chain));
         // Add more strategies as needed
         // strategies.push(new SushiswapV2Strategy(`SushiswapV2-${chain}`, chain));
+        // strategies.push(new BalancerStrategy(``Balancer-${chain}`, chain));
         break;
 
       case ChainType.ARB:
@@ -35,7 +34,7 @@ export class TraderFactory {
 
       case ChainType.BASE:
         strategies.push(new UniswapV3Strategy(`UniswapV3-${chain}`, chain));
-        // strategies.push(new AerodromeStrategy(`Aerodrome-${chain}`, chain));
+        strategies.push(new AerodromeStrategy(`Aerodrome-${chain}`, chain));
         break;
     }
 

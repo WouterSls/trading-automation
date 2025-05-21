@@ -7,7 +7,7 @@ import {
   IPermitSingle,
   IPermitTransferFrom,
 } from "../../../src/models/blockchain/universal-router/universal-router-types";
-import { TradeCreationDto } from "../../../src/api/trades/TradesController";
+import { SellTradeCreationDto, BuyTradeCreationDto } from "../../../src/api/trades/TradesController";
 import { OutputToken } from "../../../src/models/trading/types/OutputToken";
 import { createMinimalErc20, decodeLogs } from "../../../src/lib/utils";
 import { UniswapV2RouterV2 } from "../../../src/models/blockchain/uniswap-v2/UniswapV2RouterV2";
@@ -59,7 +59,7 @@ async function testPermit2TransferFrom(wallet: Wallet, chain: ChainType) {
   console.log("transfer from transaction passed");
 }
 
-export async function v4SwapInteraction(wallet: Wallet, tradeCreationDto: TradeCreationDto) {
+export async function v4SwapInteraction(wallet: Wallet, tradeCreationDto: SellTradeCreationDto) {
   const chain: ChainType = tradeCreationDto.chain as ChainType;
   const chainConfig: ChainConfig = getChainConfig(chain);
   const outputTokenAddress = getOutputTokenAddress(chain, tradeCreationDto.outputToken as OutputToken);
@@ -73,8 +73,8 @@ export async function v4SwapInteraction(wallet: Wallet, tradeCreationDto: TradeC
   const usdc = await createMinimalErc20(usdcAddress, wallet.provider!);
   const weth = await createMinimalErc20(wethAddress, wallet.provider!);
 
-  console.log("Swapping ETH for USDC...");
-  await v2Router.swapEthInUsdForToken(wallet, usdc, 200);
+  //console.log("Swapping ETH for USDC...");
+  //await v2Router.swapEthInUsdForToken(wallet, usdc, 200);
 
   const usdcBalance = await usdc.getFormattedTokenBalance(wallet.address);
   const wethBalance = await weth.getFormattedTokenBalance(wallet.address);
@@ -102,7 +102,7 @@ export async function v4SwapInteraction(wallet: Wallet, tradeCreationDto: TradeC
   const permitSingle: IPermitSingle = {
     details: {
       token: usdc.getTokenAddress(),
-      amount: BigInt(tradeCreationDto.rawInputAmount),
+      amount: BigInt(tradeCreationDto.inputAmount),
       expiration: deadline,
       nonce: nonce,
     },
@@ -118,7 +118,7 @@ export async function v4SwapInteraction(wallet: Wallet, tradeCreationDto: TradeC
   const permitTransferFrom: IPermitTransferFrom = {
     token: usdc.getTokenAddress(),
     recipient: router.getRouterAddress(),
-    amount: BigInt(tradeCreationDto.rawInputAmount),
+    amount: BigInt(tradeCreationDto.inputAmount),
   };
 
   const permit2TransferFromCommand = CommandType.PERMIT2_TRANSFER_FROM;
@@ -133,7 +133,7 @@ export async function v4SwapInteraction(wallet: Wallet, tradeCreationDto: TradeC
   const swapInput = router.encodeV4SwapInput(
     poolKey,
     isZeroForOne,
-    tradeCreationDto.rawInputAmount,
+    tradeCreationDto.inputAmount,
     minOutputAmount,
     wallet.address,
   );
@@ -170,7 +170,7 @@ if (require.main === module) {
 
   const usdcInputAmount = ethers.parseUnits("50", 6);
 
-  const tradeCreationDto: TradeCreationDto = {
+  const tradeCreationDto: SellTradeCreationDto = {
     // Equivalent to getHardhatWallet_1()
     wallet: {
       rpcUrl: process.env.HARDHAT_RPC_URL,
@@ -178,8 +178,10 @@ if (require.main === module) {
     },
     chain: chain,
     inputToken: usdcAddress,
-    rawInputAmount: usdcInputAmount.toString(),
+    inputAmount: usdcInputAmount.toString(),
     outputToken: OutputToken.ETH,
+    tradingPointPrice: "0",
+    tradeType: "SELL",
   };
   v4SwapInteraction(wallet, tradeCreationDto).catch(console.error);
 }

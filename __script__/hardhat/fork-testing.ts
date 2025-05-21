@@ -49,6 +49,7 @@ export async function forkTesting(wallet: Wallet, chain: ChainType) {
  *
  */
 async function v2RouterTest(chain: ChainType, wallet: Wallet, tokenToBuy: ERC20, ethAmountToSpendInUSD: number) {
+  const chainConfig = getChainConfig(chain);
   const tokenBalanceBefore = await tokenToBuy.getFormattedTokenBalance(wallet.address);
   console.log(`${tokenToBuy.getName()} balance before: ${tokenBalanceBefore}`);
 
@@ -56,11 +57,16 @@ async function v2RouterTest(chain: ChainType, wallet: Wallet, tokenToBuy: ERC20,
     `Executing a v2 swap transaction for ${ethAmountToSpendInUSD} USD on ${chain} with wallet ${wallet.address}`,
   );
   const v2Router = new UniswapV2RouterV2(chain);
-  const tx: TransactionRequest = await v2Router.createSwapExactETHInputTransaction(
-    wallet,
-    tokenToBuy,
-    ethAmountToSpendInUSD,
+  const path = [chainConfig.tokenAddresses.weth, tokenToBuy.getTokenAddress()];
+  const deadline = Math.floor(Date.now() / 1000) + 1200;
+  const tx: TransactionRequest = await v2Router.createSwapExactETHForTokensTransaction(
+    0n,
+    path,
+    wallet.address,
+    deadline,
   );
+  //TODO: fix -> convert to eth amount
+  tx.value = ethAmountToSpendInUSD;
   const txResponse = await wallet.sendTransaction(tx);
   await txResponse.wait();
 

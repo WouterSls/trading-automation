@@ -3,12 +3,12 @@ import { getHardhatWallet_1 } from "../../../src/hooks/useSetup";
 import { ChainType, getChainConfig } from "../../../src/config/chain-config";
 import { UniversalRouter } from "../../../src/models/blockchain/universal-router/UniversalRouter";
 import { CommandType } from "../../../src/models/blockchain/universal-router/universal-router-types";
-import { TradeCreationDto } from "../../../src/api/trades/TradesController";
+import { SellTradeCreationDto } from "../../../src/api/trades/TradesController";
 import { OutputToken } from "../../../src/models/trading/types/OutputToken";
 import { createMinimalErc20, decodeLogs } from "../../../src/lib/utils";
 import { getLowPoolKey } from "../../../src/models/blockchain/uniswap-v4/uniswap-v4-utils";
 
-export async function v4SwapInteraction(wallet: Wallet, tradeCreationDto: TradeCreationDto) {
+export async function v4SwapInteraction(wallet: Wallet, tradeCreationDto: SellTradeCreationDto) {
   const chain: ChainType = tradeCreationDto.chain as ChainType;
   const chainConfig = getChainConfig(chain);
 
@@ -34,7 +34,7 @@ export async function v4SwapInteraction(wallet: Wallet, tradeCreationDto: TradeC
 
   const poolKey = getLowPoolKey(tradeCreationDto.inputToken, tradeCreationDto.outputToken);
   const zeroForOne = poolKey.currency0 === tradeCreationDto.inputToken;
-  const inputAmount = tradeCreationDto.rawInputAmount;
+  const inputAmount = tradeCreationDto.inputAmount;
   const minOutputAmount = 0n;
   const recipient = wallet.address;
 
@@ -75,7 +75,7 @@ if (require.main === module) {
 
   const ethInputAmount = ethers.parseEther("1");
 
-  const tradeCreationDto: TradeCreationDto = {
+  const tradeCreationDto: SellTradeCreationDto = {
     // Equivalent to getHardhatWallet_1()
     wallet: {
       rpcUrl: process.env.HARDHAT_RPC_URL,
@@ -83,8 +83,10 @@ if (require.main === module) {
     },
     chain: chain,
     inputToken: ethers.ZeroAddress,
-    rawInputAmount: ethInputAmount.toString(),
+    inputAmount: ethInputAmount.toString(),
     outputToken: OutputToken.USDC,
+    tradingPointPrice: "0",
+    tradeType: "SELL",
   };
   v4SwapInteraction(wallet, tradeCreationDto).catch(console.error);
 }
