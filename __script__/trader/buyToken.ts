@@ -1,5 +1,5 @@
 import { Wallet } from "ethers";
-import { getArbitrumWallet_1, TRADING_CONFIG } from "../../src/hooks/useSetup";
+import { getArbitrumWallet_1 } from "../../src/hooks/useSetup";
 import { createMinimalErc20 } from "../../src/lib/utils";
 import { TraderFactory } from "../../src/models/trading/TraderFactory";
 import { GeckoTerminalApi } from "../../src/services/GeckoTerminalApi";
@@ -22,7 +22,7 @@ async function buyToken(usdAmount: number, _tokenAddress?: string, _wallet?: Wal
   console.log("------------------------------------------");
 
   //const buyTrade = await trader.buy(wallet, erc20, usdAmount);
-  const ethLiquidity = await trader.wethLiquidity(erc20.getTokenAddress());
+  const ethLiquidity = await trader.getStrategies()[0].getTokenEthLiquidity(wallet, erc20.getTokenAddress());
   console.log("ethLiquidity", ethLiquidity);
 
   //console.log("buyTrade", buyTrade);
@@ -42,7 +42,8 @@ async function buyToken(usdAmount: number, _tokenAddress?: string, _wallet?: Wal
 }
 
 if (require.main === module) {
-  buyToken(TRADING_CONFIG.USD_TEST_SIZE).catch(console.error);
+  const USD_TEST_SIZE = 10;
+  buyToken(USD_TEST_SIZE).catch(console.error);
 }
 
 export { buyToken };
