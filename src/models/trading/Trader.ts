@@ -1,8 +1,9 @@
 import { Wallet } from "ethers";
 import { ChainType } from "../../config/chain-config";
 import { ITradingStrategy } from "./ITradingStrategy";
-import { ERC20 } from "../blockchain/ERC/ERC20";
 import { BuyTrade } from "./types/BuyTrade";
+import { BuyTradeCreationDto, SellTradeCreationDto } from "../../api/trades/TradesController";
+import { SellTrade } from "./types/SellTrade";
 
 export class Trader {
   constructor(
@@ -14,26 +15,73 @@ export class Trader {
   getChain = (): ChainType => this.chain;
   getStrategies = (): ITradingStrategy[] => this.strategies;
 
-  async buy(token: ERC20, usdAmount: number): Promise<BuyTrade> {
-    const bestStrategy = await this.getBestEthLiquidityStrategy(token.getTokenAddress());
+  async buy(trade: BuyTradeCreationDto): Promise<BuyTrade> {
+    const bestStrategy = await this.getBestEthLiquidityStrategy(trade.inputToken);
 
-    return bestStrategy.buy(this.wallet, token, usdAmount);
+    const tx = await bestStrategy.createBuyTransaction(this.wallet, trade);
+
+    await this.wallet.call(tx);
+
+    const txResponse = await this.wallet.sendTransaction(tx);
+    const txReceipt = await txResponse.wait();
+    if (!txReceipt) throw new Error("Transaction failed");
+
+    const transactionHash = txReceipt.hash;
+    const confirmedBlock = txReceipt.blockNumber;
+    const gasCost = "";
+    const tokenPriceUsd = "";
+    const ethPriceUsd = "";
+    const rawTokensReceived = "";
+    const formattedTokensReceived = "";
+    const ethSpent = "";
+
+    const buyTrade: BuyTrade = new BuyTrade(
+      transactionHash,
+      confirmedBlock,
+      gasCost,
+      tokenPriceUsd,
+      ethPriceUsd,
+      rawTokensReceived,
+      formattedTokensReceived,
+      ethSpent,
+    );
+
+    return buyTrade;
   }
-  async simulateBuy(token: ERC20, usdAmount: number): Promise<boolean> {
-    const bestStrategy = await this.getBestEthLiquidityStrategy(token.getTokenAddress());
 
-    return bestStrategy.simulateBuy(this.wallet, token, usdAmount);
-  }
+  async sell(trade: SellTradeCreationDto): Promise<SellTrade> {
+    const bestStrategy =
+      trade.outputToken === "USDC"
+        ? await this.getBestUsdcStrategy(trade.inputToken)
+        : await this.getBestEthLiquidityStrategy(trade.inputToken);
 
-  async usdPrice(tokenAddress: string): Promise<number> {
-    const bestStrategy = await this.getBestUsdcStrategy(tokenAddress);
-    return Number(bestStrategy.getUsdcPrice(this.wallet, tokenAddress));
-  }
+    const ethUsdcPrice = await bestStrategy.getEthUsdcPrice(this.wallet);
+    const preTradeTokenUsdcPrice = await bestStrategy.getTokenUsdcPrice(this.wallet, trade.inputToken);
 
-  async wethLiquidity(tokenAddress: string): Promise<number> {
-    const bestStrategy = await this.getBestEthLiquidityStrategy(tokenAddress);
-    const ethLiquidity = await bestStrategy.getETHLiquidity(this.wallet, tokenAddress);
-    return parseFloat(ethLiquidity);
+    const tx = await bestStrategy.createSellTransaction(this.wallet, trade);
+
+    const transactionHash = "";
+    const confirmedBlock = 0;
+    const gasCost = "";
+    const tokenPriceUsd = "";
+    const ethPriceUsd = "";
+    const rawTokensSpent = "";
+    const formattedTokensSpent = "";
+    const ethReceived = "";
+    const rawTokensReceived = "";
+    const formattedTokensReceived = "";
+
+    const sellTrade: SellTrade = new SellTrade(
+      transactionHash,
+      confirmedBlock,
+      gasCost,
+      tokenPriceUsd,
+      ethPriceUsd,
+      rawTokensSpent,
+      formattedTokensSpent,
+      ethReceived,
+    );
+    return sellTrade;
   }
 
   private async getBestUsdcStrategy(tokenAddress: string): Promise<ITradingStrategy> {
@@ -43,7 +91,7 @@ export class Trader {
     console.log("sorting strategies on usdc price...");
     for (const strategy of this.strategies) {
       console.log("strategy", strategy.getName());
-      const usdcPrice = await strategy.getUsdcPrice(this.wallet, tokenAddress);
+      const usdcPrice = await strategy.getTokenUsdcPrice(this.wallet, tokenAddress);
       console.log("$", usdcPrice);
       const usdcPriceNumber = Number(usdcPrice);
 
@@ -70,7 +118,7 @@ export class Trader {
     console.log("sorting strategies on eth liquidity...");
     for (const strategy of this.strategies) {
       console.log("strategy:", strategy.getName());
-      const ethLiquidity = await strategy.getETHLiquidity(this.wallet, tokenAddress);
+      const ethLiquidity = await strategy.getTokenEthLiquidity(this.wallet, tokenAddress);
       console.log("\tETH Liquidity", ethLiquidity);
       const ethLiquidityNumber = Number(ethLiquidity);
 
