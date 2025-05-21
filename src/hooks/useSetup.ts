@@ -15,17 +15,6 @@ import { AlchemyApi } from "../services/AlchemyApi";
 import { GeckoTerminalApi } from "../services/GeckoTerminalApi";
 import { TheGraphApi } from "../services/TheGraphApi";
 
-export const TRADING_CONFIG = {
-  USD_BUY_SIZE: 20,
-  USD_TEST_SIZE: 0.01,
-  PROFIT_MARGIN: 1.21,
-  STOP_LOSS_MARGIN: 0.9,
-  SLIPPAGE_TOLERANCE: 0.02,
-  MAX_PRICE_IMPACT_PERCENTAGE: 5,
-  TP1_POSITION_PERCENTAGE: 1,
-  MAX_RETRIES: 3,
-};
-
 //BASE
 export const getBaseProvider = async (): Promise<JsonRpcProvider> => {
   const rpcUrl = process.env.BASE_RPC_URL;
@@ -138,7 +127,6 @@ export const getOfflineSigner_1 = (): Wallet => {
   const wallet = new ethers.Wallet(privateKey);
   return wallet;
 };
-
 
 //API
 export const getAlchemyApi = (): AlchemyApi => {
