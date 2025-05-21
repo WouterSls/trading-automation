@@ -1,12 +1,27 @@
 import { ethers } from "ethers";
 
 const UNISWAP_V2_ROUTER_ABI = [
-  "function factory() external pure returns (address)",
-  "function WETH() external pure returns (address)",
+  // Read-only (view/pure) functions
+  "function WETH() view returns (address)",
+  "function factory() view returns (address)",
+  "function getAmountIn(uint256 amountOut, uint256 reserveIn, uint256 reserveOut) pure returns (uint256 amountIn)",
+  "function getAmountOut(uint256 amountIn, uint256 reserveIn, uint256 reserveOut) pure returns (uint256 amountOut)",
+  "function getAmountsIn(uint256 amountOut, address[] path) view returns (uint256[] amounts)",
   "function getAmountsOut(uint256 amountIn, address[] path) view returns (uint256[] amounts)",
+  "function quote(uint256 amountA, uint256 reserveA, uint256 reserveB) pure returns (uint256 amountB)",
+
+  // State-changing (nonpayable/payable) functions
+  "function swapExactETHForTokens(uint256 amountOutMin, address[] path, address to, uint256 deadline) payable returns (uint256[] amounts)",
+
+  "function swapExactETHForTokensSupportingFeeOnTransferTokens(uint256 amountOutMin, address[] path, address to, uint256 deadline) payable",
+
   "function swapExactTokensForETH(uint256 amountIn, uint256 amountOutMin, address[] path, address to, uint256 deadline) returns (uint256[] amounts)",
-  "function swapExactETHForTokens(uint256 amountOutMin, address[] path, address to, uint256 deadline) returns (uint256[] amounts)",
-  "function swapExactETHForTokensSupportingFeeOnTransferTokens(uint256 amountOutMin, address[] path, address to, uint256 dealine)",
+
+  "function swapExactTokensForETHSupportingFeeOnTransferTokens(uint256 amountIn, uint256 amountOutMin, address[] path, address to, uint256 deadline)",
+
+  "function swapExactTokensForTokens(uint256 amountIn, uint256 amountOutMin, address[] path, address to, uint256 deadline) returns (uint256[] amounts)",
+
+  "function swapExactTokensForTokensSupportingFeeOnTransferTokens(uint256 amountIn, uint256 amountOutMin, address[] path, address to, uint256 deadline)",
 ] as const;
 
 const UNISWAP_V2_FACTORY_ABI = [
