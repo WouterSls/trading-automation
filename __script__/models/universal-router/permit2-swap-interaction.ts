@@ -10,7 +10,7 @@ import {
 import { TradeCreationDto } from "../../../src/api/trades/TradesController";
 import { OutputToken } from "../../../src/models/trading/types/OutputToken";
 import { createMinimalErc20, decodeLogs } from "../../../src/lib/utils";
-import { UniswapV2Router } from "../../../src/models/blockchain/uniswap-v2/UniswapV2Router";
+import { UniswapV2RouterV2 } from "../../../src/models/blockchain/uniswap-v2/UniswapV2RouterV2";
 import { getLowPoolKey } from "../../../src/models/blockchain/uniswap-v4/uniswap-v4-utils";
 import {
   encodePermitSingleInput,
@@ -65,7 +65,7 @@ export async function v4SwapInteraction(wallet: Wallet, tradeCreationDto: TradeC
   const outputTokenAddress = getOutputTokenAddress(chain, tradeCreationDto.outputToken as OutputToken);
 
   const router = new UniversalRouter(chain);
-  const v2Router = new UniswapV2Router(chain);
+  const v2Router = new UniswapV2RouterV2(chain);
   const permit2 = new Permit2(chain);
 
   const usdcAddress = chainConfig.tokenAddresses.usdc;

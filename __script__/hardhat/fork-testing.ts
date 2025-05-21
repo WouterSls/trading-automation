@@ -3,7 +3,7 @@ import { getHardhatWallet_1 } from "../../src/hooks/useSetup";
 import { ChainType, getChainConfig } from "../../src/config/chain-config";
 import { ERC20 } from "../../src/models/blockchain/ERC/ERC20";
 import { createMinimalErc20 } from "../../src/lib/utils";
-import { UniswapV2Router } from "../../src/models/blockchain/uniswap-v2/UniswapV2Router";
+import { UniswapV2RouterV2 } from "../../src/models/blockchain/uniswap-v2/UniswapV2RouterV2";
 import { WETH_INTERFACE } from "../../src/lib/contract-abis/erc20";
 import { UniswapV3SwapRouterV2, UniswapV3QuoterV2 } from "../../src/models/blockchain/uniswap-v3/index";
 import {
@@ -55,7 +55,7 @@ async function v2RouterTest(chain: ChainType, wallet: Wallet, tokenToBuy: ERC20,
   console.log(
     `Executing a v2 swap transaction for ${ethAmountToSpendInUSD} USD on ${chain} with wallet ${wallet.address}`,
   );
-  const v2Router = new UniswapV2Router(chain);
+  const v2Router = new UniswapV2RouterV2(chain);
   const tx: TransactionRequest = await v2Router.createSwapExactETHInputTransaction(
     wallet,
     tokenToBuy,
