@@ -64,7 +64,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/TradeCreationDto"
+              oneOf:
+                - $ref: "#/components/schemas/BuyTradeCreationDto"
+                - $ref: "#/components/schemas/SellTradeCreationDto"
+              discriminator:
+                propertyName: tradeType
+                mapping:
+                  BUY: "#/components/schemas/BuyTradeCreationDto"
+                  SELL: "#/components/schemas/SellTradeCreationDto"
       responses:
         "200":
           description: Trade created successfully
@@ -83,9 +90,22 @@ paths:
       description: Creates a new trade
       tags:
         - Trades
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - $ref: "#/components/schemas/BuyTradeCreationDto"
+                - $ref: "#/components/schemas/SellTradeCreationDto"
+              discriminator:
+                propertyName: tradeType
+                mapping:
+                  BUY: "#/components/schemas/BuyTradeCreationDto"
+                  SELL: "#/components/schemas/SellTradeCreationDto"
       responses:
         "200":
-          description: Wallet info
+          description: Trade created successfully
           content:
             application/json:
               schema:
@@ -96,9 +116,22 @@ paths:
       description: Creates a new trade
       tags:
         - Trades
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - $ref: "#/components/schemas/BuyTradeCreationDto"
+                - $ref: "#/components/schemas/SellTradeCreationDto"
+              discriminator:
+                propertyName: tradeType
+                mapping:
+                  BUY: "#/components/schemas/BuyTradeCreationDto"
+                  SELL: "#/components/schemas/SellTradeCreationDto"
       responses:
         "200":
-          description: Wallet info
+          description: Trade created successfully
           content:
             application/json:
               schema:
@@ -109,9 +142,22 @@ paths:
       description: Creates a new trade
       tags:
         - Trades
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - $ref: "#/components/schemas/BuyTradeCreationDto"
+                - $ref: "#/components/schemas/SellTradeCreationDto"
+              discriminator:
+                propertyName: tradeType
+                mapping:
+                  BUY: "#/components/schemas/BuyTradeCreationDto"
+                  SELL: "#/components/schemas/SellTradeCreationDto"
       responses:
         "200":
-          description: Wallet info
+          description: Trade created successfully
           content:
             application/json:
               schema:
@@ -214,9 +260,13 @@ components:
           items:
             type: string
 
-    TradeCreationDto:
+    BuyTradeCreationDto:
       type: object
       properties:
+        tradeType:
+          type: string
+          enum: [BUY]
+          description: Type of trade
         wallet:
           type: object
           $ref: "#/components/schemas/WalletCreationDto"
@@ -226,19 +276,54 @@ components:
           description: Blockchain network
         inputToken:
           type: string
-          description: Address of the input token
-        rawInputAmount:
+          enum: [USDC, WETH, ETH]
+          description: Address of the token you're paying with
+        inputAmount:
           type: string
-          #type: number
-          #format: double
-          description: Amount of input token to trade
+          description: Amount of input tokens to be traded
+        outputToken:
+          type: string
+          description: Token you want to buy
+      required:
+        - wallet
+        - chain
+        - inputToken
+        - inputAmount
+        - outputToken
+        - tradeType
+
+    SellTradeCreationDto:
+      type: object
+      properties:
+        tradeType:
+          type: string
+          enum: [SELL]
+          description: Type of trade
+        wallet:
+          type: object
+          $ref: "#/components/schemas/WalletCreationDto"
+        chain:
+          type: string
+          enum: [ETH, ARB, BASE]
+          description: Blockchain network
+        inputToken:
+          type: string
+          description: Address of the token you're selling
+        inputAmount:
+          type: string
+          description: Amount of input tokens to be traded
         outputToken:
           type: string
           enum: [USDC, WETH, ETH]
-          description: Output token symbol
+          description: Token you want to receive
+        tradingPointPrice:
+          type: string
+          description: The USD trading point price at which to sell
       required:
-        - walletId
+        - wallet
         - chain
         - inputToken
-        - rawInputAmount
+        - inputAmount
         - outputToken
+        - tradingPointPrice
+        - tradeType

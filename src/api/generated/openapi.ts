@@ -90,7 +90,7 @@ export interface paths {
             };
             requestBody: {
                 content: {
-                    "application/json": components["schemas"]["TradeCreationDto"];
+                    "application/json": components["schemas"]["BuyTradeCreationDto"] | components["schemas"]["SellTradeCreationDto"];
                 };
             };
             responses: {
@@ -134,9 +134,13 @@ export interface paths {
                 path?: never;
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["BuyTradeCreationDto"] | components["schemas"]["SellTradeCreationDto"];
+                };
+            };
             responses: {
-                /** @description Wallet info */
+                /** @description Trade created successfully */
                 200: {
                     headers: {
                         [name: string]: unknown;
@@ -173,9 +177,13 @@ export interface paths {
                 path?: never;
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["BuyTradeCreationDto"] | components["schemas"]["SellTradeCreationDto"];
+                };
+            };
             responses: {
-                /** @description Wallet info */
+                /** @description Trade created successfully */
                 200: {
                     headers: {
                         [name: string]: unknown;
@@ -212,9 +220,13 @@ export interface paths {
                 path?: never;
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["BuyTradeCreationDto"] | components["schemas"]["SellTradeCreationDto"];
+                };
+            };
             responses: {
-                /** @description Wallet info */
+                /** @description Trade created successfully */
                 200: {
                     headers: {
                         [name: string]: unknown;
@@ -379,22 +391,51 @@ export interface components {
             address?: string;
             chains?: string[];
         };
-        TradeCreationDto: {
-            wallet?: components["schemas"]["WalletCreationDto"];
+        BuyTradeCreationDto: {
+            /**
+             * @description Type of trade (enum property replaced by openapi-typescript)
+             * @enum {string}
+             */
+            tradeType: "BUY";
+            wallet: components["schemas"]["WalletCreationDto"];
             /**
              * @description Blockchain network
              * @enum {string}
              */
             chain: "ETH" | "ARB" | "BASE";
-            /** @description Address of the input token */
-            inputToken: string;
-            /** @description Amount of input token to trade */
-            rawInputAmount: string;
             /**
-             * @description Output token symbol
+             * @description Address of the token you're paying with
+             * @enum {string}
+             */
+            inputToken: "USDC" | "WETH" | "ETH";
+            /** @description Amount of input tokens to be traded */
+            inputAmount: string;
+            /** @description Token you want to buy */
+            outputToken: string;
+        };
+        SellTradeCreationDto: {
+            /**
+             * @description Type of trade (enum property replaced by openapi-typescript)
+             * @enum {string}
+             */
+            tradeType: "SELL";
+            wallet: components["schemas"]["WalletCreationDto"];
+            /**
+             * @description Blockchain network
+             * @enum {string}
+             */
+            chain: "ETH" | "ARB" | "BASE";
+            /** @description Address of the token you're selling */
+            inputToken: string;
+            /** @description Amount of input tokens to be traded */
+            inputAmount: string;
+            /**
+             * @description Token you want to receive
              * @enum {string}
              */
             outputToken: "USDC" | "WETH" | "ETH";
+            /** @description The USD trading point price at which to sell */
+            tradingPointPrice: string;
         };
     };
     responses: never;
