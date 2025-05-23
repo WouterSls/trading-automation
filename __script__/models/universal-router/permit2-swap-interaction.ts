@@ -8,7 +8,7 @@ import {
   IPermitTransferFrom,
 } from "../../../src/models/blockchain/universal-router/universal-router-types";
 import { OutputToken, SellTradeCreationDto } from "../../../src/models/trading/types/_index";
-import { createMinimalErc20, decodeLogs } from "../../../src/lib/utils";
+import { decodeLogs } from "../../../src/lib/utils";
 import { UniswapV2RouterV2 } from "../../../src/models/blockchain/uniswap-v2/UniswapV2RouterV2";
 import { getLowPoolKey } from "../../../src/models/blockchain/uniswap-v4/uniswap-v4-utils";
 import {
@@ -16,7 +16,7 @@ import {
   encodePermitTransferFromInput,
 } from "../../../src/models/blockchain/universal-router/universal-router-utils";
 import { Permit2 } from "../../../src/models/blockchain/permit2/Permit2";
-import { ERC20 } from "../../../src/models/blockchain/ERC/ERC20";
+import { ERC20, createMinimalErc20 } from "../../../src/models/blockchain/ERC/_index";
 
 async function verifyOrGrantMaxUnitAllowance(wallet: Wallet, token: ERC20, spender: string) {
   const permit2Allowance = await token.getRawAllowance(wallet.address, spender);

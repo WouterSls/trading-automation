@@ -3,7 +3,7 @@ import { ChainType, getChainConfig } from "../../../src/config/chain-config";
 import { getHardhatWallet_1 } from "../../../src/hooks/useSetup";
 import { TradeRoute } from "../../../src/models/blockchain/aerodrome/aerodrome-types";
 import { AerodromeRouter } from "../../../src/models/blockchain/aerodrome/AerodromeRouter";
-import { createMinimalErc20 } from "../../../src/lib/utils";
+import { createMinimalErc20 } from "../../../src/models/blockchain/ERC/erc-utils";
 
 export async function swapInteraction() {
   const chain = ChainType.BASE;

@@ -3,26 +3,8 @@ import { ethers, Provider, Wallet } from "ethers";
 import { ERC20_INTERFACE } from "./contract-abis/erc20";
 import { ERC20 } from "../models/blockchain/ERC/ERC20";
 import { ChainType, mapNetworkNameToChainType } from "../config/chain-config";
-import { POOL_INTERFACE } from "./contract-abis/uniswap-v3";
+import { POOL_INTERFACE as V3_POOL_INTERFACE } from "./contract-abis/uniswap-v3";
 import { calculatePriceFromSqrtPriceX96 } from "../models/blockchain/uniswap-v3/uniswap-v3-utils";
-
-export async function createMinimalErc20(address: string, provider: Provider): Promise<ERC20> {
-  const contract = new ethers.Contract(address, ERC20_INTERFACE, provider);
-
-  const [name, symbol, decimals, totalSupply] = await Promise.all([
-    contract.name().catch(() => "Not a token"),
-    contract.symbol().catch(() => "Unknown"),
-    contract.decimals().catch(() => 18),
-    contract.totalSupply().catch(() => "0"),
-  ]);
-
-  if (name === "Not a token" || symbol === "Unknown" || totalSupply === "0") {
-    throw new Error("Not an ERC20");
-  }
-  const numberDecimals = Number(decimals);
-
-  return new ERC20(name, symbol, address, numberDecimals, totalSupply, contract);
-}
 
 export function extractRawTokenOutputFromLogs(logs: any, token: ERC20): bigint {
   const transferEvent = logs.find((log: any) => log.address.toLowerCase() === token.getTokenAddress().toLowerCase());
@@ -81,8 +63,8 @@ export function decodeLogs(logs: ReadonlyArray<ethers.Log>) {
             log.address.toLowerCase() === "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48" ? 6 : 18,
           ),
         });
-      } else if (log.topics[0] === POOL_INTERFACE.getEvent("Swap")!.topicHash) {
-        const decoded = POOL_INTERFACE.parseLog({
+      } else if (log.topics[0] === V3_POOL_INTERFACE.getEvent("Swap")!.topicHash) {
+        const decoded = V3_POOL_INTERFACE.parseLog({
           topics: log.topics,
           data: log.data,
         });
@@ -104,7 +86,9 @@ export function decodeLogs(logs: ReadonlyArray<ethers.Log>) {
           liquidity: decoded.args.liquidity,
           tick: decoded.args.tick,
         });
-      } else {
+      }
+      //TODO: UNISWAP V2 PAIR ALSO HAS TRADE EVENT
+      else {
         decodedLogs.push({
           type: "Unknown",
           address: log.address,

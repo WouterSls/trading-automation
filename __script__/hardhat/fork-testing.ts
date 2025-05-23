@@ -1,8 +1,7 @@
 import { ethers, Wallet, TransactionRequest, Contract } from "ethers";
 import { getHardhatWallet_1 } from "../../src/hooks/useSetup";
 import { ChainType, getChainConfig } from "../../src/config/chain-config";
-import { ERC20 } from "../../src/models/blockchain/ERC/ERC20";
-import { createMinimalErc20 } from "../../src/lib/utils";
+import { ERC20, createMinimalErc20 } from "../../src/models/blockchain/ERC/_index";
 import { UniswapV2RouterV2 } from "../../src/models/blockchain/uniswap-v2/UniswapV2RouterV2";
 import { WETH_INTERFACE } from "../../src/lib/contract-abis/erc20";
 import { UniswapV3SwapRouterV2, UniswapV3QuoterV2 } from "../../src/models/blockchain/uniswap-v3/index";

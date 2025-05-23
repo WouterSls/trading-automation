@@ -3,12 +3,6 @@ import { UniswapV3Factory, UniswapV3Pool, TickInfo, FeeAmount } from "../../../s
 import { ChainType } from "../../../src/config/chain-config";
 import { ethers } from "ethers";
 
-enum FeeTier {
-  "0.05%" = 500,
-  "0.3%" = 3000,
-  "1%" = 10000,
-}
-
 export async function poolInteraction() {
   const wallet = getEthWallet_1();
   const factory = new UniswapV3Factory(ChainType.ETH);

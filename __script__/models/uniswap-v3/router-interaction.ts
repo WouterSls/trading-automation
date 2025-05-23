@@ -12,8 +12,8 @@ import {
 import { UniswapV3SwapRouterV2 } from "../../../src/models/blockchain/uniswap-v3/UniswapV3SwapRouterV2";
 import { UniswapV3Factory } from "../../../src/models/blockchain/uniswap-v3/UniswapV3Factory";
 import { getEthWallet_1, getBaseWallet_1, getArbitrumWallet_2, getHardhatWallet_1 } from "../../../src/hooks/useSetup";
-import { createMinimalErc20, decodeLogs, validateNetwork } from "../../../src/lib/utils";
-import { ERC20 } from "../../../src/models/blockchain/ERC/ERC20";
+import { decodeLogs, validateNetwork } from "../../../src/lib/utils";
+import { ERC20, createMinimalErc20 } from "../../../src/models/blockchain/ERC/_index";
 import { encodePath } from "../../../src/models/blockchain/uniswap-v3/uniswap-v3-utils";
 
 async function routerInteraction(chain: ChainType, wallet: Wallet) {

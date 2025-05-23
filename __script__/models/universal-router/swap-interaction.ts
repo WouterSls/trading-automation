@@ -4,8 +4,9 @@ import { ChainType, getChainConfig } from "../../../src/config/chain-config";
 import { UniversalRouter } from "../../../src/models/blockchain/universal-router/UniversalRouter";
 import { CommandType } from "../../../src/models/blockchain/universal-router/universal-router-types";
 import { OutputToken, SellTradeCreationDto } from "../../../src/models/trading/types/_index";
-import { createMinimalErc20, decodeLogs } from "../../../src/lib/utils";
+import { decodeLogs } from "../../../src/lib/utils";
 import { getLowPoolKey } from "../../../src/models/blockchain/uniswap-v4/uniswap-v4-utils";
+import { createMinimalErc20 } from "../../../src/models/blockchain/ERC/erc-utils";
 
 export async function v4SwapInteraction(wallet: Wallet, tradeCreationDto: SellTradeCreationDto) {
   const chain: ChainType = tradeCreationDto.chain as ChainType;
