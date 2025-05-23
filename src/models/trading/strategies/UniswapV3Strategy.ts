@@ -1,6 +1,6 @@
 import { ERC20 } from "../../blockchain/ERC/ERC20";
 import { ethers, TransactionRequest, Wallet } from "ethers";
-import { ChainType } from "../../../config/chain-config";
+import { ChainConfig, ChainType, getChainConfig } from "../../../config/chain-config";
 
 import { UniswapV3QuoterV2 } from "../../blockchain/uniswap-v3/UniswapV3QuoterV2";
 import { UniswapV3Factory } from "../../blockchain/uniswap-v3/UniswapV3Factory";
@@ -16,10 +16,12 @@ export class UniswapV3Strategy implements ITradingStrategy {
 
   private strategyName: string;
   private chain: ChainType;
+  private chainConfig: ChainConfig;
 
   constructor(STRATEGY_NAME: string, chain: ChainType) {
     this.strategyName = STRATEGY_NAME;
     this.chain = chain;
+    this.chainConfig = getChainConfig(chain);
     this.quoter = new UniswapV3QuoterV2(chain);
     this.factory = new UniswapV3Factory(chain);
   }
@@ -40,7 +42,7 @@ export class UniswapV3Strategy implements ITradingStrategy {
 
       for (const feeTier of feeTiers) {
         const poolAddress = await this.factory.getPoolAddress(wallet, tokenAddress, wethAddress, feeTier);
-        if (!poolAddress) continue;
+        if (!poolAddress || poolAddress === ethers.ZeroAddress) continue;
 
         const weth = new ethers.Contract(this.factory!.getWETHAddress(), ERC20_INTERFACE, wallet);
         const ethLiquidity = await weth.balanceOf(poolAddress);

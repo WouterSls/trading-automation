@@ -37,7 +37,8 @@ export class UniswapV4Strategy implements ITradingStrategy {
 
       for (const feeTier of feeTiers) {
         const poolAddress = await this.factory.getPoolAddress(wallet, tokenAddress, wethAddress, feeTier);
-        if (!poolAddress) continue;
+
+        if (!poolAddress || poolAddress === ethers.ZeroAddress) continue;
 
         const weth = new ethers.Contract(this.factory!.getWETHAddress(), ERC20_INTERFACE, wallet);
         const ethLiquidity = await weth.balanceOf(poolAddress);
