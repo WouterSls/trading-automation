@@ -171,11 +171,13 @@ export class AlchemyApi {
     }
 
     const data = await res.json();
+    // DEBUGGING LOG
+    //console.log(data);
+    const result = data.result;
+    const token0 = result.tokenBalances[0];
+    const tokensOwnedAmount = result.tokenBalances.length;
 
-    //console.log(res);
-    console.log(data);
-
-    return [];
+    return tokensOwnedAmount;
   }
 
   /**

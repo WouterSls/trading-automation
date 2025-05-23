@@ -15,7 +15,7 @@ export class GeckoTerminalApi {
    * @token
    */
   async getTokenPriceData(chain: ChainType, tokenAddress: string) {
-    const url = `${this.BASE_URL}/networks/${chain}/tokens/${tokenAddress}`;
+    const url = `${this.BASE_URL}/networks/${chain}/tokens/${tokenAddress}`.toLowerCase();
 
     const response = await fetch(url, {
       method: "GET",
@@ -32,7 +32,7 @@ export class GeckoTerminalApi {
     return data.data;
   }
   async getTokenUsdPrice(chain: ChainType, tokenAddress: string) {
-    const url = `${this.BASE_URL}/networks/${chain}/tokens/${tokenAddress}`;
+    const url = `${this.BASE_URL}/networks/${chain}/tokens/${tokenAddress}`.toLowerCase();
 
     const response = await fetch(url, {
       method: "GET",
@@ -54,7 +54,7 @@ export class GeckoTerminalApi {
    * @pools
    */
   async getNewPools(chain: ChainType) {
-    const url = `${this.BASE_URL}/networks/${chain}/new_pools`;
+    const url = `${this.BASE_URL}/networks/${chain}/new_pools`.toLowerCase();
 
     const response = await fetch(url, {
       method: "GET",
