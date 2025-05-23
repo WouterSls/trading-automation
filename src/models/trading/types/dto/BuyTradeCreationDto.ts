@@ -5,7 +5,7 @@ export type BuyTradeCreationDto = {
   tradeType: "BUY";
   chain: ChainType;
   inputType: InputType;
-  inputToken?: string;
+  inputToken: string;
   inputAmount: string;
   outputToken: string;
 };

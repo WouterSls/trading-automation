@@ -1,34 +1,42 @@
-import { Wallet } from "ethers";
-import { ChainType } from "../../config/chain-config";
+import { ethers, Wallet } from "ethers";
+import { ChainConfig, ChainType, getChainConfig } from "../../config/chain-config";
 import { ITradingStrategy } from "./ITradingStrategy";
-import { BuyTrade, BuyTradeCreationDto, SellTrade, SellTradeCreationDto } from "./types/_index";
+import { BuyTrade, BuyTradeCreationDto, InputType, SellTrade, SellTradeCreationDto } from "./types/_index";
 
 export class Trader {
+  private chainConfig: ChainConfig;
   constructor(
     private wallet: Wallet,
     private chain: ChainType,
     private strategies: ITradingStrategy[],
-  ) {}
+  ) {
+    this.chainConfig = getChainConfig(chain);
+  }
 
   getChain = (): ChainType => this.chain;
   getStrategies = (): ITradingStrategy[] => this.strategies;
 
   async buy(trade: BuyTradeCreationDto): Promise<BuyTrade> {
-    let bestStrategy: ITradingStrategy;
-    //TODO: is this a correct check for a buy request?
-    if (trade.inputType === "USD") {
-      bestStrategy = await this.getBestUsdcStrategy(trade.inputToken!);
-    } else {
-      bestStrategy = await this.getBestEthLiquidityStrategy(trade.inputToken!);
+    const bestStrategy: ITradingStrategy = await this.getBestEthLiquidityStrategy(trade.outputToken);
+
+    console.log("Creating buy transaction...");
+    const tx = await bestStrategy.createBuyTransaction(this.wallet, trade);
+    console.log("Transaction created!");
+
+    try {
+      console.log("Verifying transaction...");
+      await this.wallet.call(tx);
+      console.log("Transaction passed!");
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "An Unknown Error Occurred";
+      console.log(errorMessage);
     }
 
-    const tx = await bestStrategy.createBuyTransaction(this.wallet, trade);
-
-    await this.wallet.call(tx);
-
+    console.log("Sending transaction...");
     const txResponse = await this.wallet.sendTransaction(tx);
     const txReceipt = await txResponse.wait();
     if (!txReceipt) throw new Error("Transaction failed");
+    console.log("Transaction confirmed!");
 
     const transactionHash = txReceipt.hash;
     const confirmedBlock = txReceipt.blockNumber;

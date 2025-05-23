@@ -1,5 +1,5 @@
 export enum InputType {
-  USD = "USD",
   ETH = "ETH",
+  USD = "USD",
   TOKEN = "TOKEN",
 }
