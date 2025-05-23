@@ -3,8 +3,7 @@ import { getHardhatWallet_1 } from "../../../src/hooks/useSetup";
 import { ChainType, getChainConfig } from "../../../src/config/chain-config";
 import { UniversalRouter } from "../../../src/models/blockchain/universal-router/UniversalRouter";
 import { CommandType } from "../../../src/models/blockchain/universal-router/universal-router-types";
-import { SellTradeCreationDto } from "../../../src/api/trades/TradesController";
-import { OutputToken } from "../../../src/models/trading/types/OutputToken";
+import { OutputToken, SellTradeCreationDto } from "../../../src/models/trading/types/_index";
 import { createMinimalErc20, decodeLogs } from "../../../src/lib/utils";
 import { getLowPoolKey } from "../../../src/models/blockchain/uniswap-v4/uniswap-v4-utils";
 
@@ -76,11 +75,6 @@ if (require.main === module) {
   const ethInputAmount = ethers.parseEther("1");
 
   const tradeCreationDto: SellTradeCreationDto = {
-    // Equivalent to getHardhatWallet_1()
-    wallet: {
-      rpcUrl: process.env.HARDHAT_RPC_URL,
-      privateKey: process.env.HARDHAT_PRIVATE_KEY_1,
-    },
     chain: chain,
     inputToken: ethers.ZeroAddress,
     inputAmount: ethInputAmount.toString(),
