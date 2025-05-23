@@ -1,5 +1,5 @@
 import { TransactionRequest, Wallet } from "ethers";
-import { BuyTradeCreationDto, SellTradeCreationDto } from "../../api/trades/TradesController";
+import { BuyTradeCreationDto, SellTradeCreationDto } from "./types/_index";
 
 export interface ITradingStrategy {
   getName(): string;

@@ -1,7 +1,7 @@
 import { TransactionReceipt, Wallet } from "ethers";
 import { ChainType } from "../../../config/chain-config";
 import { ITradingStrategy } from "../ITradingStrategy";
-import { BuyTradeCreationDto, SellTradeCreationDto } from "../../../api/trades/TradesController";
+import { BuyTradeCreationDto, SellTradeCreationDto } from "../types/_index";
 
 export class AerodromeStrategy implements ITradingStrategy {
   constructor(

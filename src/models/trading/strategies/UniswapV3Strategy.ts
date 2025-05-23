@@ -8,8 +8,7 @@ import { UniswapV3Factory } from "../../blockchain/uniswap-v3/UniswapV3Factory";
 import { ITradingStrategy } from "../ITradingStrategy";
 import { ERC20_INTERFACE } from "../../../lib/contract-abis/erc20";
 import { FeeAmount } from "../../blockchain/uniswap-v3/uniswap-v3-types";
-import { BuyTrade, SellTrade, OutputToken } from "../types/_index";
-import { BuyTradeCreationDto, SellTradeCreationDto } from "../../../api/trades/TradesController";
+import { BuyTrade, SellTrade, OutputToken, BuyTradeCreationDto, SellTradeCreationDto } from "../types/_index";
 
 export class UniswapV3Strategy implements ITradingStrategy {
   private quoter: UniswapV3QuoterV2;

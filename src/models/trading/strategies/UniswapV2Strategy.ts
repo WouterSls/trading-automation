@@ -4,7 +4,7 @@ import { UniswapV2RouterV2, UniswapV2Factory } from "../../blockchain/uniswap-v2
 import { OutputToken } from "../types/_index";
 import { ERC20_INTERFACE } from "../../../lib/contract-abis/erc20";
 import { ITradingStrategy } from "../ITradingStrategy";
-import { BuyTradeCreationDto, SellTradeCreationDto } from "../../../api/trades/TradesController";
+import { BuyTradeCreationDto, SellTradeCreationDto } from "../types/_index";
 import { createMinimalErc20 } from "../../../lib/utils";
 import { TRADING_CONFIG } from "../../../config/trading-config";
 import { ERC20 } from "../../blockchain/ERC/ERC20";

@@ -1,9 +1,7 @@
 import { Wallet } from "ethers";
 import { ChainType } from "../../config/chain-config";
 import { ITradingStrategy } from "./ITradingStrategy";
-import { BuyTrade } from "./types/BuyTrade";
-import { BuyTradeCreationDto, SellTradeCreationDto } from "../../api/trades/TradesController";
-import { SellTrade } from "./types/SellTrade";
+import { BuyTrade, BuyTradeCreationDto, SellTrade, SellTradeCreationDto } from "./types/_index";
 
 export class Trader {
   constructor(
@@ -16,7 +14,13 @@ export class Trader {
   getStrategies = (): ITradingStrategy[] => this.strategies;
 
   async buy(trade: BuyTradeCreationDto): Promise<BuyTrade> {
-    const bestStrategy = await this.getBestEthLiquidityStrategy(trade.inputToken);
+    let bestStrategy: ITradingStrategy;
+    //TODO: is this a correct check for a buy request?
+    if (trade.inputType === "USD") {
+      bestStrategy = await this.getBestUsdcStrategy(trade.inputToken!);
+    } else {
+      bestStrategy = await this.getBestEthLiquidityStrategy(trade.inputToken!);
+    }
 
     const tx = await bestStrategy.createBuyTransaction(this.wallet, trade);
 
