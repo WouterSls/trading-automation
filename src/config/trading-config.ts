@@ -5,4 +5,5 @@ export const TRADING_CONFIG = {
   MAX_PRICE_IMPACT_PERCENTAGE: 5,
   MAX_RETRIES: 3,
   DEADLINE: Math.floor(Date.now() / 1000) + 1200,
+  INFINITE_APPROVAL: true,
 };
