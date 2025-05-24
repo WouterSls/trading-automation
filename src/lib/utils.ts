@@ -1,16 +1,11 @@
-import { ethers, Provider, Wallet } from "ethers";
+import { ethers, Wallet } from "ethers";
 
-import { ERC20_INTERFACE } from "./contract-abis/erc20";
+import { ERC20_INTERFACE, WETH_INTERFACE } from "./contract-abis/erc20";
 import { ERC20 } from "../models/blockchain/ERC/ERC20";
-import { ChainType, mapNetworkNameToChainType } from "../config/chain-config";
+import { ChainType, mapNetworkNameToChainType, getChainConfig } from "../config/chain-config";
 import { POOL_INTERFACE as V3_POOL_INTERFACE } from "./contract-abis/uniswap-v3";
+import { UNISWAP_V2_PAIR_INTERFACE } from "./contract-abis/uniswap-v2";
 import { calculatePriceFromSqrtPriceX96 } from "../models/blockchain/uniswap-v3/uniswap-v3-utils";
-
-export function extractRawTokenOutputFromLogs(logs: any, token: ERC20): bigint {
-  const transferEvent = logs.find((log: any) => log.address.toLowerCase() === token.getTokenAddress().toLowerCase());
-  const rawReceivedTokenAmount = transferEvent ? transferEvent.data : "Unknown";
-  return rawReceivedTokenAmount;
-}
 
 export async function approveTokenSpending(wallet: Wallet, token: ERC20, spenderAddress: string, rawAmount: bigint) {
   const approveTxRequest = await token.createApproveTransaction(spenderAddress, rawAmount);
@@ -19,16 +14,10 @@ export async function approveTokenSpending(wallet: Wallet, token: ERC20, spender
   const approveTxReceipt = await approveTxResponse.wait();
 
   if (!approveTxReceipt) throw new Error("Failed to approve token spending | no transaction receipt");
-  const gasCost = approveTxReceipt.gasPrice * approveTxReceipt.gasUsed;
+  const gasCost = approveTxReceipt.gasPrice! * approveTxReceipt.gasUsed;
 
   const gasCostFormatted = ethers.formatEther(gasCost);
   return gasCostFormatted;
-}
-
-export function calculateSlippageAmount(rawAmount: bigint, slippageTolerance: number) {
-  const slippageMultiplier = slippageTolerance * 100;
-  const slippageAmount = (rawAmount * BigInt(slippageMultiplier)) / 100n;
-  return slippageAmount;
 }
 
 export async function validateNetwork(wallet: Wallet, chainType: ChainType) {
@@ -58,10 +47,52 @@ export function decodeLogs(logs: ReadonlyArray<ethers.Log>) {
           from: decoded.args.from,
           to: decoded.args.to,
           amount: decoded.args.amount,
-          formattedAmount: ethers.formatUnits(
-            decoded.args.amount,
-            log.address.toLowerCase() === "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48" ? 6 : 18,
-          ),
+        });
+      } else if (log.topics[0] === WETH_INTERFACE.getEvent("Withdrawal")!.topicHash) {
+        const decoded = WETH_INTERFACE.parseLog({
+          topics: log.topics,
+          data: log.data,
+        });
+
+        if (!decoded) throw new Error("Failed to decode WETH Withdrawal");
+
+        decodedLogs.push({
+          type: "WETH Withdrawal",
+          contract: log.address,
+          src: decoded.args.src,
+          wad: decoded.args.wad,
+        });
+      } else if (log.topics[0] === WETH_INTERFACE.getEvent("Deposit")!.topicHash) {
+        const decoded = WETH_INTERFACE.parseLog({
+          topics: log.topics,
+          data: log.data,
+        });
+
+        if (!decoded) throw new Error("Failed to decode WETH Deposit");
+
+        decodedLogs.push({
+          type: "WETH Deposit",
+          contract: log.address,
+          dst: decoded.args.dst,
+          wad: decoded.args.wad,
+        });
+      } else if (log.topics[0] === UNISWAP_V2_PAIR_INTERFACE.getEvent("Swap")!.topicHash) {
+        const decoded = UNISWAP_V2_PAIR_INTERFACE.parseLog({
+          topics: log.topics,
+          data: log.data,
+        });
+
+        if (!decoded) throw new Error("Failed to decode Uniswap V2 Swap");
+
+        decodedLogs.push({
+          type: "Uniswap V2 Swap",
+          pair: log.address,
+          sender: decoded.args.sender,
+          to: decoded.args.to,
+          amount0In: decoded.args.amount0In,
+          amount1In: decoded.args.amount1In,
+          amount0Out: decoded.args.amount0Out,
+          amount1Out: decoded.args.amount1Out,
         });
       } else if (log.topics[0] === V3_POOL_INTERFACE.getEvent("Swap")!.topicHash) {
         const decoded = V3_POOL_INTERFACE.parseLog({
@@ -86,9 +117,7 @@ export function decodeLogs(logs: ReadonlyArray<ethers.Log>) {
           liquidity: decoded.args.liquidity,
           tick: decoded.args.tick,
         });
-      }
-      //TODO: UNISWAP V2 PAIR ALSO HAS TRADE EVENT
-      else {
+      } else {
         decodedLogs.push({
           type: "Unknown",
           address: log.address,
