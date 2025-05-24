@@ -9,4 +9,6 @@ export interface ITradingStrategy {
 
   createBuyTransaction(wallet: Wallet, trade: BuyTradeCreationDto): Promise<TransactionRequest>;
   createSellTransaction(wallet: Wallet, trade: SellTradeCreationDto): Promise<TransactionRequest>;
+
+  ensureTokenApproval(wallet: Wallet, tokenAddress: string, amount: string): Promise<string | null>;
 }

@@ -4,15 +4,18 @@ import { ChainType } from "../../../config/chain-config";
 
 import { UniswapV3QuoterV2 } from "../../blockchain/uniswap-v3/UniswapV3QuoterV2";
 import { UniswapV3Factory } from "../../blockchain/uniswap-v3/UniswapV3Factory";
+import { UniswapV3SwapRouterV2 } from "../../blockchain/uniswap-v3/UniswapV3SwapRouterV2";
 
 import { ITradingStrategy } from "../ITradingStrategy";
 import { ERC20_INTERFACE } from "../../../lib/contract-abis/erc20";
 import { FeeAmount } from "../../blockchain/uniswap-v3/uniswap-v3-types";
 import { BuyTrade, SellTrade, OutputToken, BuyTradeCreationDto, SellTradeCreationDto } from "../types/_index";
+import { createMinimalErc20 } from "../../blockchain/ERC/erc-utils";
 
 export class UniswapV4Strategy implements ITradingStrategy {
   private quoter: UniswapV3QuoterV2;
   private factory: UniswapV3Factory;
+  private router: UniswapV3SwapRouterV2;
 
   private strategyName: string;
   private chain: ChainType;
@@ -22,9 +25,19 @@ export class UniswapV4Strategy implements ITradingStrategy {
     this.chain = chain;
     this.quoter = new UniswapV3QuoterV2(chain);
     this.factory = new UniswapV3Factory(chain);
+    this.router = new UniswapV3SwapRouterV2(chain);
   }
 
   getName = (): string => this.strategyName;
+  getSpenderAddress = (): string => this.router.getRouterAddress();
+
+  async ensureTokenApproval(wallet: Wallet, tokenAddress: string, amount: string): Promise<string | null> {
+    // TODO: Implement Permit2 approval logic here
+    // For now, fallback to standard approval until Permit2 is fully integrated
+    const { ensureStandardApproval } = await import("../../../lib/approval-strategies");
+    return await ensureStandardApproval(wallet, tokenAddress, amount, this.router.getRouterAddress());
+  }
+
   async getEthUsdcPrice(wallet: Wallet): Promise<string> {
     throw new Error("Not implemented");
   }
