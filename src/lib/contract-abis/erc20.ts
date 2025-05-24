@@ -13,6 +13,8 @@ const MINIMAL_ERC20_ABI = [
 
 const WETH_ABI = [
   "event Transfer(address indexed from, address indexed to, uint256 amount)",
+  "event Withdrawal(address indexed src, uint256 wad)",
+  "event Deposit(address indexed dst, uint256 wad)",
   "function name() view returns (string)",
   "function symbol() view returns (string)",
   "function decimals() view returns (uint8)",
