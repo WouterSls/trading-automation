@@ -7,6 +7,7 @@ import { ITradingStrategy } from "../ITradingStrategy";
 import { BuyTradeCreationDto, SellTradeCreationDto } from "../types/_index";
 import { TRADING_CONFIG } from "../../../config/trading-config";
 import { ERC20, createMinimalErc20 } from "../../blockchain/ERC/_index";
+import { ensureInfiniteApproval, ensureStandardApproval } from "../../../lib/approval-strategies";
 
 export class UniswapV2Strategy implements ITradingStrategy {
   private router: UniswapV2RouterV2;
@@ -19,19 +20,29 @@ export class UniswapV2Strategy implements ITradingStrategy {
   private USDC_DECIMALS = 6;
 
   constructor(
-    private STRATEGY_NAME: string,
-    private CHAIN: ChainType,
+    private strategyName: string,
+    chain: ChainType,
   ) {
-    const chainConfig = getChainConfig(CHAIN);
+    const chainConfig = getChainConfig(chain);
 
     this.WETH_ADDRESS = chainConfig.tokenAddresses.weth;
     this.USDC_ADDRESS = chainConfig.tokenAddresses.usdc;
 
-    this.router = new UniswapV2RouterV2(CHAIN);
-    this.factory = new UniswapV2Factory(CHAIN);
+    this.router = new UniswapV2RouterV2(chain);
+    this.factory = new UniswapV2Factory(chain);
   }
 
-  getName = (): string => this.STRATEGY_NAME;
+  getName = (): string => this.strategyName;
+
+  async ensureTokenApproval(wallet: Wallet, tokenAddress: string, amount: string): Promise<string | null> {
+    const spender = this.router.getRouterAddress();
+    if (TRADING_CONFIG.INFINITE_APPROVAL) {
+      return await ensureInfiniteApproval(wallet, tokenAddress, amount, spender);
+    } else {
+      return await ensureStandardApproval(wallet, tokenAddress, amount, spender);
+    }
+  }
+
   async getEthUsdcPrice(wallet: Wallet): Promise<string> {
     const tradePath = [this.WETH_ADDRESS, this.USDC_ADDRESS];
     const inputAmount = ethers.parseUnits("1", this.WETH_DECIMALS);
@@ -62,8 +73,6 @@ export class UniswapV2Strategy implements ITradingStrategy {
     const token = await createMinimalErc20(tokenAddress, wallet.provider!);
 
     const tradePath = [tokenAddress, this.WETH_ADDRESS, this.USDC_ADDRESS];
-    console.log("tradePath:");
-    console.log(tradePath);
     const inputAmount = ethers.parseUnits("1", token.getDecimals());
 
     const amountsOut: BigInt[] = await this.router.getAmountsOut(wallet, inputAmount, tradePath);
@@ -74,7 +83,6 @@ export class UniswapV2Strategy implements ITradingStrategy {
   }
 
   async createBuyTransaction(wallet: Wallet, trade: BuyTradeCreationDto): Promise<TransactionRequest> {
-    console.log(trade);
     const to = wallet.address;
     const tokenOut = await createMinimalErc20(trade.outputToken, wallet.provider!);
     const deadline = TRADING_CONFIG.DEADLINE;
@@ -123,6 +131,7 @@ export class UniswapV2Strategy implements ITradingStrategy {
 
     return tx;
   }
+
   async createSellTransaction(wallet: Wallet, trade: SellTradeCreationDto): Promise<TransactionRequest> {
     const tokenIn = await createMinimalErc20(trade.inputToken, wallet.provider!);
     const amountIn = ethers.parseUnits(trade.inputAmount, tokenIn.getDecimals());
@@ -133,17 +142,20 @@ export class UniswapV2Strategy implements ITradingStrategy {
     let quotedOutput;
     let priceImpact;
     let path;
+    let rawTokensReceived;
 
     if (trade.outputToken === "USDC") {
       path = [tokenIn.getTokenAddress(), this.WETH_ADDRESS, this.USDC_ADDRESS];
       const theoreticalUsdcOutput = await this.getTheoreticalUsdcTokenOutput(sellAmount, usdSellPrice);
       quotedOutput = await this.getActualUsdcOutput(wallet, tokenIn, amountIn);
       priceImpact = this.calculatePriceImpact(theoreticalUsdcOutput, quotedOutput);
+      rawTokensReceived = ethers.parseUnits(quotedOutput.toString(), this.USDC_DECIMALS);
     } else {
       path = [tokenIn.getTokenAddress(), this.WETH_ADDRESS];
       const theoreticalEthOutput = await this.getTheoreticalEthOutput(wallet, sellAmount, usdSellPrice);
       quotedOutput = await this.getActualEthOutput(wallet, tokenIn, amountIn);
       priceImpact = this.calculatePriceImpact(theoreticalEthOutput, quotedOutput);
+      rawTokensReceived = ethers.parseUnits(quotedOutput.toString(), this.WETH_DECIMALS);
     }
 
     if (priceImpact > TRADING_CONFIG.MAX_PRICE_IMPACT_PERCENTAGE) {
@@ -153,32 +165,22 @@ export class UniswapV2Strategy implements ITradingStrategy {
     }
 
     const deadline = TRADING_CONFIG.DEADLINE;
-    const rawTokensReceived = ethers.parseUnits(quotedOutput.toString(), tokenIn.getDecimals());
-    const slippageAmount = rawTokensReceived * BigInt(TRADING_CONFIG.SLIPPAGE_TOLERANCE);
+    const slippageAmount = (rawTokensReceived * BigInt(TRADING_CONFIG.SLIPPAGE_TOLERANCE * 100)) / 100n;
     const amountOutMin = rawTokensReceived - slippageAmount;
 
     let tx: TransactionRequest;
     switch (trade.outputToken) {
-      case "WETH":
-        tx = this.router.createSwapExactTokensForTokensTransaction(
-          amountIn,
-          amountOutMin,
-          path,
-          wallet.address,
-          deadline,
-        );
-        return tx;
-      case "USDC":
-        tx = this.router.createSwapExactTokensForTokensTransaction(
-          amountIn,
-          amountOutMin,
-          path,
-          wallet.address,
-          deadline,
-        );
+      case "ETH":
+        tx = this.router.createSwapExactTokensForETHTransaction(amountIn, amountOutMin, path, wallet.address, deadline);
         return tx;
       default:
-        tx = this.router.createSwapExactTokensForETHTransaction(amountIn, amountOutMin, path, wallet.address, deadline);
+        tx = this.router.createSwapExactTokensForTokensTransaction(
+          amountIn,
+          amountOutMin,
+          path,
+          wallet.address,
+          deadline,
+        );
         return tx;
     }
   }

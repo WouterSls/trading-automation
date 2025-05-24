@@ -1,23 +1,24 @@
-import { ethers, Wallet } from "ethers";
-import { ChainConfig, ChainType, getChainConfig } from "../../config/chain-config";
+import { ethers, TransactionReceipt, TransactionRequest, Wallet } from "ethers";
+import { ChainType, getOutputTokenAddress, getChainConfig } from "../../config/chain-config";
 import { ITradingStrategy } from "./ITradingStrategy";
-import { BuyTrade, BuyTradeCreationDto, InputType, SellTrade, SellTradeCreationDto } from "./types/_index";
+import { BuyTrade, BuyTradeCreationDto, SellTrade, SellTradeCreationDto } from "./types/_index";
+import { decodeLogs } from "../../lib/utils";
+import { ERC20_INTERFACE } from "../../lib/contract-abis/erc20";
 
 export class Trader {
-  private chainConfig: ChainConfig;
   constructor(
     private wallet: Wallet,
     private chain: ChainType,
     private strategies: ITradingStrategy[],
-  ) {
-    this.chainConfig = getChainConfig(chain);
-  }
+  ) {}
 
   getChain = (): ChainType => this.chain;
   getStrategies = (): ITradingStrategy[] => this.strategies;
 
   async buy(trade: BuyTradeCreationDto): Promise<BuyTrade> {
     const bestStrategy: ITradingStrategy = await this.getBestEthLiquidityStrategy(trade.outputToken);
+
+    const ethUsdcPrice = await bestStrategy.getEthUsdcPrice(this.wallet);
 
     console.log("Creating buy transaction...");
     const tx = await bestStrategy.createBuyTransaction(this.wallet, trade);
@@ -38,26 +39,7 @@ export class Trader {
     if (!txReceipt) throw new Error("Transaction failed");
     console.log("Transaction confirmed!");
 
-    const transactionHash = txReceipt.hash;
-    const confirmedBlock = txReceipt.blockNumber;
-    const gasCost = "";
-    const tokenPriceUsd = "";
-    const ethPriceUsd = "";
-    const rawTokensReceived = "";
-    const formattedTokensReceived = "";
-    const ethSpent = "";
-
-    const buyTrade: BuyTrade = new BuyTrade(
-      transactionHash,
-      confirmedBlock,
-      gasCost,
-      tokenPriceUsd,
-      ethPriceUsd,
-      rawTokensReceived,
-      formattedTokensReceived,
-      ethSpent,
-    );
-
+    const buyTrade: BuyTrade = await this.createBuyTrade(trade.outputToken, ethUsdcPrice, tx, txReceipt);
     return buyTrade;
   }
 
@@ -70,29 +52,46 @@ export class Trader {
     const ethUsdcPrice = await bestStrategy.getEthUsdcPrice(this.wallet);
     const preTradeTokenUsdcPrice = await bestStrategy.getTokenUsdcPrice(this.wallet, trade.inputToken);
 
-    const tx = await bestStrategy.createSellTransaction(this.wallet, trade);
-
-    const transactionHash = "";
-    const confirmedBlock = 0;
-    const gasCost = "";
-    const tokenPriceUsd = "";
-    const ethPriceUsd = "";
-    const rawTokensSpent = "";
-    const formattedTokensSpent = "";
-    const ethReceived = "";
-    const rawTokensReceived = "";
-    const formattedTokensReceived = "";
-
-    const sellTrade: SellTrade = new SellTrade(
-      transactionHash,
-      confirmedBlock,
-      gasCost,
-      tokenPriceUsd,
-      ethPriceUsd,
-      rawTokensSpent,
-      formattedTokensSpent,
-      ethReceived,
+    console.log("Checking approval...");
+    const approvalGasCost: string | null = await bestStrategy.ensureTokenApproval(
+      this.wallet,
+      trade.inputToken,
+      trade.inputAmount,
     );
+
+    if (approvalGasCost) {
+      console.log("Approved new allowance!");
+      console.log("Gas cost:", approvalGasCost);
+    } else {
+      console.log("No new approval needed!");
+    }
+
+    console.log("Creating sell transaction...");
+    const tx = await bestStrategy.createSellTransaction(this.wallet, trade);
+    console.log("Transaction created!");
+
+    try {
+      console.log("Verifying transaction...");
+      await this.wallet.call(tx);
+      console.log("Transaction passed!");
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "An Unknown Error Occurred";
+      console.log(errorMessage);
+    }
+
+    console.log("Sending transaction...");
+    const txResponse = await this.wallet.sendTransaction(tx);
+    const txReceipt = await txResponse.wait();
+    if (!txReceipt) throw new Error("Transaction failed");
+    console.log("Transaction confirmed!");
+
+    const inputTokenAddress = trade.inputToken;
+    const outputTokenAddress = getOutputTokenAddress(trade.chain, trade.outputToken);
+
+    const sellTrade = await this.createSellTrade(inputTokenAddress, outputTokenAddress, ethUsdcPrice, tx, txReceipt);
+    console.log("Pre trade token usdc price:", preTradeTokenUsdcPrice);
+    console.log("Actual calculated usdc price:", sellTrade.getTokenPriceUsd());
+
     return sellTrade;
   }
 
@@ -149,5 +148,252 @@ export class Trader {
     console.log(`best strategy: ${bestStrategy.getName()}`);
 
     return bestStrategy;
+  }
+
+  //TODO: refact
+  private async createBuyTrade(
+    outputTokenAddress: string,
+    ethPriceUsd: string,
+    tx: TransactionRequest,
+    txReceipt: TransactionReceipt,
+  ) {
+    const txHash = txReceipt.hash;
+    const confirmedBlock = txReceipt.blockNumber;
+
+    const gasCostRaw = txReceipt.gasUsed * (txReceipt.gasPrice || 0n);
+    const gasCost = ethers.formatEther(gasCostRaw);
+
+    const ethSpentRaw = tx.value || 0n;
+    const ethSpent = ethers.formatEther(ethSpentRaw);
+
+    // LOG EXTRACTION
+    const encodedData = ERC20_INTERFACE.encodeFunctionData("decimals", []);
+    const decimalsTx: TransactionRequest = {
+      to: outputTokenAddress,
+      data: encodedData,
+    };
+    const rawResult = await this.wallet.call(decimalsTx);
+    const [decimals] = ERC20_INTERFACE.decodeFunctionResult("decimals", rawResult);
+
+    let rawTokensReceived = "0";
+    let formattedTokensReceived = "0";
+
+    const decodedLogs = decodeLogs(txReceipt.logs);
+    const tokenTransfers = decodedLogs.filter(
+      (log: any) =>
+        log.type === "ERC20 Transfer" &&
+        log.contract.toLowerCase() === outputTokenAddress.toLowerCase() &&
+        log.to.toLowerCase() === this.wallet.address.toLowerCase(),
+    );
+
+    if (tokenTransfers.length > 0) {
+      const finalTransfer = tokenTransfers[tokenTransfers.length - 1];
+      rawTokensReceived = finalTransfer.amount.toString();
+      formattedTokensReceived = ethers.formatUnits(finalTransfer.amount, decimals);
+    } else {
+      console.log("⚠️  No token transfers found to wallet address");
+    }
+
+    // PRICE CALCULATION
+    let tokenPriceUsd = "0";
+    if (parseFloat(formattedTokensReceived) > 0 && parseFloat(ethSpent) > 0 && parseFloat(ethPriceUsd) > 0) {
+      const usdSpent = parseFloat(ethSpent) * parseFloat(ethPriceUsd);
+      tokenPriceUsd = (usdSpent / parseFloat(formattedTokensReceived)).toString();
+    } else {
+      console.log("⚠️  Cannot calculate token price - missing token amount, ETH spent, or ETH price");
+      console.log(`  - Tokens received: ${formattedTokensReceived}`);
+      console.log(`  - ETH spent: ${ethSpent}`);
+      console.log(`  - ETH price: ${ethPriceUsd}`);
+    }
+
+    const buyTrade: BuyTrade = new BuyTrade(
+      txHash,
+      confirmedBlock,
+      gasCost,
+      tokenPriceUsd,
+      ethPriceUsd,
+      rawTokensReceived,
+      formattedTokensReceived,
+      ethSpent,
+    );
+
+    return buyTrade;
+  }
+
+  //TODO: refactor
+  private async createSellTrade(
+    inputTokenAddress: string,
+    outputTokenAddress: string,
+    ethPriceUsd: string,
+    tx: TransactionRequest,
+    txReceipt: TransactionReceipt,
+    approvalGasCost?: string,
+  ) {
+    const txHash = txReceipt.hash;
+    const confirmedBlock = txReceipt.blockNumber;
+
+    const gasCostRaw = txReceipt.gasUsed * (txReceipt.gasPrice || 0n);
+    const approvalGastCostRaw = ethers.parseEther(approvalGasCost || "0");
+    const gasCost = ethers.formatEther(gasCostRaw + approvalGastCostRaw);
+
+    const ethSpentRaw = tx.value || 0n;
+    const ethSpent = ethers.formatEther(ethSpentRaw);
+
+    // LOG EXTRACTION
+    let rawTokensReceived = "0";
+    let formattedTokensReceived = "0";
+    let rawTokensSpent = "0";
+    let formattedTokensSpent = "0";
+    let ethReceived = "0";
+    let outputDecimals;
+
+    if (outputTokenAddress === ethers.ZeroAddress) {
+      outputDecimals = 18n;
+    } else {
+      const encodedOutputTokenData = ERC20_INTERFACE.encodeFunctionData("decimals", []);
+      const outputTokenDecimalsTx: TransactionRequest = {
+        to: outputTokenAddress,
+        data: encodedOutputTokenData,
+      };
+      const rawOutputTokenTxResult = await this.wallet.call(outputTokenDecimalsTx);
+      [outputDecimals] = ERC20_INTERFACE.decodeFunctionResult("decimals", rawOutputTokenTxResult);
+    }
+
+    const encodedInputTokenData = ERC20_INTERFACE.encodeFunctionData("decimals", []);
+    const inputTokenDecimalsTx: TransactionRequest = {
+      to: inputTokenAddress,
+      data: encodedInputTokenData,
+    };
+    const rawInputTokenTxResult = await this.wallet.call(inputTokenDecimalsTx);
+    const [inputDecimals] = ERC20_INTERFACE.decodeFunctionResult("decimals", rawInputTokenTxResult);
+
+    const decodedLogs = decodeLogs(txReceipt.logs);
+
+    // Handle receiving tokens/ETH based on output type
+    if (outputTokenAddress === ethers.ZeroAddress) {
+      // For ETH output, look for WETH transfers to wallet (which will be unwrapped)
+      const chainConfig = getChainConfig(this.chain);
+      const wethAddress = chainConfig.tokenAddresses.weth;
+
+      const wethToWalletTransfers = decodedLogs.filter(
+        (log: any) =>
+          log.type === "ERC20 Transfer" &&
+          log.contract.toLowerCase() === wethAddress.toLowerCase() &&
+          log.to.toLowerCase() === this.wallet.address.toLowerCase(),
+      );
+
+      if (wethToWalletTransfers.length > 0) {
+        const finalTransfer = wethToWalletTransfers[wethToWalletTransfers.length - 1];
+        rawTokensReceived = finalTransfer.amount.toString();
+        formattedTokensReceived = ethers.formatUnits(finalTransfer.amount, outputDecimals);
+      }
+
+      // Look for WETH withdrawal events by the router (not wallet) to calculate actual ETH received
+      const routerAddress = "0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D"; // Uniswap V2 Router
+      const wethWithdrawals = decodedLogs.filter(
+        (log: any) =>
+          log.type === "WETH Withdrawal" &&
+          log.contract.toLowerCase() === wethAddress.toLowerCase() &&
+          log.src.toLowerCase() === routerAddress.toLowerCase(),
+      );
+
+      if (wethWithdrawals.length > 0) {
+        // Sum all WETH withdrawals by the router
+        const totalWithdrawn = wethWithdrawals.reduce((total: bigint, withdrawal: any) => {
+          return total + withdrawal.wad;
+        }, 0n);
+        ethReceived = ethers.formatEther(totalWithdrawn);
+        formattedTokensReceived = ethReceived; // For ETH output, received amount = ETH received
+        rawTokensReceived = totalWithdrawn.toString();
+      } else {
+        // Fallback: Look for Uniswap V2 Swap events to calculate ETH output
+        const v2Swaps = decodedLogs.filter((log: any) => log.type === "Uniswap V2 Swap");
+
+        for (const swap of v2Swaps) {
+          // In a UNI->ETH swap, we need to find which amount represents ETH
+          // Check if this pair involves WETH by looking at token0/token1
+          // For now, use the larger output amount as ETH (common pattern)
+          const amount0Out = swap.amount0Out;
+          const amount1Out = swap.amount1Out;
+
+          if (amount0Out > 0n) {
+            ethReceived = ethers.formatEther(amount0Out);
+            formattedTokensReceived = ethReceived;
+            rawTokensReceived = amount0Out.toString();
+            break;
+          } else if (amount1Out > 0n) {
+            ethReceived = ethers.formatEther(amount1Out);
+            formattedTokensReceived = ethReceived;
+            rawTokensReceived = amount1Out.toString();
+            break;
+          }
+        }
+      }
+    } else {
+      // For token output, look for ERC20 transfers to wallet
+      const receivingTokenTransfers = decodedLogs.filter(
+        (log: any) =>
+          log.type === "ERC20 Transfer" &&
+          log.contract.toLowerCase() === outputTokenAddress.toLowerCase() &&
+          log.to.toLowerCase() === this.wallet.address.toLowerCase(),
+      );
+
+      if (receivingTokenTransfers.length > 0) {
+        const finalTransfer = receivingTokenTransfers[receivingTokenTransfers.length - 1];
+        rawTokensReceived = finalTransfer.amount.toString();
+        formattedTokensReceived = ethers.formatUnits(finalTransfer.amount, outputDecimals);
+      } else {
+        console.log("⚠️  No token transfers found to wallet address");
+      }
+    }
+
+    const spendingTokenTransfers = decodedLogs.filter(
+      (log: any) =>
+        log.type === "ERC20 Transfer" &&
+        log.contract.toLowerCase() === inputTokenAddress.toLowerCase() &&
+        log.from.toLowerCase() === this.wallet.address.toLowerCase(),
+    );
+    if (spendingTokenTransfers.length > 0) {
+      const firstTransfer = spendingTokenTransfers[0];
+      rawTokensSpent = firstTransfer.amount.toString();
+      formattedTokensSpent = ethers.formatUnits(firstTransfer.amount, inputDecimals);
+    } else {
+      console.log("⚠️  No token spending transfers found from wallet address");
+    }
+
+    // PRICE CALCULATION
+    let tokenPriceUsd = "0";
+    if (parseFloat(formattedTokensSpent) > 0 && parseFloat(formattedTokensReceived) > 0) {
+      // For sell trades: Token Price = USD received / Tokens spent
+      // Assuming USDC ≈ 1 USD, or if receiving ETH, convert ETH to USD
+      let usdReceived = parseFloat(formattedTokensReceived);
+
+      // If output token is ETH, convert to USD using ETH price
+      if (outputTokenAddress === ethers.ZeroAddress && parseFloat(ethPriceUsd) > 0) {
+        usdReceived = parseFloat(formattedTokensReceived) * parseFloat(ethPriceUsd);
+      }
+
+      tokenPriceUsd = (usdReceived / parseFloat(formattedTokensSpent)).toString();
+    } else {
+      console.log("⚠️  Cannot calculate token price - missing token amounts");
+      console.log(`  - Tokens spent: ${formattedTokensSpent}`);
+      console.log(`  - Tokens received: ${formattedTokensReceived}`);
+    }
+
+    const sellTrade: SellTrade = new SellTrade(
+      txHash,
+      confirmedBlock,
+      gasCost,
+      tokenPriceUsd,
+      ethPriceUsd,
+      ethSpent,
+      rawTokensSpent,
+      formattedTokensSpent,
+      rawTokensReceived,
+      formattedTokensReceived,
+      ethReceived,
+    );
+
+    return sellTrade;
   }
 }
