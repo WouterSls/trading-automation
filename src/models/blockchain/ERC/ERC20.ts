@@ -1,6 +1,7 @@
 import { ethers, Contract } from "ethers";
 import { TransactionRequest } from "ethers";
 import { UserError } from "../../../lib/errors";
+import { ERC20_INTERFACE } from "../../../lib/contract-abis/erc20";
 
 export class ERC20 {
   constructor(
@@ -50,11 +51,7 @@ export class ERC20 {
     try {
       if (rawAmount <= 0n) throw new UserError("Invalid amount for approve transaction");
 
-      const abiInterface = new ethers.Interface([
-        "function approve(address spender, uint256 amount) external returns (bool)",
-      ]);
-
-      const encodedData = abiInterface.encodeFunctionData("approve", [spenderAddress, rawAmount]);
+      const encodedData = ERC20_INTERFACE.encodeFunctionData("approve", [spenderAddress, rawAmount]);
 
       const tx: TransactionRequest = {
         to: this.tokenAddress,
