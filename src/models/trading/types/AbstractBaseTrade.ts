@@ -1,10 +1,10 @@
 export abstract class BaseTrade {
   constructor(
-    public transactionHash: string,
-    public confirmedBlock: number,
-    public gasCost: string,
-    public tokenPriceUsd: string,
-    public ethPriceUsd: string,
+    private transactionHash: string,
+    private confirmedBlock: number,
+    private gasCost: string,
+    private tokenPriceUsd: string,
+    private ethPriceUsd: string,
   ) {}
 
   /**
