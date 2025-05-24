@@ -1,13 +1,16 @@
 import { TransactionRequest, Wallet, ethers } from "ethers";
-import { ChainType, getChainConfig, getOutputTokenAddress } from "../../../config/chain-config";
-import { UniswapV2RouterV2, UniswapV2Factory } from "../../blockchain/uniswap-v2/index";
-import { InputType, OutputToken } from "../types/_index";
-import { ERC20_INTERFACE } from "../../../lib/contract-abis/erc20";
-import { ITradingStrategy } from "../ITradingStrategy";
-import { BuyTradeCreationDto, SellTradeCreationDto } from "../types/_index";
+
+import { ChainType, getChainConfig } from "../../../config/chain-config";
 import { TRADING_CONFIG } from "../../../config/trading-config";
+
 import { ERC20, createMinimalErc20 } from "../../blockchain/ERC/_index";
-import { ensureInfiniteApproval, ensureStandardApproval } from "../../../lib/approval-strategies";
+import { UniswapV2RouterV2, UniswapV2Factory } from "../../blockchain/uniswap-v2/index";
+
+import { ITradingStrategy } from "../ITradingStrategy";
+import { BuyTradeCreationDto, SellTradeCreationDto, InputType } from "../types/_index";
+
+import { ERC20_INTERFACE } from "../../../lib/contract-abis/_index";
+import { ensureInfiniteApproval, ensureStandardApproval, validateNetwork } from "../../../lib/_index";
 
 export class UniswapV2Strategy implements ITradingStrategy {
   private router: UniswapV2RouterV2;
@@ -21,7 +24,7 @@ export class UniswapV2Strategy implements ITradingStrategy {
 
   constructor(
     private strategyName: string,
-    chain: ChainType,
+    private chain: ChainType,
   ) {
     const chainConfig = getChainConfig(chain);
 
@@ -32,8 +35,19 @@ export class UniswapV2Strategy implements ITradingStrategy {
     this.factory = new UniswapV2Factory(chain);
   }
 
+  /**
+   * Gets the name of this trading strategy
+   * @returns The strategy name
+   */
   getName = (): string => this.strategyName;
 
+  /**
+   * Ensures token approval for trading operations
+   * @param wallet Connected wallet to use for approval
+   * @param tokenAddress Address of the token to approve
+   * @param amount Amount to approve (used for standard approval calculation)
+   * @returns Transaction hash if approval was needed, null if already approved
+   */
   async ensureTokenApproval(wallet: Wallet, tokenAddress: string, amount: string): Promise<string | null> {
     const spender = this.router.getRouterAddress();
     if (TRADING_CONFIG.INFINITE_APPROVAL) {
@@ -43,7 +57,13 @@ export class UniswapV2Strategy implements ITradingStrategy {
     }
   }
 
+  /**
+   * Gets the current ETH price in USDC
+   * @param wallet Connected wallet to query the price
+   * @returns ETH price in USDC as a string
+   */
   async getEthUsdcPrice(wallet: Wallet): Promise<string> {
+    await validateNetwork(wallet, this.chain);
     const tradePath = [this.WETH_ADDRESS, this.USDC_ADDRESS];
     const inputAmount = ethers.parseUnits("1", this.WETH_DECIMALS);
 
@@ -52,9 +72,17 @@ export class UniswapV2Strategy implements ITradingStrategy {
     const amountFormatted = ethers.formatUnits(amountOut.toString(), this.USDC_DECIMALS);
     return amountFormatted;
   }
+
+  /**
+   * Gets the ETH liquidity for a given token pair
+   * @param wallet Connected wallet to query liquidity
+   * @param tokenAddress Address of the token to check liquidity for
+   * @returns ETH liquidity amount as a string
+   */
   async getTokenEthLiquidity(wallet: Wallet, tokenAddress: string): Promise<string> {
+    await validateNetwork(wallet, this.chain);
     const pairAddress: string | null = await this.factory!.getPairAddress(wallet, tokenAddress, this.WETH_ADDRESS);
-    if (!pairAddress) throw new Error(`No pair found for ${tokenAddress} and ${this.WETH_ADDRESS}`);
+    if (!pairAddress || pairAddress === ethers.ZeroAddress) return "0";
 
     const encodedData = ERC20_INTERFACE.encodeFunctionData("balanceOf", [pairAddress]);
 
@@ -68,7 +96,15 @@ export class UniswapV2Strategy implements ITradingStrategy {
     const ethLiquidityFormatted = ethers.formatEther(ethLiquidity);
     return ethLiquidityFormatted;
   }
+
+  /**
+   * Gets the current token price in USDC
+   * @param wallet Connected wallet to query the price
+   * @param tokenAddress Address of the token to get price for
+   * @returns Token price in USDC as a string
+   */
   async getTokenUsdcPrice(wallet: Wallet, tokenAddress: string): Promise<string> {
+    await validateNetwork(wallet, this.chain);
     if (!wallet.provider) throw new Error("No Blockchain provider");
     const token = await createMinimalErc20(tokenAddress, wallet.provider!);
 
@@ -82,16 +118,22 @@ export class UniswapV2Strategy implements ITradingStrategy {
     return amountFormatted;
   }
 
+  /**
+   * Creates a buy transaction based on the provided trade parameters
+   * @param wallet Connected wallet to create transaction for
+   * @param trade Buy trade creation parameters
+   * @returns Transaction request object ready to be sent
+   */
   async createBuyTransaction(wallet: Wallet, trade: BuyTradeCreationDto): Promise<TransactionRequest> {
+    await validateNetwork(wallet, this.chain);
     const to = wallet.address;
-    const tokenOut = await createMinimalErc20(trade.outputToken, wallet.provider!);
     const deadline = TRADING_CONFIG.DEADLINE;
 
     let tx: TransactionRequest = {};
 
-    // TODO: should protect inputToken = 0X0
-    if (trade.inputType === InputType.ETH) {
+    if (trade.inputType === InputType.ETH && trade.inputToken === ethers.ZeroAddress) {
       const path = [this.WETH_ADDRESS, trade.outputToken];
+
       const amountIn = ethers.parseEther(trade.inputAmount);
 
       const amountsOut = await this.router.getAmountsOut(wallet, amountIn, path);
@@ -99,26 +141,27 @@ export class UniswapV2Strategy implements ITradingStrategy {
       const amountOutMin = (tokensReceived * 95n) / 100n;
 
       tx = this.router.createSwapExactETHForTokensTransaction(amountOutMin, path, to, deadline);
-      // TODO: we might need to increase value to cover gas fees aswell. does value parameter pay for gas?
       tx.value = amountIn;
-      // TODO: should protect inputToken = 0X0 or USDC address
     } else if (trade.inputType === InputType.USD && trade.inputToken === ethers.ZeroAddress) {
       const path = [this.WETH_ADDRESS, trade.outputToken];
+
       const ethUsdcPrice = await this.getEthUsdcPrice(wallet);
       const ethValue = parseFloat(trade.inputAmount) / parseFloat(ethUsdcPrice);
 
-      const amountIn = ethers.parseEther(ethValue.toString());
+      const ethValueFixed = ethValue.toFixed(18);
+      const amountIn = ethers.parseEther(ethValueFixed);
 
       const amountsOut = await this.router.getAmountsOut(wallet, amountIn, path);
       const tokensReceived = amountsOut[amountsOut.length - 1];
       const amountOutMin = (tokensReceived * 95n) / 100n;
 
       tx = this.router.createSwapExactETHForTokensTransaction(amountOutMin, path, to, deadline);
-      // TODO: we might need to increase value to cover gas fees aswell. does value parameter pay for gas?
       tx.value = amountIn;
-    } else {
+    } else if (trade.inputType === InputType.TOKEN && trade.inputToken != ethers.ZeroAddress) {
       const tokenIn = await createMinimalErc20(trade.inputToken, wallet.provider!);
-      const path = [trade.inputToken, this.WETH_ADDRESS, trade.outputToken];
+      const tokenOut = await createMinimalErc20(trade.outputToken, wallet.provider!);
+      const path = [tokenIn.getTokenAddress(), this.WETH_ADDRESS, tokenOut.getTokenAddress()];
+
       const amountIn = ethers.parseUnits(trade.inputAmount, tokenIn.getDecimals());
 
       const amountsOut = await this.router.getAmountsOut(wallet, amountIn, path);
@@ -132,57 +175,99 @@ export class UniswapV2Strategy implements ITradingStrategy {
     return tx;
   }
 
+  /**
+   * Creates a sell transaction based on the provided trade parameters
+   * Includes price impact validation and slippage protection
+   * @param wallet Connected wallet to create transaction for
+   * @param trade Sell trade creation parameters
+   * @returns Transaction request object ready to be sent
+   * @throws Error if price impact exceeds maximum allowed percentage
+   */
   async createSellTransaction(wallet: Wallet, trade: SellTradeCreationDto): Promise<TransactionRequest> {
-    const tokenIn = await createMinimalErc20(trade.inputToken, wallet.provider!);
-    const amountIn = ethers.parseUnits(trade.inputAmount, tokenIn.getDecimals());
+    await validateNetwork(wallet, this.chain);
+    const to = wallet.address;
+    const deadline = TRADING_CONFIG.DEADLINE;
 
     const sellAmount = parseFloat(trade.inputAmount);
     const usdSellPrice = parseFloat(trade.tradingPointPrice);
 
+    let theoreticalOutput;
     let quotedOutput;
     let priceImpact;
     let path;
     let rawTokensReceived;
+    let tx: TransactionRequest = {};
 
-    if (trade.outputToken === "USDC") {
+    if (trade.outputToken === "USDC" && trade.inputToken !== ethers.ZeroAddress) {
+      const tokenIn = await createMinimalErc20(trade.inputToken, wallet.provider!);
       path = [tokenIn.getTokenAddress(), this.WETH_ADDRESS, this.USDC_ADDRESS];
-      const theoreticalUsdcOutput = await this.getTheoreticalUsdcTokenOutput(sellAmount, usdSellPrice);
+
+      const amountIn = ethers.parseUnits(trade.inputAmount, tokenIn.getDecimals());
+
+      theoreticalOutput = await this.getTheoreticalUsdcTokenOutput(sellAmount, usdSellPrice);
       quotedOutput = await this.getActualUsdcOutput(wallet, tokenIn, amountIn);
-      priceImpact = this.calculatePriceImpact(theoreticalUsdcOutput, quotedOutput);
-      rawTokensReceived = ethers.parseUnits(quotedOutput.toString(), this.USDC_DECIMALS);
-    } else {
-      path = [tokenIn.getTokenAddress(), this.WETH_ADDRESS];
-      const theoreticalEthOutput = await this.getTheoreticalEthOutput(wallet, sellAmount, usdSellPrice);
-      quotedOutput = await this.getActualEthOutput(wallet, tokenIn, amountIn);
-      priceImpact = this.calculatePriceImpact(theoreticalEthOutput, quotedOutput);
-      rawTokensReceived = ethers.parseUnits(quotedOutput.toString(), this.WETH_DECIMALS);
-    }
+      priceImpact = this.calculatePriceImpact(theoreticalOutput, quotedOutput);
 
-    if (priceImpact > TRADING_CONFIG.MAX_PRICE_IMPACT_PERCENTAGE) {
-      throw new Error(
-        `Price impact too high: ${priceImpact}%, max allowed: ${TRADING_CONFIG.MAX_PRICE_IMPACT_PERCENTAGE}%`,
-      );
-    }
-
-    const deadline = TRADING_CONFIG.DEADLINE;
-    const slippageAmount = (rawTokensReceived * BigInt(TRADING_CONFIG.SLIPPAGE_TOLERANCE * 100)) / 100n;
-    const amountOutMin = rawTokensReceived - slippageAmount;
-
-    let tx: TransactionRequest;
-    switch (trade.outputToken) {
-      case "ETH":
-        tx = this.router.createSwapExactTokensForETHTransaction(amountIn, amountOutMin, path, wallet.address, deadline);
-        return tx;
-      default:
-        tx = this.router.createSwapExactTokensForTokensTransaction(
-          amountIn,
-          amountOutMin,
-          path,
-          wallet.address,
-          deadline,
+      if (priceImpact > TRADING_CONFIG.MAX_PRICE_IMPACT_PERCENTAGE) {
+        throw new Error(
+          `Price impact too high: ${priceImpact}%, max allowed: ${TRADING_CONFIG.MAX_PRICE_IMPACT_PERCENTAGE}%`,
         );
-        return tx;
+      }
+
+      rawTokensReceived = ethers.parseUnits(quotedOutput.toString(), this.USDC_DECIMALS);
+      const slippageAmount = (rawTokensReceived * BigInt(TRADING_CONFIG.SLIPPAGE_TOLERANCE * 100)) / 100n;
+      const amountOutMin = rawTokensReceived - slippageAmount;
+
+      tx = this.router.createSwapExactTokensForTokensTransaction(amountIn, amountOutMin, path, to, deadline);
+    } else if (trade.outputToken === "WETH" && trade.inputToken !== ethers.ZeroAddress) {
+      const tokenIn = await createMinimalErc20(trade.inputToken, wallet.provider!);
+      path = [tokenIn.getTokenAddress(), this.WETH_ADDRESS];
+
+      const amountIn = ethers.parseUnits(trade.inputAmount, tokenIn.getDecimals());
+
+      theoreticalOutput = await this.getTheoreticalEthOutput(wallet, sellAmount, usdSellPrice);
+      quotedOutput = await this.getActualEthOutput(wallet, tokenIn, amountIn);
+      priceImpact = this.calculatePriceImpact(theoreticalOutput, quotedOutput);
+      if (priceImpact > TRADING_CONFIG.MAX_PRICE_IMPACT_PERCENTAGE) {
+        throw new Error(
+          `Price impact too high: ${priceImpact}%, max allowed: ${TRADING_CONFIG.MAX_PRICE_IMPACT_PERCENTAGE}%`,
+        );
+      }
+
+      const quotedOutputFixed = quotedOutput.toFixed(18);
+      rawTokensReceived = ethers.parseEther(quotedOutputFixed);
+      const slippageAmount = (rawTokensReceived * BigInt(TRADING_CONFIG.SLIPPAGE_TOLERANCE * 100)) / 100n;
+      const amountOutMin = rawTokensReceived - slippageAmount;
+
+      tx = this.router.createSwapExactTokensForTokensTransaction(amountIn, amountOutMin, path, to, deadline);
+    } else if (trade.outputToken === "ETH" && trade.inputToken !== ethers.ZeroAddress) {
+      const tokenIn = await createMinimalErc20(trade.inputToken, wallet.provider!);
+      path = [tokenIn.getTokenAddress(), this.WETH_ADDRESS];
+
+      const amountIn = ethers.parseUnits(trade.inputAmount, tokenIn.getDecimals());
+
+      theoreticalOutput = await this.getTheoreticalEthOutput(wallet, sellAmount, usdSellPrice);
+      quotedOutput = await this.getActualEthOutput(wallet, tokenIn, amountIn);
+      priceImpact = this.calculatePriceImpact(theoreticalOutput, quotedOutput);
+      if (priceImpact > TRADING_CONFIG.MAX_PRICE_IMPACT_PERCENTAGE) {
+        throw new Error(
+          `Price impact too high: ${priceImpact}%, max allowed: ${TRADING_CONFIG.MAX_PRICE_IMPACT_PERCENTAGE}%`,
+        );
+      }
+
+      rawTokensReceived = ethers.parseEther(quotedOutput.toString());
+      const slippageAmount = (rawTokensReceived * BigInt(TRADING_CONFIG.SLIPPAGE_TOLERANCE * 100)) / 100n;
+      const amountOutMin = rawTokensReceived - slippageAmount;
+
+      tx = this.router.createSwapExactTokensForETHTransaction(amountIn, amountOutMin, path, to, deadline);
     }
+    // TODO: implement token to token sale
+    /**
+       else if (trade.outputToken === "TOKEN") {
+       }
+    */
+
+    return tx;
   }
 
   /**
