@@ -21,10 +21,18 @@ export async function approveTokenSpending(wallet: Wallet, token: ERC20, spender
 }
 
 export async function validateNetwork(wallet: Wallet, chainType: ChainType) {
-  const network = await wallet.provider!.getNetwork();
-  const chain = mapNetworkNameToChainType(network.name);
-  if (chain !== chainType) {
-    throw new Error(`Wallet and factory are on different networks`);
+  try {
+    const network = await wallet.provider!.getNetwork();
+    const chain = mapNetworkNameToChainType(network.name);
+    if (chain !== chainType) {
+      throw new Error(`Wallet on different chain`);
+    }
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : "Unknown error has occurred";
+    if (errorMessage.toLowerCase().includes("wallet on different chain")) {
+      throw error;
+    }
+    throw new Error("Wallet has missing provider");
   }
 }
 
