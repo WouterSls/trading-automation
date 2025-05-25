@@ -56,4 +56,50 @@ export class AerodromeRouter {
 
     return tx;
   }
+
+  async createSwapExactTokensForTokensTransaction(
+    amountIn: bigint,
+    amountOutMin: bigint,
+    routes: TradeRoute[],
+    to: string,
+    deadline: number,
+  ): Promise<TransactionRequest> {
+    const encodedData = this.routerContract.interface.encodeFunctionData("swapExactTokensForTokens", [
+      amountIn,
+      amountOutMin,
+      routes,
+      to,
+      deadline,
+    ]);
+
+    const tx: TransactionRequest = {
+      to: this.routerAddress,
+      data: encodedData,
+    };
+
+    return tx;
+  }
+
+  async createSwapExactTokensForETHTransaction(
+    amountIn: bigint,
+    amountOutMin: bigint,
+    routes: TradeRoute[],
+    to: string,
+    deadline: number,
+  ): Promise<TransactionRequest> {
+    const encodedData = this.routerContract.interface.encodeFunctionData("swapExactTokensForETH", [
+      amountIn,
+      amountOutMin,
+      routes,
+      to,
+      deadline,
+    ]);
+
+    const tx: TransactionRequest = {
+      to: this.routerAddress,
+      data: encodedData,
+    };
+
+    return tx;
+  }
 }
