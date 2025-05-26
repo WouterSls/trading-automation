@@ -45,10 +45,11 @@ export class UniswapV2Strategy implements ITradingStrategy {
    * Ensures token approval for trading operations
    * @param wallet Connected wallet to use for approval
    * @param tokenAddress Address of the token to approve
-   * @param amount Amount to approve (used for standard approval calculation)
-   * @returns Transaction hash if approval was needed, null if already approved
+   * @param amount Amount to approve (threshold validation or standard approval calculation )
+   * @returns gas cost of approval if needed , null if already approved
    */
   async ensureTokenApproval(wallet: Wallet, tokenAddress: string, amount: string): Promise<string | null> {
+    await validateNetwork(wallet, this.chain);
     const spender = this.router.getRouterAddress();
     if (TRADING_CONFIG.INFINITE_APPROVAL) {
       return await ensureInfiniteApproval(wallet, tokenAddress, amount, spender);
@@ -64,6 +65,7 @@ export class UniswapV2Strategy implements ITradingStrategy {
    */
   async getEthUsdcPrice(wallet: Wallet): Promise<string> {
     await validateNetwork(wallet, this.chain);
+
     const tradePath = [this.WETH_ADDRESS, this.USDC_ADDRESS];
     const inputAmount = ethers.parseUnits("1", this.WETH_DECIMALS);
 
