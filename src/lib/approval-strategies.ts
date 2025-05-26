@@ -57,7 +57,9 @@ export async function ensureInfiniteApproval(
     const needsApproval = routerAllowance < rawAmount;
 
     if (needsApproval) {
-      console.log("Setting infinite approval...");
+      console.log(
+        `Setting infinite approval for token (${tokenAddress}) to spender (${spenderAddress}) by owner (${wallet.address})`,
+      );
       const approveTx = await token.createApproveTransaction(spenderAddress, ethers.MaxUint256);
       const approveTxResponse = await wallet.sendTransaction(approveTx);
       const approveTxReceipt = await approveTxResponse.wait();
