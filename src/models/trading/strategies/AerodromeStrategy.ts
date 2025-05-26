@@ -20,11 +20,9 @@ export class AerodromeStrategy implements ITradingStrategy {
 
   private WETH_ADDRESS: string;
   private USDC_ADDRESS: string;
-  private DAI_ADDRESS: string;
 
   private WETH_DECIMALS = 18;
   private USDC_DECIMALS = 6;
-  private DAI_DECIMALS = 18;
 
   constructor(
     private strategyName: string,
@@ -38,7 +36,6 @@ export class AerodromeStrategy implements ITradingStrategy {
 
     this.WETH_ADDRESS = chainConfig.tokenAddresses.weth;
     this.USDC_ADDRESS = chainConfig.tokenAddresses.usdc;
-    this.DAI_ADDRESS = chainConfig.tokenAddresses.dai;
 
     this.router = new AerodromeRouter(chain);
     this.factory = new AerodromePoolFactory(chain);
@@ -54,10 +51,11 @@ export class AerodromeStrategy implements ITradingStrategy {
    * Ensures token approval for trading operations
    * @param wallet Connected wallet to use for approval
    * @param tokenAddress Address of the token to approve
-   * @param amount Amount to approve (used for standard approval calculation)
-   * @returns Transaction hash if approval was needed, null if already approved
+   * @param amount Amount to approve (threshold validation or standard approval calculation)
+   * @returns gas cost of if needed, null if already approved
    */
   async ensureTokenApproval(wallet: Wallet, tokenAddress: string, amount: string): Promise<string | null> {
+    await validateNetwork(wallet, this.chain);
     const spender = this.router.getRouterAddress();
     if (TRADING_CONFIG.INFINITE_APPROVAL) {
       return await ensureInfiniteApproval(wallet, tokenAddress, amount, spender);
