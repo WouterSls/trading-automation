@@ -150,7 +150,7 @@ export class Trader {
     return bestStrategy;
   }
 
-  //TODO: refact
+  //TODO: refactor
   private async createBuyTrade(
     outputTokenAddress: string,
     ethPriceUsd: string,

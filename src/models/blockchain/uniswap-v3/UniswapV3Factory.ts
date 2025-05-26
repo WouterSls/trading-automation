@@ -31,19 +31,6 @@ export class UniswapV3Factory {
   getWETHAddress = (): string => this.wethAddress;
 
   /**
-   * Validates that the address is actually a Uniswap V3 Factory by checking if it implements the required interface
-   * @param wallet Wallet instance -> blockchain provider
-   * @returns true if the initialized factory address is a valid Uniswap V3 Factory, throws error if otherwise
-   */
-  async validateIsFactory(wallet: Wallet): Promise<boolean> {
-    this.factoryContract = this.factoryContract.connect(wallet) as Contract;
-
-    await this._networkAndFactoryCheck(wallet);
-
-    return true;
-  }
-
-  /**
    * Gets the pool address for a given token and fee tier
    * @param wallet Wallet instance -> blockchain provider
    * @param token0Address The address of the token0 to get the pool address for
