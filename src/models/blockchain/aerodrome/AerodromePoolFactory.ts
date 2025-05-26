@@ -45,7 +45,12 @@ export class AerodromePoolFactory {
    * @param stable does the pool exists of stables
    * @returns The pool address for the given token and fee tier, or null if the pool does not exist
    */
-  async getPoolAddress(wallet: Wallet, token0Address: string, token1Address: string, stable: boolean) {
+  async getPoolAddress(
+    wallet: Wallet,
+    token0Address: string,
+    token1Address: string,
+    stable: boolean,
+  ): Promise<string | null> {
     this.poolFactoryContract = this.poolFactoryContract.connect(wallet) as Contract;
 
     await this._networkAndFactoryCheck(wallet);
@@ -53,15 +58,14 @@ export class AerodromePoolFactory {
     const poolAddress = await this.poolFactoryContract.getPool(token0Address, token1Address, stable);
 
     if (poolAddress === ethers.ZeroAddress || poolAddress === undefined) {
-      return ethers.ZeroAddress;
+      return null;
     }
     return poolAddress;
   }
 
   private async _networkAndFactoryCheck(wallet: Wallet): Promise<void> {
+    await validateNetwork(wallet, this.chain);
     try {
-      await validateNetwork(wallet, this.chain);
-
       await this.poolFactoryContract.getPool.staticCall(
         "0x0000000000000000000000000000000000000001",
         "0x0000000000000000000000000000000000000002",
@@ -69,7 +73,6 @@ export class AerodromePoolFactory {
       );
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : "Unknown error";
-
       if (errorMessage.toLowerCase().includes("cannot read properties of null")) {
         throw new Error(`Wallet has missing provider: ${errorMessage}`);
       }
@@ -77,8 +80,7 @@ export class AerodromePoolFactory {
       if (errorMessage.includes("missing provider")) {
         throw new Error(`Wallet has missing provider: ${errorMessage}`);
       }
-
-      throw new Error(`${errorMessage}`);
+      throw error;
     }
   }
 }

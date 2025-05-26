@@ -1,7 +1,7 @@
 import { Contract, TransactionRequest, Wallet } from "ethers";
-import { ChainConfig, ChainType, getChainConfig } from "../../../config/chain-config";
+import { ChainType, getChainConfig } from "../../../config/chain-config";
 import { AERODROME_ROUTER_INTERFACE } from "../../../lib/contract-abis/aerodrome";
-import { ExactETHForTokensParams, TradeRoute } from "./aerodrome-types";
+import { TradeRoute } from "./aerodrome-types";
 
 export class AerodromeRouter {
   private routerContract: Contract;
@@ -18,7 +18,6 @@ export class AerodromeRouter {
     if (!this.routerAddress || this.routerAddress.trim() === "") {
       throw new Error(`Aerodrome Router address not defined for chain: ${chainConfig.name}`);
     }
-
     this.routerContract = new Contract(this.routerAddress, AERODROME_ROUTER_INTERFACE);
   }
 
