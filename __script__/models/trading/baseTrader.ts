@@ -59,7 +59,7 @@ async function baseTraderInteraction(wallet: Wallet) {
 if (require.main === module) {
   const wallet = getHardhatWallet_1();
 
-  baseTraderInteraction(wallet);
+  baseTraderInteraction(wallet).catch(console.error);
 }
 
 export { baseTraderInteraction };
