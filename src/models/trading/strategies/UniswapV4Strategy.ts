@@ -1,6 +1,6 @@
 import { ERC20 } from "../../blockchain/ERC/ERC20";
 import { ethers, TransactionRequest, Wallet } from "ethers";
-import { ChainType } from "../../../config/chain-config";
+import { ChainType, getChainConfig } from "../../../config/chain-config";
 
 import { UniswapV3QuoterV2 } from "../../blockchain/uniswap-v3/UniswapV3QuoterV2";
 import { UniswapV3Factory } from "../../blockchain/uniswap-v3/UniswapV3Factory";
@@ -17,12 +17,18 @@ export class UniswapV4Strategy implements ITradingStrategy {
   private factory: UniswapV3Factory;
   private router: UniswapV3SwapRouterV2;
 
-  private strategyName: string;
-  private chain: ChainType;
+  private WETH_ADDRESS: string;
+  private USDC_ADDRESS: string;
 
-  constructor(STRATEGY_NAME: string, chain: ChainType) {
-    this.strategyName = STRATEGY_NAME;
-    this.chain = chain;
+  constructor(
+    private strategyName: string,
+    private chain: ChainType,
+  ) {
+    const chainConfig = getChainConfig(chain);
+
+    this.WETH_ADDRESS = chainConfig.tokenAddresses.weth;
+    this.USDC_ADDRESS = chainConfig.tokenAddresses.usdc;
+
     this.quoter = new UniswapV3QuoterV2(chain);
     this.factory = new UniswapV3Factory(chain);
     this.router = new UniswapV3SwapRouterV2(chain);
@@ -41,10 +47,10 @@ export class UniswapV4Strategy implements ITradingStrategy {
   async getEthUsdcPrice(wallet: Wallet): Promise<string> {
     throw new Error("Not implemented");
   }
-  async getTokenEthLiquidity(wallet: Wallet, tokenAddress: string): Promise<string> {
+  async getTokenWethLiquidity(wallet: Wallet, tokenAddress: string): Promise<string> {
     try {
       const feeTiers = [FeeAmount.LOWEST, FeeAmount.LOW, FeeAmount.MEDIUM, FeeAmount.HIGH];
-      const wethAddress = this.factory.getWETHAddress();
+      const wethAddress = this.WETH_ADDRESS;
 
       let bestLiquidity = 0n;
 
@@ -53,7 +59,7 @@ export class UniswapV4Strategy implements ITradingStrategy {
 
         if (!poolAddress || poolAddress === ethers.ZeroAddress) continue;
 
-        const weth = new ethers.Contract(this.factory!.getWETHAddress(), ERC20_INTERFACE, wallet);
+        const weth = new ethers.Contract(this.WETH_ADDRESS, ERC20_INTERFACE, wallet);
         const ethLiquidity = await weth.balanceOf(poolAddress);
 
         if (ethLiquidity > bestLiquidity) {

@@ -88,12 +88,12 @@ export class AerodromeStrategy implements ITradingStrategy {
   }
 
   /**
-   * Gets the ETH liquidity for a given token pair
+   * Gets the WETH liquidity for a given token pair (can be used to get ETH liqudity)
    * @param wallet Connected wallet to query liquidity
    * @param tokenAddress Address of the token to check liquidity for
-   * @returns ETH liquidity amount as a string
+   * @returns WETH liquidity amount as a string
    */
-  async getTokenEthLiquidity(wallet: Wallet, tokenAddress: string): Promise<string> {
+  async getTokenWethLiquidity(wallet: Wallet, tokenAddress: string): Promise<string> {
     await validateNetwork(wallet, this.chain);
 
     // Try both stable and volatile pools
@@ -102,8 +102,21 @@ export class AerodromeStrategy implements ITradingStrategy {
 
     let totalLiquidity = 0n;
 
-    // Check stable pool liquidity
+    if (stablePoolAddress && volatilePoolAddress && stablePoolAddress === volatilePoolAddress) {
+      console.log("stable pool address:", stablePoolAddress);
+      console.log("volatile pool address:", stablePoolAddress);
+      const encodedData = ERC20_INTERFACE.encodeFunctionData("balanceOf", [volatilePoolAddress]);
+      const tx: TransactionRequest = {
+        to: this.WETH_ADDRESS,
+        data: encodedData,
+      };
+      const liquidity = await wallet.call(tx);
+      const ethLiquidityFormatted = ethers.formatEther(liquidity);
+      return ethLiquidityFormatted;
+    }
+
     if (stablePoolAddress && stablePoolAddress !== ethers.ZeroAddress) {
+      console.log("stable address:", stablePoolAddress);
       const encodedData = ERC20_INTERFACE.encodeFunctionData("balanceOf", [stablePoolAddress]);
       const tx: TransactionRequest = {
         to: this.WETH_ADDRESS,
@@ -113,8 +126,8 @@ export class AerodromeStrategy implements ITradingStrategy {
       totalLiquidity += BigInt(stableLiquidity);
     }
 
-    // Check volatile pool liquidity
     if (volatilePoolAddress && volatilePoolAddress !== ethers.ZeroAddress) {
+      console.log("different volitale address:", volatilePoolAddress);
       const encodedData = ERC20_INTERFACE.encodeFunctionData("balanceOf", [volatilePoolAddress]);
       const tx: TransactionRequest = {
         to: this.WETH_ADDRESS,

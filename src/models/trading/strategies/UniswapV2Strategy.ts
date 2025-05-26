@@ -76,15 +76,16 @@ export class UniswapV2Strategy implements ITradingStrategy {
   }
 
   /**
-   * Gets the ETH liquidity for a given token pair
+   * Gets the WETH liquidity for a given token pair (can be used to get ETH liquidity)
    * @param wallet Connected wallet to query liquidity
    * @param tokenAddress Address of the token to check liquidity for
-   * @returns ETH liquidity amount as a string
+   * @returns WETH liquidity amount as a string
    */
-  async getTokenEthLiquidity(wallet: Wallet, tokenAddress: string): Promise<string> {
+  async getTokenWethLiquidity(wallet: Wallet, tokenAddress: string): Promise<string> {
     await validateNetwork(wallet, this.chain);
     const pairAddress: string | null = await this.factory!.getPairAddress(wallet, tokenAddress, this.WETH_ADDRESS);
     if (!pairAddress || pairAddress === ethers.ZeroAddress) return "0";
+    console.log("pair address:", pairAddress);
 
     const encodedData = ERC20_INTERFACE.encodeFunctionData("balanceOf", [pairAddress]);
 
@@ -94,13 +95,13 @@ export class UniswapV2Strategy implements ITradingStrategy {
     };
 
     const ethLiquidity = await wallet.call(tx);
-
     const ethLiquidityFormatted = ethers.formatEther(ethLiquidity);
+
     return ethLiquidityFormatted;
   }
 
   /**
-   * Gets the current token price in USDC
+   * Gets the current token price in USDC by using WETH as intermediary trade token
    * @param wallet Connected wallet to query the price
    * @param tokenAddress Address of the token to get price for
    * @returns Token price in USDC as a string
