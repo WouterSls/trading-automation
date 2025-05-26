@@ -32,7 +32,7 @@ export async function validateNetwork(wallet: Wallet, chainType: ChainType) {
     if (errorMessage.toLowerCase().includes("wallet on different chain")) {
       throw error;
     }
-    throw new Error("Wallet has missing provider");
+    throw new Error("Network Validation Failed");
   }
 }
 
