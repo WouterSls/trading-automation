@@ -18,13 +18,6 @@ import {
   encodeTakeParams,
 } from "./universal-router-utils";
 
-export type V3SwapParams = {
-  path: string;
-  recipient: string;
-  amountIn: bigint;
-  amountOutMinimum: bigint;
-};
-
 export class UniversalRouter {
   // Addresses
   private wethAddress: string;
@@ -187,25 +180,6 @@ export class UniversalRouter {
     const encodedInput = encodeSwapCommandInput(actions, encodedSwapParams, encodedSettleParams, encodedTakeParams);
 
     return encodedInput;
-  }
-
-  /**
-   * Helper method to create V3 exact input swap command
-   * @param params V3 swap parameters
-   * @returns Command and inputs for the execute method
-   */
-  createV3SwapExactInputCommand(params: V3SwapParams): string {
-    // This would encode the V3 exact input command
-    // Command code for V3 exact input is typically 0x00 or similar
-    const V3_EXACT_INPUT_COMMAND = "0x00";
-
-    // Encode the V3 swap parameters according to Universal Router specs
-    const encodedParams = ethers.solidityPacked(
-      ["bytes", "address", "uint256", "uint256"],
-      [params.path, params.recipient, params.amountIn, params.amountOutMinimum],
-    );
-
-    return "0x01";
   }
 
   /**
