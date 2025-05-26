@@ -4,6 +4,6 @@ export const TRADING_CONFIG = {
   SLIPPAGE_TOLERANCE: 0.02,
   MAX_PRICE_IMPACT_PERCENTAGE: 5,
   MAX_RETRIES: 3,
-  DEADLINE: Math.floor(Date.now() / 1000) + 1200,
+  DEADLINE: Math.floor(Date.now() / 1000) + 1200, // 20 minutes from now
   INFINITE_APPROVAL: true,
 };
