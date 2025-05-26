@@ -9,9 +9,8 @@ This library provides a clean, type-safe interface for blockchain interactions, 
 ## Features
 
 - **Multi-Chain Support**: Ethereum, Arbitrum, and Base networks
-- **Protocol Integrations**: Uniswap V2, Uniswap V3, and more
+- **Protocol Integrations**: Uniswap V2, Uniswap V3, Uniswap V4 and Aerodrome
 - **Price Data**: Integration with GeckoTerminal and Alchemy for token pricing
-- **Wallet Management**: Tools for wallet information and transactions
 - **Trading**: Token swapping and trading functionality
 - **Type Safety**: Full TypeScript typing for a safer development experience
 
