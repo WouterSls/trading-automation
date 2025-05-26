@@ -1,6 +1,6 @@
 import { ethers, Wallet } from "ethers";
-import { approveTokenSpending } from "./utils";
 import { createMinimalErc20 } from "../models/blockchain/ERC/erc-utils";
+import { ERC20 } from "../models/blockchain/ERC/ERC20";
 
 /**
  * Standard ERC20 approval strategy
@@ -123,4 +123,20 @@ export async function ensurePermit2Approval(
     console.error(`Error during Permit2 approval: ${errorMessage}`);
     throw new Error(`Permit2 approval failed: ${errorMessage}`);
   }
+}
+
+/**
+ * Approve Token Spending
+ * Used by approval strategies to approve an amount of token to spend for an address
+ */
+async function approveTokenSpending(wallet: Wallet, token: ERC20, spenderAddress: string, rawAmount: bigint) {
+  const approveTxRequest = await token.createApproveTransaction(spenderAddress, rawAmount);
+  const approveTxResponse = await wallet.sendTransaction(approveTxRequest);
+  const approveTxReceipt = await approveTxResponse.wait();
+
+  if (!approveTxReceipt) throw new Error("Failed to approve token spending | no transaction receipt");
+  const gasCost = approveTxReceipt.gasPrice! * approveTxReceipt.gasUsed;
+
+  const gasCostFormatted = ethers.formatEther(gasCost);
+  return gasCostFormatted;
 }

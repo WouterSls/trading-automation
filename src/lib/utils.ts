@@ -1,24 +1,10 @@
 import { ethers, Wallet } from "ethers";
 
 import { ERC20_INTERFACE, WETH_INTERFACE } from "./contract-abis/erc20";
-import { ERC20 } from "../models/blockchain/ERC/ERC20";
-import { ChainType, mapNetworkNameToChainType, getChainConfig } from "../config/chain-config";
+import { ChainType, mapNetworkNameToChainType } from "../config/chain-config";
 import { POOL_INTERFACE as V3_POOL_INTERFACE } from "./contract-abis/uniswap-v3";
 import { UNISWAP_V2_PAIR_INTERFACE } from "./contract-abis/uniswap-v2";
 import { calculatePriceFromSqrtPriceX96 } from "../models/blockchain/uniswap-v3/uniswap-v3-utils";
-
-export async function approveTokenSpending(wallet: Wallet, token: ERC20, spenderAddress: string, rawAmount: bigint) {
-  const approveTxRequest = await token.createApproveTransaction(spenderAddress, rawAmount);
-  const populatedApproveTransaction = await wallet.populateTransaction(approveTxRequest);
-  const approveTxResponse = await wallet.sendTransaction(populatedApproveTransaction);
-  const approveTxReceipt = await approveTxResponse.wait();
-
-  if (!approveTxReceipt) throw new Error("Failed to approve token spending | no transaction receipt");
-  const gasCost = approveTxReceipt.gasPrice! * approveTxReceipt.gasUsed;
-
-  const gasCostFormatted = ethers.formatEther(gasCost);
-  return gasCostFormatted;
-}
 
 export async function validateNetwork(wallet: Wallet, chainType: ChainType) {
   try {
