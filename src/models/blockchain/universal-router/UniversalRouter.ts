@@ -150,8 +150,8 @@ export class UniversalRouter {
     const inputCurrency = zeroForOne ? poolKey.currency0 : poolKey.currency1;
     const outputCurrency = zeroForOne ? poolKey.currency1 : poolKey.currency0;
 
-    const swapAction: V4PoolAction = V4PoolAction.SWAP_EXACT_IN_SINGLE;
-    const swapParams: IV4ExactInputSingleParams = {
+    const swapAction = V4PoolAction.SWAP_EXACT_IN_SINGLE;
+    const swapParams = {
       poolKey: poolKey,
       zeroForOne: zeroForOne,
       amountIn: inputAmount,
@@ -160,16 +160,16 @@ export class UniversalRouter {
     };
     const encodedSwapParams = encodeExactInputSingleSwapParams(swapParams);
 
-    const settleAction: V4PoolAction = V4PoolAction.SETTLE;
-    const settleParams: IV4SettleParams = {
+    const settleAction = V4PoolAction.SETTLE;
+    const settleParams = {
       inputCurrency: inputCurrency,
       amountIn: inputAmount,
       bool: zeroForOne,
     };
     const encodedSettleParams = encodeSettleParams(settleParams);
 
-    const takeAction: V4PoolAction = V4PoolAction.TAKE;
-    const takeParams: IV4TakeParams = {
+    const takeAction = V4PoolAction.TAKE;
+    const takeParams = {
       outputCurrency: outputCurrency,
       recipient: recipient,
       amount: V4PoolActionConstants.OPEN_DELTA,
