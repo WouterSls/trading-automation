@@ -1,10 +1,10 @@
 import { ethers, Wallet } from "ethers";
-import { getHardhatWallet_1 } from "../../src/hooks/useSetup";
-import { createMinimalErc20 } from "../../src/models/blockchain/ERC/erc-utils";
-import { TraderFactory } from "../../src/models/trading/TraderFactory";
-import { GeckoTerminalApi } from "../../src/services/GeckoTerminalApi";
-import { ChainType, getChainConfig, getOutputTokenAddress } from "../../src/config/chain-config";
-import { OutputToken, SellTrade, SellTradeCreationDto } from "../../src/models/trading/types/_index";
+import { getHardhatWallet_1 } from "../../../src/hooks/useSetup";
+import { createMinimalErc20 } from "../../../src/models/blockchain/ERC/erc-utils";
+import { TraderFactory } from "../../../src/models/trading/TraderFactory";
+import { GeckoTerminalApi } from "../../../src/services/GeckoTerminalApi";
+import { ChainType, getChainConfig, getOutputTokenAddress } from "../../../src/config/chain-config";
+import { OutputToken, SellTrade, SellTradeCreationDto } from "../../../src/models/trading/types/_index";
 
 async function sellToken(wallet: Wallet, trade: SellTradeCreationDto) {
   const geckoTerminalApi = new GeckoTerminalApi();

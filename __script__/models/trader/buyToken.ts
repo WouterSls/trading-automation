@@ -1,10 +1,10 @@
 import { ethers, Wallet } from "ethers";
-import { getHardhatWallet_1 } from "../../src/hooks/useSetup";
-import { createMinimalErc20 } from "../../src/models/blockchain/ERC/erc-utils";
-import { TraderFactory } from "../../src/models/trading/TraderFactory";
-import { GeckoTerminalApi } from "../../src/services/GeckoTerminalApi";
-import { ChainType, getChainConfig } from "../../src/config/chain-config";
-import { BuyTrade, BuyTradeCreationDto, InputType } from "../../src/models/trading/types/_index";
+import { getHardhatWallet_1 } from "../../../src/hooks/useSetup";
+import { createMinimalErc20 } from "../../../src/models/blockchain/ERC/erc-utils";
+import { TraderFactory } from "../../../src/models/trading/TraderFactory";
+import { GeckoTerminalApi } from "../../../src/services/GeckoTerminalApi";
+import { ChainType, getChainConfig } from "../../../src/config/chain-config";
+import { BuyTrade, BuyTradeCreationDto, InputType } from "../../../src/models/trading/types/_index";
 
 async function buyToken(wallet: Wallet, trade: BuyTradeCreationDto) {
   const trader = await TraderFactory.createTrader(wallet);
