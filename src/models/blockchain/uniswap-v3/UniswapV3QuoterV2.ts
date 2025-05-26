@@ -1,6 +1,6 @@
-import { Contract, ethers, Wallet } from "ethers";
+import { Contract, ethers, recoverAddress, Wallet } from "ethers";
 
-import { ChainType, getChainConfig } from "../../../config/chain-config";
+import { ChainConfig, ChainType, getChainConfig } from "../../../config/chain-config";
 
 import { QUOTER_INTERFACE } from "../../../lib/contract-abis/uniswap-v3";
 import { validateNetwork } from "../../../lib/utils";
@@ -9,30 +9,21 @@ import {
   QuoterExactInputResponse,
   QuoteExactOutputSingleParams,
   QuoterExactOutputResponse,
+  FeeAmount,
 } from "./uniswap-v3-types";
 
 export class UniswapV3QuoterV2 {
-  //Addresses
-  private wethAddress: string;
-  private usdcAddress: string;
+  private quoterContract: Contract;
   private quoterAddress: string;
 
-  //Contract
-  private quoterContract: Contract;
+  private WETH_ADDRESS: string;
+  private USDC_ADDRESS: string;
 
   constructor(private chain: ChainType) {
     const chainConfig = getChainConfig(chain);
-    this.wethAddress = chainConfig.tokenAddresses.weth;
-    this.usdcAddress = chainConfig.tokenAddresses.usdc!;
     this.quoterAddress = chainConfig.uniswap.v3.quoterV2Address;
-
-    if (!this.usdcAddress || this.usdcAddress.trim() === "") {
-      throw new Error(`USDC address not defined for chain: ${chainConfig.name}`);
-    }
-
-    if (!this.wethAddress || this.wethAddress.trim() === "") {
-      throw new Error(`WETH address not defined for chain: ${chainConfig.name}`);
-    }
+    this.WETH_ADDRESS = chainConfig.tokenAddresses.weth;
+    this.USDC_ADDRESS = chainConfig.tokenAddresses.usdc;
 
     if (!this.quoterAddress || this.quoterAddress.trim() === "") {
       throw new Error(`Quoter address not defined for chain: ${chainConfig.name}`);
@@ -42,8 +33,6 @@ export class UniswapV3QuoterV2 {
   }
 
   getQuoterAddress = () => this.quoterAddress;
-  getWethAddress = () => this.wethAddress;
-  getUsdcAddress = () => this.usdcAddress;
 
   async quoteExactInput(wallet: Wallet, path: string, amountIn: bigint): Promise<QuoterExactInputResponse> {
     this.quoterContract = this.quoterContract.connect(wallet) as Contract;
@@ -56,13 +45,32 @@ export class UniswapV3QuoterV2 {
     return { amountOut, sqrtPriceX96After, initializedTicksCrossed, gasEstimate };
   }
 
-  async quoteExactInputSingle(wallet: Wallet, params: QuoteExactInputSingleParams): Promise<QuoterExactInputResponse> {
+  async quoteExactInputSingle(
+    wallet: Wallet,
+    tokenIn: string,
+    tokenOut: string,
+    fee: FeeAmount,
+    recipient: string,
+    amountIn: bigint,
+    amountOutMin: bigint,
+    sqrtPriceLimitX96: bigint,
+  ): Promise<QuoterExactInputResponse> {
     this.quoterContract = this.quoterContract.connect(wallet) as Contract;
 
     await this._networkAndQuoterCheck(wallet);
 
+    const ExactInputSingleParmas = {
+      tokenIn,
+      tokenOut,
+      fee,
+      recipient,
+      amountIn,
+      amountOutMin,
+      sqrtPriceLimitX96,
+    };
+
     const { amountOut, sqrtPriceX96After, initializedTicksCrossed, gasEstimate } =
-      await this.quoterContract.quoteExactInputSingle.staticCall(params);
+      await this.quoterContract.quoteExactInputSingle.staticCall(ExactInputSingleParmas);
 
     return { amountOut, sqrtPriceX96After, initializedTicksCrossed, gasEstimate };
   }
@@ -107,10 +115,10 @@ export class UniswapV3QuoterV2 {
 
     try {
       await this.quoterContract.quoteExactInputSingle.staticCall({
-        tokenIn: this.wethAddress,
-        tokenOut: this.usdcAddress,
-        fee: 3000,
-        amountIn: ethers.parseUnits("100", 18),
+        tokenIn: this.WETH_ADDRESS,
+        tokenOut: this.USDC_ADDRESS,
+        fee: FeeAmount.MEDIUM,
+        amountIn: ethers.parseUnits("0.1", 18),
         sqrtPriceLimitX96: 0n,
       });
       return true;

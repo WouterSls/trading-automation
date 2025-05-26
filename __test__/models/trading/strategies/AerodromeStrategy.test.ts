@@ -142,13 +142,13 @@ describe("Aerodrome Strategy Test", () => {
 
   describe("getTokenEthLiquidity", () => {
     it("should throw error with offline wallet", async () => {
-      await expect(strategy.getTokenEthLiquidity(offlineWallet, AERO_TOKEN_ADDRESS)).rejects.toThrow(
+      await expect(strategy.getTokenWethLiquidity(offlineWallet, AERO_TOKEN_ADDRESS)).rejects.toThrow(
         NETWORK_VALIDATION_FAILED,
       );
     });
 
     it("should throw error with wrong network wallet", async () => {
-      await expect(strategy.getTokenEthLiquidity(nonNetworkWallet, AERO_TOKEN_ADDRESS)).rejects.toThrow(
+      await expect(strategy.getTokenWethLiquidity(nonNetworkWallet, AERO_TOKEN_ADDRESS)).rejects.toThrow(
         "Wallet on different chain",
       );
     });
@@ -157,13 +157,14 @@ describe("Aerodrome Strategy Test", () => {
       const expectedLiquidity = "0.0";
       const nonExistentToken = "0x1234567890123456789012345678901234567890";
 
-      const actualLiquidity = await strategy.getTokenEthLiquidity(wallet, nonExistentToken);
+      const actualLiquidity = await strategy.getTokenWethLiquidity(wallet, nonExistentToken);
 
       expect(actualLiquidity).toBe(expectedLiquidity);
     });
 
     it("should return valid ETH liquidity for AERO token", async () => {
-      const liquidity = await strategy.getTokenEthLiquidity(wallet, AERO_TOKEN_ADDRESS);
+      const liquidity = await strategy.getTokenWethLiquidity(wallet, AERO_TOKEN_ADDRESS);
+      console.log("Aerodrome token eth liquidity on Aerodrome");
 
       expect(liquidity).toBeDefined();
       expect(typeof liquidity).toBe("string");
@@ -171,7 +172,7 @@ describe("Aerodrome Strategy Test", () => {
     });
 
     it("should check both stable and volatile pools", async () => {
-      const liquidity = await strategy.getTokenEthLiquidity(wallet, CBETH_TOKEN_ADDRESS);
+      const liquidity = await strategy.getTokenWethLiquidity(wallet, CBETH_TOKEN_ADDRESS);
 
       expect(liquidity).toBeDefined();
       expect(typeof liquidity).toBe("string");

@@ -129,7 +129,7 @@ export class Trader {
     console.log("sorting strategies on eth liquidity...");
     for (const strategy of this.strategies) {
       console.log("strategy:", strategy.getName());
-      const ethLiquidity = await strategy.getTokenEthLiquidity(this.wallet, tokenAddress);
+      const ethLiquidity = await strategy.getTokenWethLiquidity(this.wallet, tokenAddress);
       console.log("\tETH Liquidity", ethLiquidity);
       const ethLiquidityNumber = Number(ethLiquidity);
 

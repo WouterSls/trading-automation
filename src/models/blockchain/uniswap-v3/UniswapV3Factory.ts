@@ -8,17 +8,11 @@ export class UniswapV3Factory {
   private factoryContract: Contract;
 
   private factoryAddress: string;
-  private wethAddress: string;
 
   constructor(private chain: ChainType) {
     const chainConfig = getChainConfig(chain);
 
-    this.wethAddress = chainConfig.tokenAddresses.weth;
     this.factoryAddress = chainConfig.uniswap.v3.factoryAddress;
-
-    if (!this.wethAddress || this.wethAddress.trim() === "") {
-      throw new Error(`WETH address not defined for chain: ${chainConfig.name}`);
-    }
 
     if (!this.factoryAddress || this.factoryAddress.trim() === "") {
       throw new Error(`Factory address not defined for chain: ${chainConfig.name}`);
@@ -28,7 +22,6 @@ export class UniswapV3Factory {
   }
 
   getFactoryAddress = (): string => this.factoryAddress;
-  getWETHAddress = (): string => this.wethAddress;
 
   /**
    * Gets the pool address for a given token and fee tier
@@ -101,7 +94,7 @@ export class UniswapV3Factory {
       await this.factoryContract.getPool.staticCall(
         "0x0000000000000000000000000000000000000001",
         "0x0000000000000000000000000000000000000002",
-        3000,
+        FeeAmount.MEDIUM,
       );
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : "Unknown error";

@@ -4,10 +4,3 @@ export interface TradeRoute {
   stable: boolean;
   factory: string;
 }
-
-export interface ExactETHForTokensParams {
-  amountOutMin: bigint;
-  routes: TradeRoute[];
-  to: string;
-  deadline: number;
-}
