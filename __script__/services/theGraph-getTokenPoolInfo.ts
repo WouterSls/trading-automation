@@ -1,37 +1,29 @@
-import { ethers } from "ethers";
-import { getAlchemyApi, getBaseWallet_1, getTheGraphApi } from "../../src/hooks/useSetup";
-import { PriceData } from "../../src/services/types/alchemy-api.types";
+import { getTheGraphApi } from "../../src/hooks/useSetup";
 import { TheGraphApi } from "../../src/services/TheGraphApi";
 import { ChainType } from "../../src/config/chain-config";
 
 async function getPoolInfo() {
-  const wallet = await getBaseWallet_1();
+  const chain = ChainType.BASE;
   const graphApi: TheGraphApi = await getTheGraphApi();
-  const alchemyApi = await getAlchemyApi();
 
   const AERO_ADDRESS = "0x940181a94A35A4569E4529A3CDfB74e38FD98631";
   const GAME_ADDRESS = "0x1c4cca7c5db003824208adda61bd749e55f463a3";
 
-  const balance = await wallet.provider!.getBalance(wallet.address);
-  const formattedBalance = ethers.formatEther(balance);
+  const pools = await graphApi.getTopUniV3Pool(ChainType.BASE, GAME_ADDRESS);
+  const pools2 = await graphApi.getTopUniV3PoolsByTokenAmount(ChainType.BASE, GAME_ADDRESS);
 
-  const test = await graphApi.getTopUniV3Pool(ChainType.BASE, GAME_ADDRESS);
-
-  const ethTokenPriceData: PriceData = await alchemyApi.getEthUsdPrice();
-  const symbol = ethTokenPriceData.symbol;
-  const currency = ethTokenPriceData.prices[0].currency;
-  const value: string = ethTokenPriceData.prices[0].value;
-
-  const parsedValue = parseFloat(value);
-  const parsedBalance = parseFloat(formattedBalance);
-
-  console.log("-------------Pool Info-------------");
-  console.log(wallet.address);
-  console.log(`${symbol} price: ${value} ${currency}`);
-  console.log();
-  console.log("ETH balance:", formattedBalance);
-  const balanceUsdValue = parsedValue * parsedBalance;
-  console.log(`${currency.toUpperCase()} value: ${balanceUsdValue.toFixed(2)}`);
+  console.log("-------------Pools Info-------------");
+  for (const pool of pools2) {
+    console.log("address:", pool.id);
+    console.log("fee:", pool.feeTier);
+    console.log("Token0: ", pool.token0);
+    console.log("TVL Token0", pool.totalValueLockedToken0);
+    console.log("Token1: ", pool.token1);
+    console.log("TVL Token1", pool.totalValueLockedToken1);
+    console.log("TVL USD: ", pool.totalValueLockedUSD);
+    console.log("Liquidity:", pool.liquidity);
+    console.log("----------------------------------");
+  }
 }
 
 if (require.main === module) {
