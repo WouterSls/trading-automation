@@ -31,7 +31,7 @@ export const getBaseChainConfig = (): ChainConfig => {
 };
 export const getBaseWallet_1 = (): Wallet => {
   const rpcUrl = process.env.BASE_RPC_URL;
-  const privateKey = process.env.MS_PRIVATE_KEY;
+  const privateKey = process.env.CL_PRIVATE_KEY;
 
   if (!rpcUrl || !privateKey) {
     throw new Error("RPC_URL and PRIVATE_KEY must be set");
