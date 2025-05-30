@@ -5,12 +5,19 @@ import { ChainType, getChainConfig } from "../../../config/chain-config";
 import { UniswapV3QuoterV2 } from "../../blockchain/uniswap-v3/UniswapV3QuoterV2";
 import { UniswapV3Factory } from "../../blockchain/uniswap-v3/UniswapV3Factory";
 import { UniswapV3SwapRouterV2 } from "../../blockchain/uniswap-v3/UniswapV3SwapRouterV2";
+import {
+  ensureInfiniteApproval,
+  ensureStandardApproval,
+  ensurePermit2Approval,
+} from "../../../lib/approval-strategies";
 
 import { ITradingStrategy } from "../ITradingStrategy";
 import { ERC20_INTERFACE } from "../../../lib/contract-abis/erc20";
 import { FeeAmount } from "../../blockchain/uniswap-v3/uniswap-v3-types";
 import { BuyTrade, SellTrade, OutputToken, BuyTradeCreationDto, SellTradeCreationDto } from "../types/_index";
 import { createMinimalErc20 } from "../../blockchain/ERC/erc-utils";
+import { validateNetwork } from "../../../lib/utils";
+import { TRADING_CONFIG } from "../../../config/trading-config";
 
 export class UniswapV4Strategy implements ITradingStrategy {
   private quoter: UniswapV3QuoterV2;
@@ -38,10 +45,13 @@ export class UniswapV4Strategy implements ITradingStrategy {
   getSpenderAddress = (): string => this.router.getRouterAddress();
 
   async ensureTokenApproval(wallet: Wallet, tokenAddress: string, amount: string): Promise<string | null> {
-    // TODO: Implement Permit2 approval logic here
-    // For now, fallback to standard approval until Permit2 is fully integrated
-    const { ensureStandardApproval } = await import("../../../lib/approval-strategies");
-    return await ensureStandardApproval(wallet, tokenAddress, amount, this.router.getRouterAddress());
+    await validateNetwork(wallet, this.chain);
+    const spender = this.router.getRouterAddress();
+    if (TRADING_CONFIG.INFINITE_APPROVAL) {
+      return await ensureInfiniteApproval(wallet, tokenAddress, amount, spender);
+    } else {
+      return await ensureStandardApproval(wallet, tokenAddress, amount, spender);
+    }
   }
 
   async getEthUsdcPrice(wallet: Wallet): Promise<string> {
