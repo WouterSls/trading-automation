@@ -14,7 +14,7 @@ import { UniswapV3Factory } from "../../../../src/models/blockchain/uniswap-v3/U
 import {
   getEthWallet_1,
   getBaseWallet_1,
-  getArbitrumWallet_2,
+  getArbitrumWallet_1,
   getHardhatWallet_1,
 } from "../../../../src/hooks/useSetup";
 import { decodeLogs, validateNetwork } from "../../../../src/lib/utils";
@@ -340,7 +340,7 @@ if (require.main === module) {
   const hardhatWallet = getHardhatWallet_1();
   const ethWallet = getEthWallet_1();
   const baseWallet = getBaseWallet_1();
-  const arbWallet2 = getArbitrumWallet_2();
+  const arbWallet2 = getArbitrumWallet_1();
 
   const eth = ChainType.ETH;
   const base = ChainType.BASE;

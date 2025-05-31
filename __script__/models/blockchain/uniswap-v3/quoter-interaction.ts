@@ -2,7 +2,7 @@ import { ethers, Wallet } from "ethers";
 import { ChainType } from "../../../../src/config/chain-config";
 
 import { getChainConfig } from "../../../../src/config/chain-config";
-import { getBaseWallet_2, getEthWallet_2 } from "../../../../src/hooks/useSetup";
+import { getBaseWallet_1, getEthWallet_1 } from "../../../../src/hooks/useSetup";
 import { validateNetwork } from "../../../../src/lib/utils";
 import { UniswapV3QuoterV2 } from "../../../../src/models/blockchain/uniswap-v3";
 import { FeeAmount, QuoteExactInputSingleParams } from "../../../../src/models/blockchain/uniswap-v3/uniswap-v3-types";
@@ -35,15 +35,23 @@ export async function quoterInteraction(chain: ChainType, wallet: Wallet) {
   console.log();
   console.log("Trading", wethTradeAmount, "WETH -> USDC");
 
-  const quoteInputSingleParams: QuoteExactInputSingleParams = {
-    tokenIn: WETH_ADDRESS,
-    tokenOut: USDC_ADDRESS,
-    fee: 3000,
-    amountIn: wethAmountIn,
-    sqrtPriceLimitX96: 0n,
-  };
+  const tokenA = WETH_ADDRESS;
+  const tokenB = USDC_ADDRESS;
+  const fee = FeeAmount.LOW;
+  const amountIn = wethAmountIn;
+  const amountOutMin = 0n;
+  const sqrtPriceLimitX96 = 0n;
 
-  const { amountOut } = await quoter.quoteExactInputSingle(wallet, quoteInputSingleParams);
+  const { amountOut } = await quoter.quoteExactInputSingle(
+    wallet,
+    tokenA,
+    tokenB,
+    fee,
+    wallet.address,
+    amountIn,
+    amountOutMin,
+    sqrtPriceLimitX96,
+  );
   const amountOutFormatted = ethers.formatUnits(amountOut, 6);
   console.log("Amount out", amountOutFormatted, "USDC");
   console.log();
@@ -63,10 +71,10 @@ export async function quoterInteraction(chain: ChainType, wallet: Wallet) {
 
 if (require.main === module) {
   const base = ChainType.BASE;
-  const baseWallet = getBaseWallet_2();
+  const baseWallet = getBaseWallet_1();
 
   const eth = ChainType.ETH;
-  const ethWallet = getEthWallet_2();
+  const ethWallet = getEthWallet_1();
 
   //quoterInteraction(base, baseWallet).catch(console.error);
   quoterInteraction(eth, ethWallet).catch(console.error);
