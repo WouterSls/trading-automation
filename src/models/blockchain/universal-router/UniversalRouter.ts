@@ -1,4 +1,4 @@
-import { Contract, ContractTransactionResponse, ethers, TransactionRequest, Wallet, AbiCoder } from "ethers";
+import { Contract, ethers, TransactionRequest, Wallet, AbiCoder } from "ethers";
 import { ChainType, getChainConfig } from "../../../config/chain-config";
 import { UNIVERSAL_ROUTER_INTERFACE } from "../../../lib/contract-abis/universal-router";
 import { validateNetwork } from "../../../lib/utils";
@@ -19,28 +19,15 @@ import {
 } from "./universal-router-utils";
 
 export class UniversalRouter {
-  // Addresses
-  private wethAddress: string;
-  private usdcAddress: string;
+  private routerContract: Contract;
   private routerAddress: string;
 
   // Contract
-  private routerContract: Contract;
 
   constructor(private chain: ChainType) {
     const chainConfig = getChainConfig(chain);
 
-    this.wethAddress = chainConfig.tokenAddresses.weth;
-    this.usdcAddress = chainConfig.tokenAddresses.usdc!;
     this.routerAddress = chainConfig.uniswap.universalRouterAddress;
-
-    if (!this.usdcAddress || this.usdcAddress.trim() === "") {
-      throw new Error(`USDC address not defined for chain: ${chainConfig.name}`);
-    }
-
-    if (!this.wethAddress || this.wethAddress.trim() === "") {
-      throw new Error(`WETH address not defined for chain: ${chainConfig.name}`);
-    }
 
     if (!this.routerAddress || this.routerAddress.trim() === "") {
       throw new Error(`Universal Router address not defined for chain: ${chainConfig.name}`);
@@ -50,8 +37,6 @@ export class UniversalRouter {
   }
 
   getRouterAddress = () => this.routerAddress;
-  getWethAddress = () => this.wethAddress;
-  getUsdcAddress = () => this.usdcAddress;
 
   /**
    * Validates that the address is actually a Universal Router by checking if it implements the required interface
@@ -70,49 +55,13 @@ export class UniversalRouter {
   }
 
   /**
-   * Execute commands on the Universal Router
-   * @param wallet The wallet to execute the commands with
-   * @param params The command parameters
-   * @returns Transaction response
-   */
-  async execute(
-    wallet: Wallet,
-    commandType: CommandType,
-    command: string,
-    deadline?: bigint,
-  ): Promise<ContractTransactionResponse> {
-    this.routerContract = this.routerContract.connect(wallet) as Contract;
-
-    await this._networkAndRouterCheck(wallet);
-
-    const dl = deadline ?? BigInt(Math.floor(Date.now() / 1000) + 1200);
-
-    try {
-      const txResponse: ContractTransactionResponse = await this.routerContract.execute(commandType, command, dl);
-      return txResponse;
-    } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : "Unknown error";
-      throw new Error(`${errorMessage}`);
-    }
-  }
-
-  /**
    * Create an execute transaction
    * @param wallet The wallet to execute the commands with
    * @param commands concatenated commands to execute in order
    * @param inputs list of encoded inputs for each command
    * @returns Transaction request
    */
-  async createExecuteTransaction(
-    wallet: Wallet,
-    commands: string,
-    inputs: string[],
-    deadline?: number,
-  ): Promise<TransactionRequest> {
-    this.routerContract = this.routerContract.connect(wallet) as Contract;
-
-    await this._networkAndRouterCheck(wallet);
-
+  async createExecuteTransaction(commands: string, inputs: string[], deadline?: number): Promise<TransactionRequest> {
     const dl = deadline ?? Math.floor(Date.now() / 1000) + 1200;
 
     const encodedData = this.routerContract.interface.encodeFunctionData("execute", [commands, inputs, dl]);
