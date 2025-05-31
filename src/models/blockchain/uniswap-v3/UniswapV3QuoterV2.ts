@@ -1,4 +1,4 @@
-import { Contract, ethers, recoverAddress, Wallet } from "ethers";
+import { Contract, ethers, Wallet } from "ethers";
 
 import { ChainConfig, ChainType, getChainConfig } from "../../../config/chain-config";
 
@@ -39,10 +39,25 @@ export class UniswapV3QuoterV2 {
 
     await this._networkAndQuoterCheck(wallet);
 
-    const { amountOut, sqrtPriceX96After, initializedTicksCrossed, gasEstimate } =
-      await this.quoterContract.quoteExactInput.staticCall(path, amountIn);
+    try {
+      const { amountOut, sqrtPriceX96After, initializedTicksCrossed, gasEstimate } =
+        await this.quoterContract.quoteExactInput.staticCall(path, amountIn);
 
-    return { amountOut, sqrtPriceX96After, initializedTicksCrossed, gasEstimate };
+      return { amountOut, sqrtPriceX96After, initializedTicksCrossed, gasEstimate };
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : "An unknown error occurred";
+
+      if (errorMessage.toLowerCase().includes("no data present")) {
+        return {
+          amountOut: 0n,
+          sqrtPriceX96After: 0n,
+          initializedTicksCrossed: 0n,
+          gasEstimate: 0n,
+        };
+      }
+
+      throw error;
+    }
   }
 
   async quoteExactInputSingle(
@@ -69,10 +84,24 @@ export class UniswapV3QuoterV2 {
       sqrtPriceLimitX96,
     };
 
-    const { amountOut, sqrtPriceX96After, initializedTicksCrossed, gasEstimate } =
-      await this.quoterContract.quoteExactInputSingle.staticCall(ExactInputSingleParmas);
+    try {
+      const { amountOut, sqrtPriceX96After, initializedTicksCrossed, gasEstimate } =
+        await this.quoterContract.quoteExactInputSingle.staticCall(ExactInputSingleParmas);
 
-    return { amountOut, sqrtPriceX96After, initializedTicksCrossed, gasEstimate };
+      return { amountOut, sqrtPriceX96After, initializedTicksCrossed, gasEstimate };
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : "An unknown error occurred";
+
+      if (errorMessage.toLowerCase().includes("no data present")) {
+        return {
+          amountOut: 0n,
+          sqrtPriceX96After: 0n,
+          initializedTicksCrossed: 0n,
+          gasEstimate: 0n,
+        };
+      }
+      throw error;
+    }
   }
 
   async quoteExactOutput(wallet: Wallet, path: string, amountOut: bigint): Promise<QuoterExactOutputResponse> {
@@ -80,10 +109,25 @@ export class UniswapV3QuoterV2 {
 
     await this._networkAndQuoterCheck(wallet);
 
-    const { amountIn, sqrtPriceX96After, initializedTicksCrossed, gasEstimate } =
-      await this.quoterContract.quoteExactOutput.staticCall(path, amountOut);
+    try {
+      const { amountIn, sqrtPriceX96After, initializedTicksCrossed, gasEstimate } =
+        await this.quoterContract.quoteExactOutput.staticCall(path, amountOut);
 
-    return { amountIn, sqrtPriceX96After, initializedTicksCrossed, gasEstimate };
+      return { amountIn, sqrtPriceX96After, initializedTicksCrossed, gasEstimate };
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : "An unknown error occurred";
+
+      if (errorMessage.toLowerCase().includes("no data present")) {
+        return {
+          amountIn: 0n,
+          sqrtPriceX96After: 0n,
+          initializedTicksCrossed: 0n,
+          gasEstimate: 0n,
+        };
+      }
+
+      throw error;
+    }
   }
 
   async quoteExactOutputSingle(
@@ -94,10 +138,34 @@ export class UniswapV3QuoterV2 {
 
     await this._networkAndQuoterCheck(wallet);
 
-    const { amountIn, sqrtPriceX96After, initializedTicksCrossed, gasEstimate } =
-      await this.quoterContract.quoteExactOutputSingle.staticCall(params);
+    // Map the params to match the ABI expectation (amount -> amountOut)
+    const contractParams = {
+      tokenIn: params.tokenIn,
+      tokenOut: params.tokenOut,
+      amountOut: params.amount, // Map 'amount' to 'amountOut' for the contract call
+      fee: params.fee,
+      sqrtPriceLimitX96: params.sqrtPriceLimitX96,
+    };
 
-    return { amountIn, sqrtPriceX96After, initializedTicksCrossed, gasEstimate };
+    try {
+      const { amountIn, sqrtPriceX96After, initializedTicksCrossed, gasEstimate } =
+        await this.quoterContract.quoteExactOutputSingle.staticCall(contractParams);
+
+      return { amountIn, sqrtPriceX96After, initializedTicksCrossed, gasEstimate };
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : "An unknown error occurred";
+
+      if (errorMessage.toLowerCase().includes("no data present")) {
+        return {
+          amountIn: 0n,
+          sqrtPriceX96After: 0n,
+          initializedTicksCrossed: 0n,
+          gasEstimate: 0n,
+        };
+      }
+
+      throw error;
+    }
   }
 
   /**
@@ -105,27 +173,18 @@ export class UniswapV3QuoterV2 {
    * @param wallet Wallet instance -> blockchain provider
    * @returns true if the wallet is on the correct network and that the factory address is valid, false otherwise
    */
-  private async _networkAndQuoterCheck(wallet: Wallet): Promise<boolean> {
-    await validateNetwork(wallet, this.chain);
-
-    const code = await wallet.provider!.getCode(this.quoterAddress);
-    if (code === "0x" || code === "0x0") {
-      throw new Error(`No contract found at router address: ${this.quoterAddress}`);
-    }
-
+  private async _networkAndQuoterCheck(wallet: Wallet): Promise<void> {
     try {
-      await this.quoterContract.quoteExactInputSingle.staticCall({
-        tokenIn: this.WETH_ADDRESS,
-        tokenOut: this.USDC_ADDRESS,
-        fee: FeeAmount.MEDIUM,
-        amountIn: ethers.parseUnits("0.1", 18),
-        sqrtPriceLimitX96: 0n,
-      });
-      return true;
+      await validateNetwork(wallet, this.chain);
+
+      const code = await wallet.provider!.getCode(this.quoterAddress);
+      if (code === "0x" || code === "0x0") {
+        throw new Error(`No contract found at quoter address: ${this.quoterAddress}`);
+      }
+
+      await this.quoterContract.factory();
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : "Unknown error";
-
-      const revertDataError = errorMessage.includes("missing revert data");
 
       const functionNotFoundError =
         errorMessage.includes("function not found") ||
@@ -136,10 +195,6 @@ export class UniswapV3QuoterV2 {
         errorMessage.toLowerCase().includes("cannot read property") ||
         errorMessage.toLowerCase().includes("cannot read properties") ||
         errorMessage.includes("missing provider");
-
-      if (revertDataError) {
-        return true;
-      }
 
       if (functionNotFoundError) {
         throw new Error(`Contract at ${this.quoterAddress} is not a Uniswap V3 Quoter`);

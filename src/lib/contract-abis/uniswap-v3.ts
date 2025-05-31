@@ -20,7 +20,9 @@ const V3_POOL_ABI = [
   "function ticks(int24) external view returns (uint256 liquidityGross, int128 liquidityNet, uint256 feeGrowthOutside0X128, uint256 feeGrowthOutside1X128, int56 tickCumulative, uint16 tickIndex, uint88 community, uint256 blockTimestampLast)",
 ] as const;
 
-const V2_QUOTER_ABI = [
+const V3_QUOTER_V2_ABI = [
+  "function factory() external view returns (address)",
+
   "function quoteExactInputSingle(tuple(address tokenIn, address tokenOut, uint256 amountIn, uint24 fee, uint160 sqrtPriceLimitX96) params) external returns (uint256 amountOut, uint160 sqrtPriceX96After, uint32 initializedTicksCrossed, uint256 gasEstimate)",
 
   "function quoteExactInput(bytes path, uint256 amountIn) external returns (uint256 amountOut, uint160[] sqrtPriceX96AfterList, uint32[] initializedTicksCrossedList, uint256 gasEstimate)",
@@ -46,6 +48,6 @@ const V3_ROUTER_02_ABI = [
 ] as const;
 
 export const POOL_INTERFACE = new ethers.Interface(V3_POOL_ABI);
-export const QUOTER_INTERFACE = new ethers.Interface(V2_QUOTER_ABI);
+export const QUOTER_INTERFACE = new ethers.Interface(V3_QUOTER_V2_ABI);
 export const FACTORY_INTERFACE = new ethers.Interface(V3_FACTORY_ABI);
 export const ROUTER_INTERFACE = new ethers.Interface(V3_ROUTER_02_ABI);
