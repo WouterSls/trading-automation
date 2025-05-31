@@ -41,33 +41,9 @@ export const getBaseWallet_1 = (): Wallet => {
   const wallet = new ethers.Wallet(privateKey, provider);
   return wallet;
 };
-export const getBaseWallet_2 = (): Wallet => {
-  const rpcUrl = process.env.BASE_RPC_URL;
-  const privateKey = process.env.CL_PRIVATE_KEY;
-
-  if (!rpcUrl || !privateKey) {
-    throw new Error("RPC_URL and PRIVATE_KEY must be set");
-  }
-
-  const provider = new ethers.JsonRpcProvider(rpcUrl);
-  const wallet = new ethers.Wallet(privateKey, provider);
-  return wallet;
-};
 
 //ARB
 export const getArbitrumWallet_1 = (): Wallet => {
-  const rpcUrl = process.env.ARB_RPC_URL;
-  const privateKey = process.env.MS_PRIVATE_KEY;
-
-  if (!rpcUrl || !privateKey) {
-    throw new Error("RPC_URL and PRIVATE_KEY must be set");
-  }
-
-  const provider = new ethers.JsonRpcProvider(rpcUrl);
-  const wallet = new ethers.Wallet(privateKey, provider);
-  return wallet;
-};
-export const getArbitrumWallet_2 = (): Wallet => {
   const rpcUrl = process.env.ARB_RPC_URL;
   const privateKey = process.env.CL_PRIVATE_KEY;
 
@@ -82,18 +58,6 @@ export const getArbitrumWallet_2 = (): Wallet => {
 
 //ETH
 export const getEthWallet_1 = (): Wallet => {
-  const rpcUrl = process.env.ETH_RPC_URL;
-  const privateKey = process.env.MS_PRIVATE_KEY;
-
-  if (!rpcUrl || !privateKey) {
-    throw new Error("RPC_URL and PRIVATE_KEY must be set");
-  }
-
-  const provider = new ethers.JsonRpcProvider(rpcUrl);
-  const wallet = new ethers.Wallet(privateKey, provider);
-  return wallet;
-};
-export const getEthWallet_2 = (): Wallet => {
   const rpcUrl = process.env.ETH_RPC_URL;
   const privateKey = process.env.CL_PRIVATE_KEY;
 
@@ -120,7 +84,7 @@ export const getHardhatWallet_1 = (): Wallet => {
   return wallet;
 };
 export const getOfflineSigner_1 = (): Wallet => {
-  const privateKey = process.env.MS_PRIVATE_KEY;
+  const privateKey = process.env.CL_PRIVATE_KEY;
   if (!privateKey) {
     throw new Error("PRIVATE_KEY must be set");
   }
