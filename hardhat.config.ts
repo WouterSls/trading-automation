@@ -56,7 +56,8 @@ switch (forkNetwork) {
     networkConfig = {
       forking: {
         url: process.env.ETH_RPC_URL!,
-        blockNumber: 22_344_527,
+        //blockNumber: 22_344_527,
+        blockNumber: 15_763_614,
       },
       chainId: 1,
     };
