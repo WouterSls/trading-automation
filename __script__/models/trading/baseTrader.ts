@@ -234,8 +234,11 @@ async function baseTraderInteraction(wallet: Wallet) {
     console.log("fee:", pool.feeTier);
     console.log(`${pool.token0.symbol} / ${pool.token1.symbol}`);
     console.log("address:", pool.id);
-    console.log("TVL USD: ", pool.totalValueLockedUSD);
-    console.log("Liquidity:", ethers.formatEther(pool.liquidity));
+    if (pool.token0.name.toLowerCase().includes("game")) {
+      console.log("Game locked: ", pool.totalValueLockedToken0);
+    } else {
+      console.log("Game locked:", pool.totalValueLockedToken1);
+    }
     console.log("----------------------------------");
   }
 
