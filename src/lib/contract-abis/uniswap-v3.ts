@@ -38,6 +38,7 @@ const V3_FACTORY_ABI = [
 ] as const;
 
 const V3_ROUTER_02_ABI = [
+  // SWAP FUNCTIONS
   "function exactInputSingle(tuple(address tokenIn, address tokenOut, uint24 fee, address recipient, uint256 amountIn, uint256 amountOutMinimum, uint160 sqrtPriceLimitX96)) external payable returns (uint256 amountOut)",
 
   "function exactInput(tuple(bytes path, address recipient, uint256 amountIn, uint256 amountOutMinimum)) external payable returns (uint256 amountOut)",
@@ -45,6 +46,52 @@ const V3_ROUTER_02_ABI = [
   "function exactOutputSingle(tuple(address tokenIn, address tokenOut, uint24 fee, address recipient, uint256 amountOut, uint256 amountInMaximum, uint160 sqrtPriceLimitX96)) external payable returns (uint256 amountIn)",
 
   "function exactOutput(tuple(bytes path, address recipient, uint256 amountOut, uint256 amountInMaximum)) external payable returns (uint256 amountIn)",
+
+  // MULTICALL FUNCTIONS
+  "function multicall(uint256 deadline, bytes[] data) external payable returns (bytes[] results)",
+
+  // SELF PERMIT FUNCTIONS (for gasless approvals)
+  "function selfPermit(address token, uint256 value, uint256 deadline, uint8 v, bytes32 r, bytes32 s) external payable",
+
+  "function selfPermitIfNecessary(address token, uint256 value, uint256 deadline, uint8 v, bytes32 r, bytes32 s) external payable",
+
+  "function selfPermitAllowed(address token, uint256 nonce, uint256 expiry, uint8 v, bytes32 r, bytes32 s) external payable",
+
+  "function selfPermitAllowedIfNecessary(address token, uint256 nonce, uint256 expiry, uint8 v, bytes32 r, bytes32 s) external payable",
+
+  // PAYMENT FUNCTIONS
+  "function refundETH() external payable",
+
+  "function sweepToken(address token, uint256 amountMinimum, address recipient) external payable",
+
+  "function sweepTokenWithFee(address token, uint256 amountMinimum, address recipient, uint256 feeBips, address feeRecipient) external payable",
+
+  "function unwrapWETH9(uint256 amountMinimum, address recipient) external payable",
+
+  "function unwrapWETH9WithFee(uint256 amountMinimum, address recipient, uint256 feeBips, address feeRecipient) external payable",
+
+  // APPROVAL FUNCTIONS
+  "function approveMax(address token) external payable",
+
+  "function approveMaxMinusOne(address token) external payable",
+
+  "function approveZeroThenMax(address token) external payable",
+
+  "function approveZeroThenMaxMinusOne(address token) external payable",
+
+  // UTILITY FUNCTIONS
+  "function pull(address token, uint256 value) external payable",
+
+  "function wrapETH(uint256 value) external payable",
+
+  // IMMUTABLE STATE
+  "function factory() external view returns (address)",
+
+  "function factoryV2() external view returns (address)",
+
+  "function positionManager() external view returns (address)",
+
+  "function WETH9() external view returns (address)",
 ] as const;
 
 export const POOL_INTERFACE = new ethers.Interface(V3_POOL_ABI);
