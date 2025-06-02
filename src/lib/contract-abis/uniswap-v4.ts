@@ -25,7 +25,9 @@ const POOL_MANAGER_ABI = [
 
   // Liquidity management
   "function modifyLiquidity(tuple(address currency0,address currency1,uint24 fee,int24 tickSpacing,address hooks) key, (int24 tickLower,int24 tickUpper,int256 liquidityDelta,bytes32 salt) params, bytes calldata hookData) returns (tuple(int256 callerDelta, int256 feesAccrued))",
+
   "function swap(tuple(address currency0,address currency1,uint24 fee,int24 tickSpacing,address hooks) key, (bool zeroForOne,int256 amountSpecified,uint160 sqrtPriceLimitX96) params, bytes calldata hookData) returns (int256 swapDelta)",
+
   "function donate(tuple(address currency0,address currency1,uint24 fee,int24 tickSpacing,address hooks) key, uint256 amount0, uint256 amount1, bytes calldata hookData) returns (int256)",
 
   // Balance settlement
@@ -76,6 +78,30 @@ const STATE_VIEW_ABI = [
   "function getFeeGrowthInside(bytes32 poolId, int24 tickLower, int24 tickUpper) view returns (uint256 feeGrowthInside0X128, uint256 feeGrowthInside1X128)",
 ] as const;
 
+const QUOTER_ABI = [
+  // Errors
+  "error NotEnoughLiquidity(bytes32 poolId)",
+  "error NotPoolManager()",
+  "error NotSelf()",
+  "error QuoteSwap(uint256 amount)",
+  "error UnexpectedCallSuccess()",
+  "error UnexpectedRevertBytes(bytes revertData)",
+
+  // Public quoting functions (return decoded values)
+  "function quoteExactInput((address exactCurrency,(address intermediateCurrency,uint24 fee,int24 tickSpacing,address hooks,bytes hookData)[] path,uint128 exactAmount) params) returns (uint256 amountOut,uint256 gasEstimate)",
+
+  "function quoteExactInputSingle(((address currency0,address currency1,uint24 fee,int24 tickSpacing,address hooks) poolKey,bool zeroForOne,uint128 exactAmount,bytes hookData) params) returns (uint256 amountOut,uint256 gasEstimate)",
+
+  "function quoteExactOutput((address exactCurrency,(address intermediateCurrency,uint24 fee,int24 tickSpacing,address hooks,bytes hookData)[] path,uint128 exactAmount) params) returns (uint256 amountIn,uint256 gasEstimate)",
+
+  "function quoteExactOutputSingle(((address currency0,address currency1,uint24 fee,int24 tickSpacing,address hooks) poolKey,bool zeroForOne,uint128 exactAmount,bytes hookData) params) returns (uint256 amountIn,uint256 gasEstimate)",
+
+  // Miscellaneous
+  "function poolManager() view returns (address)",
+  "function unlockCallback(bytes data) returns (bytes)",
+];
+
 export const POOL_MANAGER_INTERFACE = new ethers.Interface(POOL_MANAGER_ABI);
 export const POSITION_MANAGER_INTERFACE = new ethers.Interface(POSITION_MANAGER_ABI);
 export const STATE_VIEW_INTERFACE = new ethers.Interface(STATE_VIEW_ABI);
+export const QUOTER_INTERFACE = new ethers.Interface(QUOTER_ABI);
