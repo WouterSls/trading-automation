@@ -1,6 +1,6 @@
 import { Contract, Wallet } from "ethers";
 import { ChainType, getChainConfig } from "../../../config/chain-config";
-import { POOL_MANAGER_INTERFACE } from "../../../lib/contract-abis/uniswap-v4";
+import { UNISWAP_V4_POOL_MANAGER_INTERFACE } from "../../../lib/contract-abis/uniswap-v4";
 import { validateNetwork } from "../../../lib/utils";
 
 export class UniswapV4PoolManager {
@@ -23,7 +23,7 @@ export class UniswapV4PoolManager {
       throw new Error(`Pool manager address not defined for chain: ${chainConfig.name}`);
     }
 
-    this.poolManagerContract = new Contract(this.POOL_MANAGER_ADDRESS, POOL_MANAGER_INTERFACE);
+    this.poolManagerContract = new Contract(this.POOL_MANAGER_ADDRESS, UNISWAP_V4_POOL_MANAGER_INTERFACE);
   }
 
   getPoolManagerAddress = (): string => this.POOL_MANAGER_ADDRESS;

@@ -101,7 +101,7 @@ const QUOTER_ABI = [
   "function unlockCallback(bytes data) returns (bytes)",
 ];
 
-export const POOL_MANAGER_INTERFACE = new ethers.Interface(POOL_MANAGER_ABI);
-export const POSITION_MANAGER_INTERFACE = new ethers.Interface(POSITION_MANAGER_ABI);
-export const STATE_VIEW_INTERFACE = new ethers.Interface(STATE_VIEW_ABI);
-export const QUOTER_INTERFACE = new ethers.Interface(QUOTER_ABI);
+export const UNISWAP_V4_POOL_MANAGER_INTERFACE = new ethers.Interface(POOL_MANAGER_ABI);
+export const UNISWAP_V4_POSITION_MANAGER_INTERFACE = new ethers.Interface(POSITION_MANAGER_ABI);
+export const UNISWAP_V4_STATE_VIEW_INTERFACE = new ethers.Interface(STATE_VIEW_ABI);
+export const UNISWAP_V4_QUOTER_INTERFACE = new ethers.Interface(QUOTER_ABI);

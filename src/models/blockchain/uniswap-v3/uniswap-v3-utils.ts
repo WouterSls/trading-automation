@@ -1,8 +1,5 @@
-import { Provider, Wallet } from "ethers";
-import { ethers } from "ethers";
-import { FeeAmount, FeeToTickSpacing } from "./uniswap-v3-types";
-import { UniswapV3Pool } from "./UniswapV3Pool";
-import { POOL_INTERFACE } from "../../../lib/contract-abis/uniswap-v3";
+import { FeeAmount } from "./uniswap-v3-types";
+
 /**
  * Converts sqrtPriceX96 to a human readable price
  * @param sqrtPriceX96 The sqrt price value from the pool

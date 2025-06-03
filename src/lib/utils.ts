@@ -2,7 +2,7 @@ import { ethers, Wallet } from "ethers";
 
 import { ERC20_INTERFACE, WETH_INTERFACE } from "./contract-abis/erc20";
 import { ChainType, mapNetworkNameToChainType } from "../config/chain-config";
-import { POOL_INTERFACE as V3_POOL_INTERFACE } from "./contract-abis/uniswap-v3";
+import { UNISWAP_V3_POOL_INTERFACE } from "./contract-abis/uniswap-v3";
 import { UNISWAP_V2_PAIR_INTERFACE } from "./contract-abis/uniswap-v2";
 import { calculatePriceFromSqrtPriceX96 } from "../models/blockchain/uniswap-v3/uniswap-v3-utils";
 
@@ -88,8 +88,8 @@ export function decodeLogs(logs: ReadonlyArray<ethers.Log>) {
           amount0Out: decoded.args.amount0Out,
           amount1Out: decoded.args.amount1Out,
         });
-      } else if (log.topics[0] === V3_POOL_INTERFACE.getEvent("Swap")!.topicHash) {
-        const decoded = V3_POOL_INTERFACE.parseLog({
+      } else if (log.topics[0] === UNISWAP_V3_POOL_INTERFACE.getEvent("Swap")!.topicHash) {
+        const decoded = UNISWAP_V3_POOL_INTERFACE.parseLog({
           topics: log.topics,
           data: log.data,
         });

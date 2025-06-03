@@ -1,6 +1,6 @@
 import { Contract, Wallet, ethers } from "ethers";
 import { ChainType, getChainConfig } from "../../../config/chain-config";
-import { FACTORY_INTERFACE, POOL_INTERFACE } from "../../../lib/contract-abis/uniswap-v3";
+import { UNISWAP_V3_FACTORY_INTERFACE, UNISWAP_V3_POOL_INTERFACE } from "../../../lib/contract-abis/uniswap-v3";
 import { validateNetwork } from "../../../lib/utils";
 import { UniswapV3Pool, FeeAmount, FeeToTickSpacing } from "./index";
 
@@ -18,7 +18,7 @@ export class UniswapV3Factory {
       throw new Error(`Factory address not defined for chain: ${chainConfig.name}`);
     }
 
-    this.factoryContract = new Contract(this.factoryAddress, FACTORY_INTERFACE);
+    this.factoryContract = new Contract(this.factoryAddress, UNISWAP_V3_FACTORY_INTERFACE);
   }
 
   getFactoryAddress = (): string => this.factoryAddress;
@@ -72,7 +72,7 @@ export class UniswapV3Factory {
       throw new Error(`Provider not found for ${token0Address} and ${token1Address} and ${feeTier}`);
     }
 
-    const contract = new ethers.Contract(poolAddress, POOL_INTERFACE, wallet);
+    const contract = new ethers.Contract(poolAddress, UNISWAP_V3_POOL_INTERFACE, wallet);
     const [token0, token1] = await Promise.all([contract.token0(), contract.token1()]);
 
     const tickSpacing = FeeToTickSpacing.get(feeTier);

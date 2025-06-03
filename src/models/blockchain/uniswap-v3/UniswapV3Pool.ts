@@ -1,5 +1,5 @@
 import { Contract, Wallet } from "ethers";
-import { POOL_INTERFACE } from "../../../lib/contract-abis/uniswap-v3";
+import { UNISWAP_V3_POOL_INTERFACE } from "../../../lib/contract-abis/uniswap-v3";
 import { FeeAmount } from "./index";
 
 export interface Slot0 {
@@ -35,7 +35,7 @@ export class UniswapV3Pool {
     private fee: FeeAmount,
     private tickSpacing: number,
   ) {
-    this.poolContract = new Contract(poolAddress, POOL_INTERFACE, wallet);
+    this.poolContract = new Contract(poolAddress, UNISWAP_V3_POOL_INTERFACE, wallet);
   }
 
   getPoolAddress = (): string => this.poolAddress;

@@ -94,7 +94,7 @@ const V3_ROUTER_02_ABI = [
   "function WETH9() external view returns (address)",
 ] as const;
 
-export const POOL_INTERFACE = new ethers.Interface(V3_POOL_ABI);
-export const QUOTER_INTERFACE = new ethers.Interface(V3_QUOTER_V2_ABI);
-export const FACTORY_INTERFACE = new ethers.Interface(V3_FACTORY_ABI);
-export const ROUTER_INTERFACE = new ethers.Interface(V3_ROUTER_02_ABI);
+export const UNISWAP_V3_POOL_INTERFACE = new ethers.Interface(V3_POOL_ABI);
+export const UNISWAP_V3_QUOTER_INTERFACE = new ethers.Interface(V3_QUOTER_V2_ABI);
+export const UNISWAP_V3_FACTORY_INTERFACE = new ethers.Interface(V3_FACTORY_ABI);
+export const UNISWAP_V3_ROUTER_INTERFACE = new ethers.Interface(V3_ROUTER_02_ABI);

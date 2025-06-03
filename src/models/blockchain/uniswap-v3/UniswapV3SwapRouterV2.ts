@@ -6,7 +6,7 @@ import {
   ExactOutputSingleParams,
 } from "./uniswap-v3-types";
 import { ChainType, getChainConfig } from "../../../config/chain-config";
-import { ROUTER_INTERFACE } from "../../../lib/contract-abis/uniswap-v3";
+import { UNISWAP_V3_ROUTER_INTERFACE } from "../../../lib/contract-abis/uniswap-v3";
 import { validateNetwork } from "../../../lib/utils";
 
 export class UniswapV3SwapRouterV2 {
@@ -22,7 +22,7 @@ export class UniswapV3SwapRouterV2 {
       throw new Error(`UniV3 Router address not defined for chain: ${chainConfig.name}`);
     }
 
-    this.routerContract = new ethers.Contract(this.routerAddress, ROUTER_INTERFACE);
+    this.routerContract = new ethers.Contract(this.routerAddress, UNISWAP_V3_ROUTER_INTERFACE);
   }
 
   getRouterAddress = () => this.routerAddress;

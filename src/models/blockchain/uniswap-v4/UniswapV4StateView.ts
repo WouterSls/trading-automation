@@ -1,6 +1,6 @@
 import { Contract, Wallet } from "ethers";
 import { ChainType, getChainConfig } from "../../../config/chain-config";
-import { STATE_VIEW_INTERFACE } from "../../../lib/contract-abis/uniswap-v4";
+import { UNISWAP_V4_STATE_VIEW_INTERFACE } from "../../../lib/contract-abis/uniswap-v4";
 import { PoolKey } from "./uniswap-v4-types";
 import { computePoolId } from "./uniswap-v4-utils";
 
@@ -18,7 +18,7 @@ export class UniswapV4StateView {
       throw new Error(`State manager address not defined for chain: ${chainConfig.name}`);
     }
 
-    this.stateViewContract = new Contract(this.STATE_MANAGER_ADDRESS, STATE_VIEW_INTERFACE);
+    this.stateViewContract = new Contract(this.STATE_MANAGER_ADDRESS, UNISWAP_V4_STATE_VIEW_INTERFACE);
   }
 
   async getSlot0(wallet: Wallet, poolKey: PoolKey): Promise<PoolKey> {
