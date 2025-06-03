@@ -143,24 +143,24 @@ describe("Uniswap V2 Strategy Test", () => {
 
   describe("getTokenEthLiquidity", () => {
     it("should throw error with offline wallet", async () => {
-      await expect(strategy.getTokenEthLiquidity(offlineWallet, UNI_TOKEN_ADDRESS)).rejects.toThrow(
+      await expect(strategy.getTokenWethLiquidity(offlineWallet, UNI_TOKEN_ADDRESS)).rejects.toThrow(
         MISSING_PROVIDER_ERROR_MESSAGE,
       );
     });
     it("should throw error with wrong network wallet", async () => {
-      await expect(strategy.getTokenEthLiquidity(nonNetworkWallet, UNI_TOKEN_ADDRESS)).rejects.toThrow(
+      await expect(strategy.getTokenWethLiquidity(nonNetworkWallet, UNI_TOKEN_ADDRESS)).rejects.toThrow(
         "Wallet on different chain",
       );
     });
     it("should handle non-existent pair gracefully", async () => {
       const nonExistentToken = "0x1234567890123456789012345678901234567890";
-      const liquidity = await strategy.getTokenEthLiquidity(wallet, nonExistentToken);
+      const liquidity = await strategy.getTokenWethLiquidity(wallet, nonExistentToken);
 
       expect(liquidity).toBe("0");
     });
 
     it("should return valid ETH liquidity for UNI token", async () => {
-      const liquidity = await strategy.getTokenEthLiquidity(wallet, UNI_TOKEN_ADDRESS);
+      const liquidity = await strategy.getTokenWethLiquidity(wallet, UNI_TOKEN_ADDRESS);
 
       expect(liquidity).toBeDefined();
       expect(typeof liquidity).toBe("string");
