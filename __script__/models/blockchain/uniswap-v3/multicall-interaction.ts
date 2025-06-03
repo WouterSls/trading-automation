@@ -4,8 +4,7 @@ import { ChainType } from "../../../../src/config/chain-config";
 import { getChainConfig } from "../../../../src/config/chain-config";
 import { getHardhatWallet_1 } from "../../../../src/hooks/useSetup";
 import { validateNetwork } from "../../../../src/lib/utils";
-import { UniswapV2RouterV2 } from "../../../../src/models/blockchain/uniswap-v2";
-import { ROUTER_INTERFACE } from "../../../../src/lib/contract-abis/uniswap-v3";
+import { UNISWAP_V3_ROUTER_INTERFACE } from "../../../../src/lib/contract-abis/uniswap-v3";
 import { UniswapV3SwapRouterV2 } from "../../../../src/models/blockchain/uniswap-v3";
 
 export async function multicallInteraction(chain: ChainType, wallet: Wallet) {
