@@ -51,7 +51,7 @@ async function testPermit2TransferFrom(wallet: Wallet, chain: ChainType) {
   console.log("transfer command:", command);
   const input = encodePermitTransferFromInput(permitTransferFrom);
 
-  const tx = await router.createExecuteTransaction(wallet, command, [input]);
+  const tx = await router.createExecuteTransaction(command, [input]);
   const res = await wallet.sendTransaction(tx);
   const receipt = await res.wait();
   if (!receipt) throw new Error("Trasnaction failed");
@@ -140,7 +140,6 @@ export async function v4SwapInteraction(wallet: Wallet, tradeCreationDto: SellTr
   const commands = ethers.concat([permit2PermitCommand, permit2TransferFromCommand, swapCommand]);
   console.log("commands", commands);
   const txRequest = await router.createExecuteTransaction(
-    wallet,
     commands,
     [permit2Input, permit2TransferFromInput, swapInput],
     deadline,

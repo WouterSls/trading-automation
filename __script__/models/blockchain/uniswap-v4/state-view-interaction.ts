@@ -17,9 +17,6 @@ export async function stateViewInteraction(chain: ChainType, wallet: Wallet) {
   const ethAddress = ethers.ZeroAddress;
 
   const theGraphApi = getTheGraphApi();
-  const poolKeys = await theGraphApi.fetchV4PoolKeysByTokens(chain, usdcAddress, daiAddress);
-  const bestPoolKey = await getBestPoolKey(poolKeys);
-  console.log("bestPoolKey", bestPoolKey);
 
   const stateView = new UniswapV4StateView(chain);
 

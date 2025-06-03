@@ -49,7 +49,7 @@ export async function v4SwapInteraction(wallet: Wallet, tradeCreationDto: SellTr
   console.log();
 
   console.log("Creating V4 swap execute transaction...");
-  const tx = await router.createExecuteTransaction(wallet, command, [input], deadline);
+  const tx = await router.createExecuteTransaction(command, [input], deadline);
   tx.value = ethers.parseEther(ethValue);
   console.log("Transaction request:");
   console.log(tx);

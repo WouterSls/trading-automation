@@ -7,6 +7,7 @@ import { WETH_INTERFACE } from "../../src/lib/contract-abis/erc20";
 import { UniswapV3SwapRouterV2, UniswapV3QuoterV2 } from "../../src/models/blockchain/uniswap-v3/index";
 import {
   ExactInputSingleParams,
+  FeeAmount,
   QuoteExactInputSingleParams,
 } from "../../src/models/blockchain/uniswap-v3/uniswap-v3-types";
 
@@ -87,20 +88,25 @@ async function v3RouterTest(
 ) {
   const v3Router = new UniswapV3SwapRouterV2(chain);
   const quoter = new UniswapV3QuoterV2(chain);
-
   const rawTradeAmount = ethers.parseUnits(tradeAmount.toString(), inputToken.getDecimals());
 
-  const quoteExactInputSingleParams: QuoteExactInputSingleParams = {
-    tokenIn: inputToken.getTokenAddress(),
-    tokenOut: outputToken.getTokenAddress(),
-    fee: 3000,
-    amountIn: rawTradeAmount,
-    sqrtPriceLimitX96: 0n,
-  };
+  const tokenIn = inputToken.getTokenAddress();
+  const amountIn = rawTradeAmount;
+  const tokenOut = outputToken.getTokenAddress();
+  const fee = FeeAmount.MEDIUM;
+  const recipient = wallet.address;
+  const amountOutMinimum = 0n;
+  const sqrtPriceLimitX96 = 0n;
 
   const { amountOut, sqrtPriceX96After, initializedTicksCrossed, gasEstimate } = await quoter.quoteExactInputSingle(
     wallet,
-    quoteExactInputSingleParams,
+    tokenIn,
+    tokenOut,
+    fee,
+    recipient,
+    amountIn,
+    amountOutMinimum,
+    sqrtPriceLimitX96,
   );
 
   console.log({
