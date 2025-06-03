@@ -46,7 +46,7 @@ describe("UniversalRouter V4 Trade Tests | ETH", () => {
       const deadline = Math.floor(Date.now() / 1000) + 1200;
 
       // Act
-      const tx = await router.createExecuteTransaction(wallet, command, [input], deadline);
+      const tx = await router.createExecuteTransaction(command, [input], deadline);
       tx.value = ethers.parseEther("10");
       const txResponse = await wallet.sendTransaction(tx);
       const txReceipt = await txResponse.wait();
