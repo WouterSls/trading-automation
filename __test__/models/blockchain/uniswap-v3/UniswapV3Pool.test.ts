@@ -1,6 +1,5 @@
 import { getEthWallet_1, getOfflineSigner_1 } from "../../../../src/hooks/useSetup";
 import { UniswapV3Pool } from "../../../../src/models/blockchain/uniswap-v3";
-import { V3_POOL_PEPE_ETH_3000_ADDRESS } from "../../../../src/lib/token-addresses";
 import { Wallet } from "ethers";
 
 global.fetch = jest.fn();
