@@ -24,7 +24,7 @@ describe("ETH UniswapV3Factory", () => {
     nonNetworkWallet = getArbitrumWallet_1();
     offlineWallet = getOfflineSigner_1();
     wallet = getHardhatWallet_1();
-  });
+  }, 20_000);
 
   afterAll(async () => {
     await NetworkForkManager.cleanupHardhatFork();

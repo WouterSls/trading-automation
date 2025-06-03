@@ -24,7 +24,7 @@ describe("Uniswap V3 QuoterV2", () => {
     await NetworkForkManager.startHardhatFork(chain);
     chainConfig = getChainConfig(chain);
     quoter = new UniswapV3QuoterV2(chain);
-  });
+  }, 20_000);
 
   beforeEach(() => {
     wallet = getHardhatWallet_1();

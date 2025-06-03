@@ -3,8 +3,8 @@ import { UniversalRouter } from "../../../../src/models/blockchain/universal-rou
 import { ChainType } from "../../../../src/config/chain-config";
 import { getArbitrumWallet_1, getBaseWallet_1, getEthWallet_1, getOfflineSigner_1 } from "../../../../src/hooks/useSetup";
 
-const MISSING_PROVIDER_ERROR_MESSAGE = "Wallet has missing provider";
-const INVALID_NETWORK_ERROR_MESSAGE = "Wallet and factory are on different networks";
+const MISSING_PROVIDER_ERROR_MESSAGE = "Network Validation Failed";
+const INVALID_NETWORK_ERROR_MESSAGE = "Wallet on different chain";
 
 describe("address validation", () => {
   let ethWallet: Wallet;

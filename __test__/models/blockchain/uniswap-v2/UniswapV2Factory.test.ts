@@ -9,8 +9,8 @@ import {
 import { UniswapV2Factory } from "../../../../src/models/blockchain/uniswap-v2/UniswapV2Factory";
 import { ChainConfig, ChainType, getChainConfig } from "../../../../src/config/chain-config";
 
-const MISSING_PROVIDER_ERROR_MESSAGE = "Wallet has missing provider";
-const INVALID_NETWORK_ERROR_MESSAGE = "Wallet and factory are on different networks";
+const MISSING_PROVIDER_ERROR_MESSAGE = "Network Validation Failed";
+const INVALID_NETWORK_ERROR_MESSAGE = "Wallet on different chain";
 
 describe("ETH UniswapV2Factory", () => {
   let factory: UniswapV2Factory;
@@ -28,7 +28,7 @@ describe("ETH UniswapV2Factory", () => {
     nonNetworkWallet = getArbitrumWallet_1();
     offlineWallet = getOfflineSigner_1();
     wallet = getHardhatWallet_1();
-  });
+  },20_000);
 
   afterAll(async () => {
     await NetworkForkManager.cleanupHardhatFork();

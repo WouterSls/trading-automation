@@ -4,8 +4,8 @@ import { getArbitrumWallet_1, getHardhatWallet_1, getOfflineSigner_1 } from "../
 import { UniswapV2RouterV2 } from "../../../../src/models/blockchain/uniswap-v2/index";
 import { ChainConfig, ChainType, getChainConfig } from "../../../../src/config/chain-config";
 
-const MISSING_PROVIDER_ERROR_MESSAGE = "Wallet has missing provider";
-const INVALID_NETWORK_ERROR_MESSAGE = "Wallet and factory are on different networks";
+const MISSING_PROVIDER_ERROR_MESSAGE = "Network Validation Failed";
+const INVALID_NETWORK_ERROR_MESSAGE = "Wallet on different chain";
 
 describe("Uniswap V2 Router", () => {
   let router: UniswapV2RouterV2;
@@ -25,7 +25,7 @@ describe("Uniswap V2 Router", () => {
     await NetworkForkManager.startHardhatFork(chain);
     chainConfig = getChainConfig(chain);
     router = new UniswapV2RouterV2(chain);
-  });
+  }, 20_000);
 
   beforeEach(() => {
     wallet = getHardhatWallet_1();
