@@ -14,65 +14,61 @@ This library provides a clean, type-safe interface for blockchain interactions, 
 - **Trading**: Token swapping and trading functionality
 - **Type Safety**: Full TypeScript typing for a safer development experience
 
-## Installation
-
-```bash
-npm install
-```
-
 ## Configuration
 
 Create a `.env` file in the root directory with the following variables:
 
 ```
-ALCHEMY_API_KEY=your_alchemy_api_key
-ETH_PRIVATE_KEY=your_ethereum_wallet_private_key
-ARB_PRIVATE_KEY=your_arbitrum_wallet_private_key
-BASE_PRIVATE_KEY=your_base_wallet_private_key
+BASE_RPC_URL=
+ARB_RPC_URL=
+ETH_RPC_URL=
+
+PRIVATE_KEY=
+
+HARDHAT_RPC_URL= http://127.0.0.1:8545/
+HARDHAT_PRIVATE_KEY_1=found on hardhat startup
+HARDHAT_PRIVATE_KEY_2=found on hardhat startup
+
+ALCHEMY_API_KEY=
+THE_GRAPH_API_KEY=
 ```
+
+setup and usage of .env variables can be found in hooks/useSetup.ts
 
 ## Usage Examples
 
-### Getting Token Prices
-
-```typescript
-import { AlchemyApi } from "./src/services/AlchemyApi";
-import { NetworkEnum } from "./src/lib/types/alchemy-api.types";
-
-const api = new AlchemyApi(process.env.ALCHEMY_API_KEY);
-const tokenPrice = await api.getTokenPrice(NetworkEnum.MAINNET, "0xTokenAddress");
-console.log(`Token price: $${tokenPrice.price}`);
-```
-
-### Trading Tokens
-
-```typescript
-import { buyToken } from "./src/scripts/trader/buyToken";
-
-// Buy $100 worth of a token
-await buyToken(100, "0xTokenAddress");
-```
-
-### Wallet Information
-
-```typescript
-import { Wallet } from "ethers";
-import { getArbitrumWallet_1 } from "./src/config/setup-config";
-
-const wallet = await getArbitrumWallet_1();
-console.log(`Wallet address: ${wallet.address}`);
-```
+for interaction with the trading engine check the **scripts** directory for all interaction scripts
 
 ## Architecture
 
 The project is organized into the following structure:
 
-- **config/**: Chain configuration and setup
-- **contract-abis/**: ABI definitions for smart contract interactions
+### Core Source (`src/`)
+
+- **config/**: Chain configuration and trading setup
+- **hooks/**: Custom hooks and setup utilities
 - **lib/**: Utility functions and type definitions
 - **models/**: Core business logic and abstractions
-- **scripts/**: Executable scripts for various operations
+  - **blockchain/**: Blockchain interaction models
+  - **trading/**: Trading-specific models and logic
 - **services/**: External API integrations
+
+### Scripts (`__script__/`)
+
+- **hardhat/**: Hardhat-related scripts for testing and development
+- **models/**: Executable scripts for models
+  - **blockchain/**: Blockchain interaction scripts
+  - **trading/**: Trading operation scripts
+- **services/**: Scripts for external service interactions
+  - Alchemy wallet information retrieval
+  - GeckoTerminal price and pool data
+  - The Graph token pool information
+
+### Tests (`__test__/`)
+
+- **helpers/**: Test utility functions and helpers
+- **models/**: Unit tests for core models and business logic
+- **services/**: Tests for external API integrations
 
 ## Supported Chains
 
@@ -84,7 +80,8 @@ The project is organized into the following structure:
 
 - Uniswap V2
 - Uniswap V3
-- (More to come)
+- Uniswap V4 (via Universal Router)
+- Aerodrome
 
 ## Contributing
 
@@ -92,8 +89,4 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 
 ## License
 
-ISC
-
-## Disclaimers
-
-This software is for educational purposes only. Use at your own risk. Always verify transactions before signing them, and never expose your private keys.
+This project is licensed under the [MIT License](LICENSE).
