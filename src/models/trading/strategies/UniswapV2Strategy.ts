@@ -7,7 +7,7 @@ import { ERC20, createMinimalErc20 } from "../../blockchain/ERC/_index";
 import { UniswapV2RouterV2, UniswapV2Factory } from "../../blockchain/uniswap-v2/index";
 
 import { ITradingStrategy } from "../ITradingStrategy";
-import { BuyTradeCreationDto, SellTradeCreationDto, InputType } from "../types/_index";
+import { BuyTradeCreationDto, SellTradeCreationDto, InputType, TradeQuote, OutputToken } from "../types/_index";
 
 import { ERC20_INTERFACE } from "../../../lib/contract-abis/_index";
 import { ensureInfiniteApproval, ensureStandardApproval, validateNetwork } from "../../../lib/_index";
@@ -76,49 +76,167 @@ export class UniswapV2Strategy implements ITradingStrategy {
   }
 
   /**
-   * Gets the WETH liquidity for a given token pair (can be used to get ETH liquidity)
-   * @param wallet Connected wallet to query liquidity
-   * @param tokenAddress Address of the token to check liquidity for
-   * @returns WETH liquidity amount as a string
+   * Gets a comprehensive quote for a buy trade by mirroring the exact transaction creation logic
+   * @param wallet Connected wallet to query the price
+   * @param trade Buy trade creation parameters
+   * @returns TradeQuote with all execution details
    */
-  async getTokenWethLiquidity(wallet: Wallet, tokenAddress: string): Promise<string> {
+  async getBuyTradeQuote(wallet: Wallet, trade: BuyTradeCreationDto): Promise<TradeQuote> {
     await validateNetwork(wallet, this.chain);
-    const pairAddress: string | null = await this.factory!.getPairAddress(wallet, tokenAddress, this.WETH_ADDRESS);
-    if (!pairAddress || pairAddress === ethers.ZeroAddress) return "0";
-    console.log("pair address:", pairAddress);
 
-    const encodedData = ERC20_INTERFACE.encodeFunctionData("balanceOf", [pairAddress]);
+    let outputAmount = "0";
+    let priceImpact = 0;
+    let route: string[] = [];
 
-    const tx: TransactionRequest = {
-      to: this.WETH_ADDRESS,
-      data: encodedData,
+    const outputToken = await createMinimalErc20(trade.outputToken, wallet.provider!);
+
+    const isETHInputETHValue = trade.inputType === InputType.ETH && trade.inputToken === ethers.ZeroAddress;
+    const isETHInputUSDValue = trade.inputType === InputType.USD && trade.inputToken === ethers.ZeroAddress;
+    const isTOKENInputTOKENValue = trade.inputType === InputType.TOKEN && trade.inputToken !== ethers.ZeroAddress;
+
+    if (isETHInputETHValue) {
+      route = [ethers.ZeroAddress, trade.outputToken];
+      const path = [this.WETH_ADDRESS, trade.outputToken];
+      const amountIn = ethers.parseEther(trade.inputAmount);
+
+      const amountsOut = await this.router.getAmountsOut(wallet, amountIn, path);
+      const tokensReceived = amountsOut[amountsOut.length - 1];
+
+      outputAmount = ethers.formatUnits(tokensReceived, outputToken.getDecimals());
+    }
+
+    if (isETHInputUSDValue) {
+      route = [ethers.ZeroAddress, trade.outputToken];
+      const path = [this.WETH_ADDRESS, trade.outputToken];
+
+      const ethUsdcPrice = await this.getEthUsdcPrice(wallet);
+      const ethValue = parseFloat(trade.inputAmount) / parseFloat(ethUsdcPrice);
+      const ethValueFixed = ethValue.toFixed(18);
+      const amountIn = ethers.parseEther(ethValueFixed);
+
+      const amountsOut = await this.router.getAmountsOut(wallet, amountIn, path);
+      const tokensReceived = amountsOut[amountsOut.length - 1];
+
+      outputAmount = ethers.formatUnits(tokensReceived, outputToken.getDecimals());
+    }
+
+    if (isTOKENInputTOKENValue) {
+      const inputToken = await createMinimalErc20(trade.inputToken, wallet.provider!);
+
+      //TODO: find optimal route / path -> graph or fallback strat
+      route = [inputToken.getTokenAddress(), this.WETH_ADDRESS, outputToken.getSymbol()];
+      const path = [inputToken.getTokenAddress(), this.WETH_ADDRESS, outputToken.getTokenAddress()];
+
+      const amountIn = ethers.parseUnits(trade.inputAmount, inputToken.getDecimals());
+
+      const amountsOut = await this.router.getAmountsOut(wallet, amountIn, path);
+      const tokensReceived = amountsOut[amountsOut.length - 1];
+
+      outputAmount = ethers.formatUnits(tokensReceived, outputToken.getDecimals());
+
+      priceImpact = await this.estimateBuyPriceImpact(wallet, inputToken, amountIn, tokensReceived, outputToken);
+    }
+
+    return {
+      outputAmount,
+      priceImpact,
+      route,
     };
-
-    const ethLiquidity = await wallet.call(tx);
-    const ethLiquidityFormatted = ethers.formatEther(ethLiquidity);
-
-    return ethLiquidityFormatted;
   }
 
   /**
-   * Gets the current token price in USDC by using WETH as intermediary trade token
+   * Gets a comprehensive quote for a sell trade by mirroring the exact transaction creation logic
    * @param wallet Connected wallet to query the price
-   * @param tokenAddress Address of the token to get price for
-   * @returns Token price in USDC as a string
+   * @param trade Sell trade creation parameters
+   * @returns TradeQuote with all execution details including price impact validation
    */
-  async getTokenUsdcPrice(wallet: Wallet, tokenAddress: string): Promise<string> {
+  async getSellTradeQuote(wallet: Wallet, trade: SellTradeCreationDto): Promise<TradeQuote> {
     await validateNetwork(wallet, this.chain);
-    if (!wallet.provider) throw new Error("No Blockchain provider");
-    const token = await createMinimalErc20(tokenAddress, wallet.provider!);
 
-    const tradePath = [tokenAddress, this.WETH_ADDRESS, this.USDC_ADDRESS];
-    const inputAmount = ethers.parseUnits("1", token.getDecimals());
+    let outputAmount = "0";
+    let priceImpact = 0;
+    let route: string[] = [];
 
-    const amountsOut: BigInt[] = await this.router.getAmountsOut(wallet, inputAmount, tradePath);
-    const amountOut = amountsOut[amountsOut.length - 1];
+    const inputToken = await createMinimalErc20(trade.inputToken, wallet.provider!);
 
-    const amountFormatted = ethers.formatUnits(amountOut.toString(), this.USDC_DECIMALS);
-    return amountFormatted;
+    const sellAmount = parseFloat(trade.inputAmount);
+    const usdSellPrice = parseFloat(trade.tradingPointPrice);
+
+    const isTOKENInputETHOutput = trade.inputToken !== ethers.ZeroAddress && trade.outputToken === OutputToken.ETH;
+    const isTOKENInputUSDCOutput = trade.inputToken !== ethers.ZeroAddress && trade.outputToken === OutputToken.USDC;
+    const isTOKENInputTOKENOutput = trade.inputToken !== ethers.ZeroAddress && trade.outputToken === OutputToken.TOKEN;
+
+    if (isTOKENInputETHOutput) {
+      route = [inputToken.getTokenAddress(), this.WETH_ADDRESS, ethers.ZeroAddress];
+
+      const path = [inputToken.getTokenAddress(), this.WETH_ADDRESS];
+
+      const amountIn = ethers.parseUnits(trade.inputAmount, inputToken.getDecimals());
+
+      const theoreticalOutput = await this.getTheoreticalEthOutput(wallet, sellAmount, usdSellPrice);
+      const quotedOutput = await this.getActualEthOutput(wallet, inputToken, amountIn);
+
+      priceImpact = this.calculatePriceImpact(theoreticalOutput, quotedOutput);
+
+      outputAmount = quotedOutput.toString();
+    }
+
+    if (isTOKENInputUSDCOutput) {
+      // Token → USDC path: InputToken → WETH → USDC
+      const tokenIn = await createMinimalErc20(trade.inputToken, wallet.provider!);
+      route = [tokenIn.getSymbol(), "WETH", "USDC"];
+      const path = [tokenIn.getTokenAddress(), this.WETH_ADDRESS, this.USDC_ADDRESS];
+
+      const amountIn = ethers.parseUnits(trade.inputAmount, tokenIn.getDecimals());
+
+      // Use the exact same logic as createSellTransaction
+      const theoreticalOutput = await this.getTheoreticalUsdcTokenOutput(sellAmount, usdSellPrice);
+      const quotedOutput = await this.getActualUsdcOutput(wallet, tokenIn, amountIn);
+      priceImpact = this.calculatePriceImpact(theoreticalOutput, quotedOutput);
+
+      // Check if price impact would cause transaction to fail
+      if (priceImpact > TRADING_CONFIG.MAX_PRICE_IMPACT_PERCENTAGE) {
+        throw new Error(
+          `Price impact too high: ${priceImpact.toFixed(2)}%, max allowed: ${TRADING_CONFIG.MAX_PRICE_IMPACT_PERCENTAGE}%`,
+        );
+      }
+
+      outputAmount = quotedOutput.toString();
+
+      // Confidence based on liquidity depth
+      const wethLiquidity = await this.getTokenWethLiquidity(wallet, trade.inputToken);
+    }
+
+    if (isTOKENInputTOKENOutput) {
+      throw new Error("Token -> Token trading is not implemented");
+      // Token → WETH path: InputToken → WETH
+      const tokenIn = await createMinimalErc20(trade.inputToken, wallet.provider!);
+      route = [tokenIn.getSymbol(), "WETH"];
+      const path = [tokenIn.getTokenAddress(), this.WETH_ADDRESS];
+
+      const amountIn = ethers.parseUnits(trade.inputAmount, tokenIn.getDecimals());
+
+      // Use the exact same logic as createSellTransaction
+      const theoreticalOutput = await this.getTheoreticalEthOutput(wallet, sellAmount, usdSellPrice);
+      const quotedOutput = await this.getActualEthOutput(wallet, tokenIn, amountIn);
+      priceImpact = this.calculatePriceImpact(theoreticalOutput, quotedOutput);
+
+      if (priceImpact > TRADING_CONFIG.MAX_PRICE_IMPACT_PERCENTAGE) {
+        throw new Error(
+          `Price impact too high: ${priceImpact.toFixed(2)}%, max allowed: ${TRADING_CONFIG.MAX_PRICE_IMPACT_PERCENTAGE}%`,
+        );
+      }
+
+      outputAmount = quotedOutput.toString();
+
+      const wethLiquidity = await this.getTokenWethLiquidity(wallet, trade.inputToken);
+    }
+
+    return {
+      outputAmount,
+      priceImpact,
+      route,
+    };
   }
 
   /**
@@ -201,49 +319,11 @@ export class UniswapV2Strategy implements ITradingStrategy {
     let rawTokensReceived;
     let tx: TransactionRequest = {};
 
-    if (trade.outputToken === "USDC" && trade.inputToken !== ethers.ZeroAddress) {
-      const tokenIn = await createMinimalErc20(trade.inputToken, wallet.provider!);
-      path = [tokenIn.getTokenAddress(), this.WETH_ADDRESS, this.USDC_ADDRESS];
+    const isTOKENInputETHOutput = trade.inputToken !== ethers.ZeroAddress && trade.outputToken === OutputToken.ETH;
+    const isTOKENInputUSDCOutput = trade.inputToken !== ethers.ZeroAddress && trade.outputToken === OutputToken.USDC;
+    const isTOKENInputTOKENOutput = trade.inputToken !== ethers.ZeroAddress && trade.outputToken === OutputToken.TOKEN;
 
-      const amountIn = ethers.parseUnits(trade.inputAmount, tokenIn.getDecimals());
-
-      theoreticalOutput = await this.getTheoreticalUsdcTokenOutput(sellAmount, usdSellPrice);
-      quotedOutput = await this.getActualUsdcOutput(wallet, tokenIn, amountIn);
-      priceImpact = this.calculatePriceImpact(theoreticalOutput, quotedOutput);
-
-      if (priceImpact > TRADING_CONFIG.MAX_PRICE_IMPACT_PERCENTAGE) {
-        throw new Error(
-          `Price impact too high: ${priceImpact}%, max allowed: ${TRADING_CONFIG.MAX_PRICE_IMPACT_PERCENTAGE}%`,
-        );
-      }
-
-      rawTokensReceived = ethers.parseUnits(quotedOutput.toString(), this.USDC_DECIMALS);
-      const slippageAmount = (rawTokensReceived * BigInt(TRADING_CONFIG.SLIPPAGE_TOLERANCE * 100)) / 100n;
-      const amountOutMin = rawTokensReceived - slippageAmount;
-
-      tx = this.router.createSwapExactTokensForTokensTransaction(amountIn, amountOutMin, path, to, deadline);
-    } else if (trade.outputToken === "WETH" && trade.inputToken !== ethers.ZeroAddress) {
-      const tokenIn = await createMinimalErc20(trade.inputToken, wallet.provider!);
-      path = [tokenIn.getTokenAddress(), this.WETH_ADDRESS];
-
-      const amountIn = ethers.parseUnits(trade.inputAmount, tokenIn.getDecimals());
-
-      theoreticalOutput = await this.getTheoreticalEthOutput(wallet, sellAmount, usdSellPrice);
-      quotedOutput = await this.getActualEthOutput(wallet, tokenIn, amountIn);
-      priceImpact = this.calculatePriceImpact(theoreticalOutput, quotedOutput);
-      if (priceImpact > TRADING_CONFIG.MAX_PRICE_IMPACT_PERCENTAGE) {
-        throw new Error(
-          `Price impact too high: ${priceImpact}%, max allowed: ${TRADING_CONFIG.MAX_PRICE_IMPACT_PERCENTAGE}%`,
-        );
-      }
-
-      const quotedOutputFixed = quotedOutput.toFixed(18);
-      rawTokensReceived = ethers.parseEther(quotedOutputFixed);
-      const slippageAmount = (rawTokensReceived * BigInt(TRADING_CONFIG.SLIPPAGE_TOLERANCE * 100)) / 100n;
-      const amountOutMin = rawTokensReceived - slippageAmount;
-
-      tx = this.router.createSwapExactTokensForTokensTransaction(amountIn, amountOutMin, path, to, deadline);
-    } else if (trade.outputToken === "ETH" && trade.inputToken !== ethers.ZeroAddress) {
+    if (isTOKENInputETHOutput) {
       const tokenIn = await createMinimalErc20(trade.inputToken, wallet.provider!);
       path = [tokenIn.getTokenAddress(), this.WETH_ADDRESS];
 
@@ -264,13 +344,116 @@ export class UniswapV2Strategy implements ITradingStrategy {
 
       tx = this.router.createSwapExactTokensForETHTransaction(amountIn, amountOutMin, path, to, deadline);
     }
-    // TODO: implement token to token sale
-    /**
-       else if (trade.outputToken === "TOKEN") {
-       }
-    */
+
+    if (isTOKENInputUSDCOutput) {
+      const tokenIn = await createMinimalErc20(trade.inputToken, wallet.provider!);
+      path = [tokenIn.getTokenAddress(), this.WETH_ADDRESS, this.USDC_ADDRESS];
+
+      const amountIn = ethers.parseUnits(trade.inputAmount, tokenIn.getDecimals());
+
+      theoreticalOutput = await this.getTheoreticalUsdcTokenOutput(sellAmount, usdSellPrice);
+      quotedOutput = await this.getActualUsdcOutput(wallet, tokenIn, amountIn);
+      priceImpact = this.calculatePriceImpact(theoreticalOutput, quotedOutput);
+
+      if (priceImpact > TRADING_CONFIG.MAX_PRICE_IMPACT_PERCENTAGE) {
+        throw new Error(
+          `Price impact too high: ${priceImpact}%, max allowed: ${TRADING_CONFIG.MAX_PRICE_IMPACT_PERCENTAGE}%`,
+        );
+      }
+
+      rawTokensReceived = ethers.parseUnits(quotedOutput.toString(), this.USDC_DECIMALS);
+      const slippageAmount = (rawTokensReceived * BigInt(TRADING_CONFIG.SLIPPAGE_TOLERANCE * 100)) / 100n;
+      const amountOutMin = rawTokensReceived - slippageAmount;
+
+      tx = this.router.createSwapExactTokensForTokensTransaction(amountIn, amountOutMin, path, to, deadline);
+    }
+
+    //TODO: implement
+    if (isTOKENInputTOKENOutput) {
+      const tokenIn = await createMinimalErc20(trade.inputToken, wallet.provider!);
+      path = [tokenIn.getTokenAddress(), this.WETH_ADDRESS];
+
+      const amountIn = ethers.parseUnits(trade.inputAmount, tokenIn.getDecimals());
+
+      theoreticalOutput = await this.getTheoreticalEthOutput(wallet, sellAmount, usdSellPrice);
+      quotedOutput = await this.getActualEthOutput(wallet, tokenIn, amountIn);
+      priceImpact = this.calculatePriceImpact(theoreticalOutput, quotedOutput);
+      if (priceImpact > TRADING_CONFIG.MAX_PRICE_IMPACT_PERCENTAGE) {
+        throw new Error(
+          `Price impact too high: ${priceImpact}%, max allowed: ${TRADING_CONFIG.MAX_PRICE_IMPACT_PERCENTAGE}%`,
+        );
+      }
+
+      const quotedOutputFixed = quotedOutput.toFixed(18);
+      rawTokensReceived = ethers.parseEther(quotedOutputFixed);
+      const slippageAmount = (rawTokensReceived * BigInt(TRADING_CONFIG.SLIPPAGE_TOLERANCE * 100)) / 100n;
+      const amountOutMin = rawTokensReceived - slippageAmount;
+
+      tx = this.router.createSwapExactTokensForTokensTransaction(amountIn, amountOutMin, path, to, deadline);
+    }
 
     return tx;
+  }
+
+  /**
+   * Gets WETH liquidity for a token pair (used for confidence calculation)
+   * @param wallet Connected wallet to query liquidity
+   * @param tokenAddress Address of the token to check liquidity for
+   * @returns WETH liquidity amount as a string
+   */
+  private async getTokenWethLiquidity(wallet: Wallet, tokenAddress: string): Promise<string> {
+    try {
+      const pairAddress: string | null = await this.factory.getPairAddress(wallet, tokenAddress, this.WETH_ADDRESS);
+      if (!pairAddress || pairAddress === ethers.ZeroAddress) return "0";
+
+      const encodedData = ERC20_INTERFACE.encodeFunctionData("balanceOf", [pairAddress]);
+      const tx: TransactionRequest = {
+        to: this.WETH_ADDRESS,
+        data: encodedData,
+      };
+
+      const ethLiquidity = await wallet.call(tx);
+      const ethLiquidityFormatted = ethers.formatEther(ethLiquidity);
+      return ethLiquidityFormatted;
+    } catch (error) {
+      return "0";
+    }
+  }
+
+  /**
+   * Estimates price impact for buy trades (simplified calculation)
+   * @param wallet Connected wallet
+   * @param tokenIn Input token
+   * @param amountIn Input amount
+   * @param tokensReceived Expected output
+   * @param tokenOut Output token
+   * @returns Estimated price impact percentage
+   */
+  private async estimateBuyPriceImpact(
+    wallet: Wallet,
+    tokenIn: ERC20,
+    amountIn: bigint,
+    tokensReceived: bigint,
+    tokenOut: ERC20,
+  ): Promise<number> {
+    try {
+      // For buy trades, price impact is harder to calculate without a reference price
+      // We'll estimate based on trade size vs liquidity
+      const inputLiquidity = await this.getTokenWethLiquidity(wallet, tokenIn.getTokenAddress());
+      const liquidityValue = parseFloat(inputLiquidity);
+
+      if (liquidityValue === 0) return 5; // High impact if no liquidity data
+
+      const tradeSize = parseFloat(ethers.formatUnits(amountIn, tokenIn.getDecimals()));
+      const ethUsdPrice = await this.getEthUsdcPrice(wallet);
+      const tradeSizeUsd = tradeSize * parseFloat(ethUsdPrice); // Rough USD estimate
+
+      // Simple heuristic: impact increases with trade size relative to liquidity
+      const impactFactor = (tradeSizeUsd / (liquidityValue * parseFloat(ethUsdPrice))) * 100;
+      return Math.min(impactFactor, 50); // Cap at 50%
+    } catch (error) {
+      return 2; // Default conservative estimate
+    }
   }
 
   /**
