@@ -1,5 +1,6 @@
 export enum OutputToken {
   ETH = "ETH",
-  WETH = "WETH",
   USDC = "USDC",
+  TOKEN = "TOKEN",
+  WETH = "WETH",
 }
