@@ -37,7 +37,7 @@ setup and usage of .env variables can be found in hooks/useSetup.ts
 
 ## Usage Examples
 
-for interaction with the trading engine check the **scripts** directory for all interaction scripts
+for interaction with the trading engine check the (`__script__/`) directory for all interaction scripts
 
 ## Architecture
 
