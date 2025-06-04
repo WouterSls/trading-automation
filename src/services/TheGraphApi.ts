@@ -1,38 +1,63 @@
 import { ChainType } from "../config/chain-config";
 import { PoolKey } from "../models/blockchain/uniswap-v4/uniswap-v4-types";
-
-// Define interface for Uniswap V3 pool data
-interface UniV3PoolData {
-  id: string; // This is the pool address
-  feeTier: string;
-  liquidity: string;
-  volumeUSD: string;
-  totalValueLockedUSD: string;
-  totalValueLockedToken0: string; // Amount of token0 locked in the pool
-  totalValueLockedToken1: string; // Amount of token1 locked in the pool
-  token0: {
-    id: string;
-    symbol: string;
-    name: string;
-    decimals: string;
-  };
-  token1: {
-    id: string;
-    symbol: string;
-    name: string;
-    decimals: string;
-  };
-}
-
-// Extended interface for pools sorted by input token amount
-interface UniV3PoolDataWithInputAmount extends UniV3PoolData {
-  inputTokenAmount: number; // Amount of the specific input token in this pool
-}
+import { UniV2PoolData, UniV3PoolData, UniV3PoolDataWithInputAmount } from "./types/thegraph-api.types";
 
 export class TheGraphApi {
   constructor(private readonly apiKey: string) {}
+  // ------ UNI V2 ------
+  async getTopUniV2Pools(chain: ChainType, tokenAddress: string, first = 5) {
+    let uniV2SubgraphUrl;
 
-  async getTopUniV3Pool(chain: ChainType, tokenAddress: string, first = 5) {
+    switch (chain) {
+      case ChainType.ETH:
+        uniV2SubgraphUrl = "https://gateway.thegraph.com/api/subgraphs/id/A3Np3RQbaBA6oKJgiwDJeo5T3zrYfGHPWFYayMwtNDum";
+        break;
+      case ChainType.ARB:
+        return [];
+      case ChainType.BASE:
+        uniV2SubgraphUrl = "https://gateway.thegraph.com/api/subgraphs/id/4jGhpKjW4prWoyt5Bwk1ZHUwdEmNWveJcjEyjoTZWCY9";
+        break;
+      default:
+        return [];
+    }
+
+    const gql = `
+    `;
+
+    const authHeaders: Record<string, string> = {
+      "content-type": "application/json",
+      Authorization: `Bearer ${this.apiKey}`,
+    };
+
+    const res = await fetch(uniV2SubgraphUrl, {
+      method: "POST",
+      headers: authHeaders,
+      body: JSON.stringify({
+        query: gql,
+        variables: {
+          tokenAddress: tokenAddress.toLowerCase(), // Ensure lowercase for consistency
+          first: first,
+        },
+      }),
+    });
+
+    if (!res.ok) {
+      throw new Error(`GraphQL error: ${res.status} ${res.statusText}`);
+    }
+
+    const { data, errors } = await res.json();
+    if (errors && errors.length) {
+      console.error(errors);
+      throw new Error("Subgraph returned errors");
+    }
+
+    const pools: UniV2PoolData[] = data?.pools || [];
+
+    return pools;
+  }
+
+  // ------ UNI V3 ------
+  async getTopUniV3Pools(chain: ChainType, tokenAddress: string, first = 5) {
     let uniV3SubgraphUrl;
 
     switch (chain) {
@@ -124,63 +149,6 @@ export class TheGraphApi {
     // Convert to PoolKey format or return the raw pool data
     // For now, returning the raw pool data since PoolKey seems to be for V4
     return pools;
-  }
-
-  /**
-   * Fetch pool for a token pair from the Uniswap V4 subgraph.
-   * @param chain - The chain to fetch the pool from.
-   * @param token0 - The first token in the pair.
-   * @param token1 - The second token in the pair.
-   * @param first - The number of pools to fetch.
-   * @returns The pool for the token pair.
-   */
-  async getUniV4PoolKeysForTokens(chain: ChainType, token0: string, token1: string, first = 1000): Promise<PoolKey[]> {
-    let uniV4SubgraphUrl;
-
-    switch (chain) {
-      case ChainType.ETH:
-        uniV4SubgraphUrl = "https://gateway.thegraph.com/api/subgraphs/id/DiYPVdygkfjDWhbxGSqAQxwBKmfKnkWQojqeM2rkLb3G";
-        break;
-      case ChainType.ARB:
-        uniV4SubgraphUrl = "https://gateway.thegraph.com/api/subgraphs/id/G5TsTKNi8yhPSV7kycaE23oWbqv9zzNqR49FoEQjzq1r";
-        break;
-      case ChainType.BASE:
-        uniV4SubgraphUrl = "https://gateway.thegraph.com/api/subgraphs/id/HNCFA9TyBqpo5qpe6QreQABAA1kV8g46mhkCcicu6v2R";
-        break;
-      default:
-        return [];
-    }
-
-    const gql = `
-      query PoolsByTokens($t0: String!, $t1: String!) {
-        pools(where: { token0: $t0, token1: $t1 }, first: ${first}) {
-          id
-          feeTier
-          liquidity
-        }
-      }
-    `;
-
-    const authHeaders: Record<string, string> = {
-      "content-type": "application/json",
-      Authorization: `Bearer ${this.apiKey}`,
-    };
-
-    const res = await fetch(uniV4SubgraphUrl, {
-      method: "POST",
-      headers: authHeaders,
-      body: JSON.stringify({ query: gql, variables: { t0: token0, t1: token1 } }),
-    });
-    if (!res.ok) {
-      throw new Error(`GraphQL error: ${res.status} ${res.statusText}`);
-    }
-    const { data, errors } = await res.json();
-    if (errors && errors.length) {
-      console.error(errors);
-      throw new Error("Subgraph returned errors");
-    }
-    const result: PoolKey[] = [];
-    return result;
   }
 
   /**
@@ -395,5 +363,63 @@ export class TheGraphApi {
       .slice(0, first); // Take only the requested number
 
     return sortedPools;
+  }
+
+  // ------ UNI V4 ------
+  /**
+   * Fetch pool for a token pair from the Uniswap V4 subgraph.
+   * @param chain - The chain to fetch the pool from.
+   * @param token0 - The first token in the pair.
+   * @param token1 - The second token in the pair.
+   * @param first - The number of pools to fetch.
+   * @returns The pool for the token pair.
+   */
+  async getUniV4PoolKeysForTokens(chain: ChainType, token0: string, token1: string, first = 1000): Promise<PoolKey[]> {
+    let uniV4SubgraphUrl;
+
+    switch (chain) {
+      case ChainType.ETH:
+        uniV4SubgraphUrl = "https://gateway.thegraph.com/api/subgraphs/id/DiYPVdygkfjDWhbxGSqAQxwBKmfKnkWQojqeM2rkLb3G";
+        break;
+      case ChainType.ARB:
+        uniV4SubgraphUrl = "https://gateway.thegraph.com/api/subgraphs/id/G5TsTKNi8yhPSV7kycaE23oWbqv9zzNqR49FoEQjzq1r";
+        break;
+      case ChainType.BASE:
+        uniV4SubgraphUrl = "https://gateway.thegraph.com/api/subgraphs/id/HNCFA9TyBqpo5qpe6QreQABAA1kV8g46mhkCcicu6v2R";
+        break;
+      default:
+        return [];
+    }
+
+    const gql = `
+      query PoolsByTokens($t0: String!, $t1: String!) {
+        pools(where: { token0: $t0, token1: $t1 }, first: ${first}) {
+          id
+          feeTier
+          liquidity
+        }
+      }
+    `;
+
+    const authHeaders: Record<string, string> = {
+      "content-type": "application/json",
+      Authorization: `Bearer ${this.apiKey}`,
+    };
+
+    const res = await fetch(uniV4SubgraphUrl, {
+      method: "POST",
+      headers: authHeaders,
+      body: JSON.stringify({ query: gql, variables: { t0: token0, t1: token1 } }),
+    });
+    if (!res.ok) {
+      throw new Error(`GraphQL error: ${res.status} ${res.statusText}`);
+    }
+    const { data, errors } = await res.json();
+    if (errors && errors.length) {
+      console.error(errors);
+      throw new Error("Subgraph returned errors");
+    }
+    const result: PoolKey[] = [];
+    return result;
   }
 }
