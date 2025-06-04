@@ -1,11 +1,12 @@
 import { TransactionRequest, Wallet } from "ethers";
-import { BuyTradeCreationDto, SellTradeCreationDto } from "./types/_index";
+import { BuyTradeCreationDto, SellTradeCreationDto, TradeQuote } from "./types/_index";
 
 export interface ITradingStrategy {
   getName(): string;
   getEthUsdcPrice(wallet: Wallet): Promise<string>;
-  getTokenWethLiquidity(wallet: Wallet, tokenAddress: string): Promise<string>;
-  getTokenUsdcPrice(wallet: Wallet, tokenAddress: string): Promise<string>;
+
+  getBuyTradeQuote(wallet: Wallet, trade: BuyTradeCreationDto): Promise<TradeQuote>;
+  getSellTradeQuote(wallet: Wallet, trade: SellTradeCreationDto): Promise<TradeQuote>;
 
   createBuyTransaction(wallet: Wallet, trade: BuyTradeCreationDto): Promise<TransactionRequest>;
   createSellTransaction(wallet: Wallet, trade: SellTradeCreationDto): Promise<TransactionRequest>;

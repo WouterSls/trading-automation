@@ -1,9 +1,10 @@
 import { ethers, TransactionReceipt, TransactionRequest, Wallet } from "ethers";
 import { ChainType, getOutputTokenAddress, getChainConfig } from "../../config/chain-config";
 import { ITradingStrategy } from "./ITradingStrategy";
-import { BuyTrade, BuyTradeCreationDto, SellTrade, SellTradeCreationDto } from "./types/_index";
+import { BuyTrade, BuyTradeCreationDto, TradeQuote, SellTrade, SellTradeCreationDto } from "./types/_index";
 import { decodeLogs } from "../../lib/utils";
 import { ERC20_INTERFACE } from "../../lib/contract-abis/erc20";
+import { TRADING_CONFIG } from "../../config/trading-config";
 
 export class Trader {
   constructor(
@@ -16,7 +17,7 @@ export class Trader {
   getStrategies = (): ITradingStrategy[] => this.strategies;
 
   async buy(trade: BuyTradeCreationDto): Promise<BuyTrade> {
-    const bestStrategy: ITradingStrategy = await this.getBestEthLiquidityStrategy(trade.outputToken);
+    const bestStrategy: ITradingStrategy = await this.getBestBuyStrategy(trade);
 
     const ethUsdcPrice = await bestStrategy.getEthUsdcPrice(this.wallet);
 
@@ -44,13 +45,9 @@ export class Trader {
   }
 
   async sell(trade: SellTradeCreationDto): Promise<SellTrade> {
-    const bestStrategy =
-      trade.outputToken === "USDC"
-        ? await this.getBestUsdcStrategy(trade.inputToken)
-        : await this.getBestEthLiquidityStrategy(trade.inputToken);
+    const bestStrategy = await this.getBestSellStrategy(trade);
 
     const ethUsdcPrice = await bestStrategy.getEthUsdcPrice(this.wallet);
-    const preTradeTokenUsdcPrice = await bestStrategy.getTokenUsdcPrice(this.wallet, trade.inputToken);
 
     console.log("Checking approval...");
     const approvalGasCost: string | null = await bestStrategy.ensureTokenApproval(
@@ -89,68 +86,100 @@ export class Trader {
     const outputTokenAddress = getOutputTokenAddress(trade.chain, trade.outputToken);
 
     const sellTrade = await this.createSellTrade(inputTokenAddress, outputTokenAddress, ethUsdcPrice, tx, txReceipt);
-    console.log("Pre trade token usdc price:", preTradeTokenUsdcPrice);
-    console.log("Actual calculated usdc price:", sellTrade.getTokenPriceUsd());
 
     return sellTrade;
   }
 
-  private async getBestUsdcStrategy(tokenAddress: string): Promise<ITradingStrategy> {
+  /**
+   * Finds the optimal strategy for a buy trade by comparing actual trade quotes
+   * @param trade The buy trade to optimize for
+   * @returns The best strategy for this specific trade
+   */
+  private async getBestBuyStrategy(trade: BuyTradeCreationDto): Promise<ITradingStrategy> {
     let bestStrategy: ITradingStrategy | null = null;
-    let bestUsdcPrice: number = 0;
+    let bestQuote: TradeQuote | null = null;
 
-    console.log("sorting strategies on usdc price...");
+    console.log("Comparing buy trade quotes across strategies...");
+
     for (const strategy of this.strategies) {
-      console.log("strategy", strategy.getName());
-      const usdcPrice = await strategy.getTokenUsdcPrice(this.wallet, tokenAddress);
-      console.log("$", usdcPrice);
-      const usdcPriceNumber = Number(usdcPrice);
+      try {
+        console.log(`Getting quote from ${strategy.getName()}...`);
+        const quote = await strategy.getBuyTradeQuote(this.wallet, trade);
 
-      if (isNaN(usdcPriceNumber)) throw new Error(`Invalid usdc price for strategy: ${strategy.getName()}`);
+        console.log(`${strategy.getName()}:`);
+        console.log(`  Output: ${quote.outputAmount}`);
+        console.log(`  Price Impact: ${quote.priceImpact}%`);
+        console.log(`  Route: ${quote.route.join(" → ")}`);
 
-      if (!bestUsdcPrice || usdcPriceNumber > bestUsdcPrice) {
-        bestUsdcPrice = usdcPriceNumber;
-        bestStrategy = strategy;
+        if (!bestQuote || bestQuote.outputAmount < quote.outputAmount) {
+          bestQuote = quote;
+          bestStrategy = strategy;
+        }
+      } catch (error) {
+        console.warn(`${strategy.getName()} failed to provide quote:`, error);
+        continue;
       }
     }
 
-    if (!bestStrategy) {
-      throw new Error(`No strategy found for token: ${tokenAddress}`);
+    if (!bestStrategy || !bestQuote) {
+      throw new Error(`No strategy could provide a valid quote for buy trade`);
     }
 
-    console.log("best strategy:", bestStrategy.getName());
+    if (bestQuote.priceImpact > TRADING_CONFIG.MAX_PRICE_IMPACT_PERCENTAGE) {
+      throw new Error(
+        `Price impact too high: ${bestQuote.priceImpact.toFixed(2)}%, max allowed: ${TRADING_CONFIG.MAX_PRICE_IMPACT_PERCENTAGE}%`,
+      );
+    }
 
+    console.log(`Best strategy: ${bestStrategy.getName()}`);
     return bestStrategy;
   }
-  private async getBestEthLiquidityStrategy(tokenAddress: string): Promise<ITradingStrategy> {
+
+  /**
+   * Finds the optimal strategy for a sell trade by comparing actual trade quotes
+   * @param trade The sell trade to optimize for
+   * @returns The best strategy for this specific trade
+   */
+  private async getBestSellStrategy(trade: SellTradeCreationDto): Promise<ITradingStrategy> {
     let bestStrategy: ITradingStrategy | null = null;
-    let bestETHLiquidity: number = 0;
+    let bestQuote: TradeQuote | null = null;
 
-    console.log("sorting strategies on eth liquidity...");
+    console.log("Comparing sell trade quotes across strategies...");
+
     for (const strategy of this.strategies) {
-      console.log("strategy:", strategy.getName());
-      const ethLiquidity = await strategy.getTokenWethLiquidity(this.wallet, tokenAddress);
-      console.log("\tETH Liquidity", ethLiquidity);
-      const ethLiquidityNumber = Number(ethLiquidity);
+      try {
+        console.log(`Getting quote from ${strategy.getName()}...`);
+        const quote = await strategy.getSellTradeQuote(this.wallet, trade);
 
-      if (isNaN(ethLiquidityNumber)) throw new Error(`Invalid ETH liquidity for strategy: ${strategy.getName()}`);
+        console.log(`${strategy.getName()}:`);
+        console.log(`  Output: ${quote.outputAmount}`);
+        console.log(`  Price Impact: ${quote.priceImpact}%`);
+        console.log(`  Route: ${quote.route.join(" → ")}`);
 
-      if (!bestETHLiquidity || ethLiquidityNumber > bestETHLiquidity) {
-        bestETHLiquidity = ethLiquidityNumber;
-        bestStrategy = strategy;
+        if (!bestQuote || bestQuote.outputAmount < quote.outputAmount) {
+          bestQuote = quote;
+          bestStrategy = strategy;
+        }
+      } catch (error) {
+        console.warn(`${strategy.getName()} failed to provide quote:`, error);
+        continue;
       }
     }
 
-    if (!bestStrategy) {
-      throw new Error(`No strategy found for token: ${tokenAddress}`);
+    if (!bestStrategy || !bestQuote) {
+      throw new Error(`No strategy could provide a valid quote for sell trade`);
     }
 
-    console.log(`best strategy: ${bestStrategy.getName()}`);
+    if (bestQuote.priceImpact > TRADING_CONFIG.MAX_PRICE_IMPACT_PERCENTAGE) {
+      throw new Error(
+        `Price impact too high: ${bestQuote.priceImpact.toFixed(2)}%, max allowed: ${TRADING_CONFIG.MAX_PRICE_IMPACT_PERCENTAGE}%`,
+      );
+    }
 
+    console.log(`Best strategy: ${bestStrategy.getName()}`);
     return bestStrategy;
   }
 
-  //TODO: refactor
   private async createBuyTrade(
     outputTokenAddress: string,
     ethPriceUsd: string,
@@ -220,7 +249,6 @@ export class Trader {
     return buyTrade;
   }
 
-  //TODO: refactor
   private async createSellTrade(
     inputTokenAddress: string,
     outputTokenAddress: string,

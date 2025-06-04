@@ -1,6 +1,5 @@
-import { ERC20 } from "../../blockchain/ERC/ERC20";
 import { ethers, TransactionRequest, Wallet } from "ethers";
-import { ChainConfig, ChainType, getChainConfig } from "../../../config/chain-config";
+import { ChainType, getChainConfig } from "../../../config/chain-config";
 
 import { UniswapV3QuoterV2 } from "../../blockchain/uniswap-v3/UniswapV3QuoterV2";
 import { UniswapV3Factory } from "../../blockchain/uniswap-v3/UniswapV3Factory";
@@ -9,8 +8,7 @@ import { UniswapV3SwapRouterV2 } from "../../blockchain/uniswap-v3/UniswapV3Swap
 import { ITradingStrategy } from "../ITradingStrategy";
 import { ERC20_INTERFACE } from "../../../lib/contract-abis/erc20";
 import { FeeAmount } from "../../blockchain/uniswap-v3/uniswap-v3-types";
-import { BuyTrade, SellTrade, OutputToken, BuyTradeCreationDto, SellTradeCreationDto } from "../types/_index";
-import { createMinimalErc20 } from "../../blockchain/ERC/erc-utils";
+import { BuyTradeCreationDto, SellTradeCreationDto } from "../types/_index";
 import { validateNetwork } from "../../../lib/utils";
 import { TRADING_CONFIG } from "../../../config/trading-config";
 import { ensureInfiniteApproval, ensureStandardApproval } from "../../../lib/approval-strategies";
@@ -166,11 +164,7 @@ export class UniswapV3Strategy implements ITradingStrategy {
    * @param tokenAddress Address of the token to get price for
    * @returns Token price in USDC as a string
    */
-  async getTokenUsdcPriceCustomRoute(
-    wallet: Wallet,
-    tokenAddress: string,
-    intermediaryTokens: string[],
-  ): Promise<string> {
+  async getQuote(wallet: Wallet, tokenIn: string, amountIn: number): Promise<string> {
     throw new Error("Not implemented");
   }
 

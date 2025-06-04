@@ -9,7 +9,7 @@ import { AerodromePoolFactory } from "../../blockchain/aerodrome/AerodromePoolFa
 import { TradeRoute } from "../../blockchain/aerodrome/aerodrome-types";
 
 import { ITradingStrategy } from "../ITradingStrategy";
-import { BuyTradeCreationDto, SellTradeCreationDto, InputType } from "../types/_index";
+import { BuyTradeCreationDto, SellTradeCreationDto, InputType, TradeQuote } from "../types/_index";
 
 import { ERC20_INTERFACE } from "../../../lib/contract-abis/_index";
 import { ensureInfiniteApproval, ensureStandardApproval, validateNetwork } from "../../../lib/_index";
@@ -88,6 +88,7 @@ export class AerodromeStrategy implements ITradingStrategy {
   }
 
   /**
+   * @deprecated
    * Gets the WETH liquidity for a given token pair (can be used to get ETH liqudity)
    * @param wallet Connected wallet to query liquidity
    * @param tokenAddress Address of the token to check liquidity for
@@ -142,6 +143,7 @@ export class AerodromeStrategy implements ITradingStrategy {
   }
 
   /**
+   * @deprecated
    * Gets the current token price in USDC
    * @param wallet Connected wallet to query the price
    * @param tokenAddress Address of the token to get price for
@@ -172,6 +174,14 @@ export class AerodromeStrategy implements ITradingStrategy {
     const amountOut = await this.router.getAmountsOut(wallet, inputAmount, routes);
     const amountFormatted = ethers.formatUnits(amountOut.toString(), this.USDC_DECIMALS);
     return amountFormatted;
+  }
+
+  async getBuyTradeQuote(wallet: Wallet, trade: BuyTradeCreationDto): Promise<TradeQuote> {
+    throw new Error("Not implemented");
+  }
+
+  async getSellTradeQuote(wallet: Wallet, trade: SellTradeCreationDto): Promise<TradeQuote> {
+    throw new Error("Not implemented");
   }
 
   /**

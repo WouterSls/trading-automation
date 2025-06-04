@@ -14,7 +14,14 @@ import {
 import { ITradingStrategy } from "../ITradingStrategy";
 import { ERC20_INTERFACE } from "../../../lib/contract-abis/erc20";
 import { FeeAmount } from "../../blockchain/uniswap-v3/uniswap-v3-types";
-import { BuyTrade, SellTrade, OutputToken, BuyTradeCreationDto, SellTradeCreationDto } from "../types/_index";
+import {
+  BuyTrade,
+  SellTrade,
+  OutputToken,
+  BuyTradeCreationDto,
+  SellTradeCreationDto,
+  TradeQuote,
+} from "../types/_index";
 import { createMinimalErc20 } from "../../blockchain/ERC/erc-utils";
 import { validateNetwork } from "../../../lib/utils";
 import { TRADING_CONFIG } from "../../../config/trading-config";
@@ -57,36 +64,10 @@ export class UniswapV4Strategy implements ITradingStrategy {
   async getEthUsdcPrice(wallet: Wallet): Promise<string> {
     throw new Error("Not implemented");
   }
-  async getTokenWethLiquidity(wallet: Wallet, tokenAddress: string): Promise<string> {
-    try {
-      const feeTiers = [FeeAmount.LOWEST, FeeAmount.LOW, FeeAmount.MEDIUM, FeeAmount.HIGH];
-      const wethAddress = this.WETH_ADDRESS;
-
-      let bestLiquidity = 0n;
-
-      for (const feeTier of feeTiers) {
-        const poolAddress = await this.factory.getPoolAddress(wallet, tokenAddress, wethAddress, feeTier);
-
-        if (!poolAddress || poolAddress === ethers.ZeroAddress) continue;
-
-        const weth = new ethers.Contract(this.WETH_ADDRESS, ERC20_INTERFACE, wallet);
-        const ethLiquidity = await weth.balanceOf(poolAddress);
-
-        if (ethLiquidity > bestLiquidity) {
-          bestLiquidity = ethLiquidity;
-        }
-      }
-
-      const ethLiquidityFormatted = ethers.formatEther(bestLiquidity);
-      return ethLiquidityFormatted;
-    } catch (error) {
-      console.error(
-        `Error checking V3 liquidity for ${tokenAddress}: ${error instanceof Error ? error.message : "Unknown error"}`,
-      );
-      return "0";
-    }
+  async getBuyTradeQuote(wallet: Wallet, trade: BuyTradeCreationDto): Promise<TradeQuote> {
+    throw new Error("Not implemented");
   }
-  async getTokenUsdcPrice(wallet: Wallet, tokenAddress: string): Promise<string> {
+  async getSellTradeQuote(wallet: Wallet, trade: SellTradeCreationDto): Promise<TradeQuote> {
     throw new Error("Not implemented");
   }
 
