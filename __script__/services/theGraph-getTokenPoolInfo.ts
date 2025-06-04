@@ -9,7 +9,7 @@ async function getPoolInfo() {
   const AERO_ADDRESS = "0x940181a94A35A4569E4529A3CDfB74e38FD98631";
   const GAME_ADDRESS = "0x1c4cca7c5db003824208adda61bd749e55f463a3";
 
-  const pools = await graphApi.getTopUniV3Pool(ChainType.BASE, GAME_ADDRESS);
+  const pools = await graphApi.getTopUniV3Pools(ChainType.BASE, GAME_ADDRESS);
   const pools2 = await graphApi.getTopUniV3PoolsByTokenAmount(ChainType.BASE, GAME_ADDRESS);
 
   console.log("-------------Pools Info-------------");
