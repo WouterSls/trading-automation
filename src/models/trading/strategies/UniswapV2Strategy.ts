@@ -90,11 +90,11 @@ export class UniswapV2Strategy implements ITradingStrategy {
     let priceImpact = 0;
     let route: string[] = [];
 
-    const isETHInputETHValue = trade.inputType === InputType.ETH && trade.inputToken === ethers.ZeroAddress;
-    const isETHInputUSDValue = trade.inputType === InputType.USD && trade.inputToken === ethers.ZeroAddress;
-    const isTOKENInputTOKENValue = trade.inputType === InputType.TOKEN && trade.inputToken !== ethers.ZeroAddress;
+    const isETHInputETHAmount = trade.inputType === InputType.ETH && trade.inputToken === ethers.ZeroAddress;
+    const isETHInputUSDAmount = trade.inputType === InputType.USD && trade.inputToken === ethers.ZeroAddress;
+    const isTOKENInputTOKENAmount = trade.inputType === InputType.TOKEN && trade.inputToken !== ethers.ZeroAddress;
 
-    if (isETHInputETHValue) {
+    if (isETHInputETHAmount) {
       const amountIn = ethers.parseEther(trade.inputAmount);
 
       // TODO: add optimal path calculation
@@ -107,7 +107,7 @@ export class UniswapV2Strategy implements ITradingStrategy {
       outputAmount = ethers.formatUnits(tokensReceived, outputToken.getDecimals());
     }
 
-    if (isETHInputUSDValue) {
+    if (isETHInputUSDAmount) {
       const ethUsdcPrice = await this.getEthUsdcPrice(wallet);
       const ethValue = parseFloat(trade.inputAmount) / parseFloat(ethUsdcPrice);
       const ethValueFixed = ethValue.toFixed(18);
@@ -123,7 +123,7 @@ export class UniswapV2Strategy implements ITradingStrategy {
       outputAmount = ethers.formatUnits(tokensReceived, outputToken.getDecimals());
     }
 
-    if (isTOKENInputTOKENValue) {
+    if (isTOKENInputTOKENAmount) {
       const tokenIn = await createMinimalErc20(trade.inputToken, wallet.provider!);
       const amountIn = ethers.parseUnits(trade.inputAmount, tokenIn.getDecimals());
 
@@ -242,11 +242,11 @@ export class UniswapV2Strategy implements ITradingStrategy {
 
     let tx: TransactionRequest = {};
 
-    const isETHInputETHValue = trade.inputType === InputType.ETH && trade.inputToken === ethers.ZeroAddress;
-    const isETHInputUSDValue = trade.inputType === InputType.USD && trade.inputToken === ethers.ZeroAddress;
-    const isTOKENInputTOKENValue = trade.inputType === InputType.TOKEN && trade.inputToken !== ethers.ZeroAddress;
+    const isETHInputETHAmount = trade.inputType === InputType.ETH && trade.inputToken === ethers.ZeroAddress;
+    const isETHInputUSDAmount = trade.inputType === InputType.USD && trade.inputToken === ethers.ZeroAddress;
+    const isTOKENInputTOKENAmount = trade.inputType === InputType.TOKEN && trade.inputToken !== ethers.ZeroAddress;
 
-    if (isETHInputETHValue) {
+    if (isETHInputETHAmount) {
       // TODO: add optimal path calculation
       const path = [this.WETH_ADDRESS, outputToken.getTokenAddress()];
 
@@ -260,7 +260,7 @@ export class UniswapV2Strategy implements ITradingStrategy {
       tx.value = amountIn;
     }
 
-    if (isETHInputUSDValue) {
+    if (isETHInputUSDAmount) {
       // TODO: add optimal path calculation
       const path = [this.WETH_ADDRESS, outputToken.getTokenAddress()];
 
@@ -278,7 +278,7 @@ export class UniswapV2Strategy implements ITradingStrategy {
       tx.value = amountIn;
     }
 
-    if (isTOKENInputTOKENValue) {
+    if (isTOKENInputTOKENAmount) {
       const tokenIn = await createMinimalErc20(trade.inputToken, wallet.provider!);
       const amountIn = ethers.parseUnits(trade.inputAmount, tokenIn.getDecimals());
 
