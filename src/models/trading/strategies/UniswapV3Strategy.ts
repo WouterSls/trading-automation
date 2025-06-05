@@ -161,9 +161,9 @@ export class UniswapV3Strategy implements ITradingStrategy {
   }
 
   /**
-   * Gets the current token price in USDC by using WETH as intermediary trade token
+   * Gets a comprehensive quote for a buy trade by mirroring the exact transaction creation logic
    * @param wallet Connected wallet to query the price
-   * @param tokenAddress Address of the token to get price for
+   * @param trade Buy trade creation parameters
    * @returns Token price in USDC as a string
    */
   async getBuyTradeQuote(wallet: Wallet, trade: BuyTradeCreationDto): Promise<TradeQuote> {
@@ -171,9 +171,9 @@ export class UniswapV3Strategy implements ITradingStrategy {
   }
 
   /**
-   * Gets the current token price in USDC by using WETH as intermediary trade token
+   * Gets a comprehensive quote for a sell trade by mirroring the exact transaction creation logic
    * @param wallet Connected wallet to query the price
-   * @param tokenAddress Address of the token to get price for
+   * @param trade Sell trade creation parameters
    * @returns Token price in USDC as a string
    */
   async getSellTradeQuote(wallet: Wallet, trade: SellTradeCreationDto): Promise<TradeQuote> {
