@@ -8,7 +8,7 @@ import { UniswapV3SwapRouterV2 } from "../../blockchain/uniswap-v3/UniswapV3Swap
 import { ITradingStrategy } from "../ITradingStrategy";
 import { ERC20_INTERFACE } from "../../../lib/contract-abis/erc20";
 import { FeeAmount } from "../../blockchain/uniswap-v3/uniswap-v3-types";
-import { BuyTradeCreationDto, SellTradeCreationDto } from "../types/_index";
+import { BuyTradeCreationDto, SellTradeCreationDto, TradeQuote } from "../types/_index";
 import { validateNetwork } from "../../../lib/utils";
 import { TRADING_CONFIG } from "../../../config/trading-config";
 import { ensureInfiniteApproval, ensureStandardApproval } from "../../../lib/approval-strategies";
@@ -69,9 +69,11 @@ export class UniswapV3Strategy implements ITradingStrategy {
    * @returns ETH price in USDC as a string
    */
   async getEthUsdcPrice(wallet: Wallet): Promise<string> {
+    await validateNetwork(wallet, this.chain);
+
     const tokenIn = this.WETH_ADDRESS;
     const tokenOut = this.USDC_ADDRESS;
-    const fee = FeeAmount.MEDIUM;
+    const fee = FeeAmount.LOW;
     const recipient = wallet.address;
     const amountIn = ethers.parseEther("1");
     const amountOutMin = 0n;
@@ -164,7 +166,17 @@ export class UniswapV3Strategy implements ITradingStrategy {
    * @param tokenAddress Address of the token to get price for
    * @returns Token price in USDC as a string
    */
-  async getQuote(wallet: Wallet, tokenIn: string, amountIn: number): Promise<string> {
+  async getBuyTradeQuote(wallet: Wallet, trade: BuyTradeCreationDto): Promise<TradeQuote> {
+    throw new Error("Not implemented");
+  }
+
+  /**
+   * Gets the current token price in USDC by using WETH as intermediary trade token
+   * @param wallet Connected wallet to query the price
+   * @param tokenAddress Address of the token to get price for
+   * @returns Token price in USDC as a string
+   */
+  async getSellTradeQuote(wallet: Wallet, trade: SellTradeCreationDto): Promise<TradeQuote> {
     throw new Error("Not implemented");
   }
 
