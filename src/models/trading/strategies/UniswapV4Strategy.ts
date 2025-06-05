@@ -2,9 +2,7 @@ import { ERC20 } from "../../blockchain/ERC/ERC20";
 import { ethers, TransactionRequest, Wallet } from "ethers";
 import { ChainType, getChainConfig } from "../../../config/chain-config";
 
-import { UniswapV3QuoterV2 } from "../../blockchain/uniswap-v3/UniswapV3QuoterV2";
-import { UniswapV3Factory } from "../../blockchain/uniswap-v3/UniswapV3Factory";
-import { UniswapV3SwapRouterV2 } from "../../blockchain/uniswap-v3/UniswapV3SwapRouterV2";
+import { FeeToTickSpacing, PoolKey } from "../../blockchain/uniswap-v4/uniswap-v4-types";
 import {
   ensureInfiniteApproval,
   ensureStandardApproval,
@@ -25,14 +23,18 @@ import {
 import { createMinimalErc20 } from "../../blockchain/ERC/erc-utils";
 import { validateNetwork } from "../../../lib/utils";
 import { TRADING_CONFIG } from "../../../config/trading-config";
+import { UniswapV4Quoter } from "../../blockchain/uniswap-v4/UniswapV4Quoter";
+import { UniversalRouter } from "../../blockchain/universal-router/UniversalRouter";
 
 export class UniswapV4Strategy implements ITradingStrategy {
-  private quoter: UniswapV3QuoterV2;
-  private factory: UniswapV3Factory;
-  private router: UniswapV3SwapRouterV2;
+  private quoter: UniswapV4Quoter;
+  private router: UniversalRouter;
 
   private WETH_ADDRESS: string;
   private USDC_ADDRESS: string;
+
+  private WETH_DECIMALS = 18;
+  private USDC_DECIMALS = 6;
 
   constructor(
     private strategyName: string,
@@ -43,14 +45,23 @@ export class UniswapV4Strategy implements ITradingStrategy {
     this.WETH_ADDRESS = chainConfig.tokenAddresses.weth;
     this.USDC_ADDRESS = chainConfig.tokenAddresses.usdc;
 
-    this.quoter = new UniswapV3QuoterV2(chain);
-    this.factory = new UniswapV3Factory(chain);
-    this.router = new UniswapV3SwapRouterV2(chain);
+    this.quoter = new UniswapV4Quoter(chain);
+    this.router = new UniversalRouter(chain);
   }
 
+  /**
+   * Gets the name of this trading strategy
+   * @returns The strategy name
+   */
   getName = (): string => this.strategyName;
-  getSpenderAddress = (): string => this.router.getRouterAddress();
 
+  /**
+   * Ensures token approval for trading operations
+   * @param wallet Connected wallet to use for approval
+   * @param tokenAddress Address of the token to approve
+   * @param amount Amount to approve (threshold validation or standard approval calculation )
+   * @returns gas cost of approval if needed , null if already approved
+   */
   async ensureTokenApproval(wallet: Wallet, tokenAddress: string, amount: string): Promise<string | null> {
     await validateNetwork(wallet, this.chain);
     const spender = this.router.getRouterAddress();
@@ -61,8 +72,41 @@ export class UniswapV4Strategy implements ITradingStrategy {
     }
   }
 
+  /**
+   * Gets the current ETH price in USDC
+   * @param wallet Connected wallet to query the price
+   * @returns ETH price in USDC as a string
+   */
   async getEthUsdcPrice(wallet: Wallet): Promise<string> {
-    throw new Error("Not implemented");
+    await validateNetwork(wallet, this.chain);
+
+    const tokenIn = ethers.ZeroAddress;
+    const tokenOut = this.USDC_ADDRESS;
+    const fee = FeeAmount.LOW;
+    const tickSpacing = FeeToTickSpacing.get(fee)!;
+
+    const poolKey: PoolKey = {
+      currency0: tokenIn,
+      currency1: tokenOut,
+      fee: fee,
+      tickSpacing: tickSpacing,
+      hooks: ethers.ZeroAddress,
+    };
+    const zeroForOne = true;
+    const exactAmount = ethers.parseEther("1");
+    const hookData = ethers.ZeroAddress;
+
+    const { amountOut, gasEstimate } = await this.quoter.quoteExactInputSingle(
+      wallet,
+      poolKey,
+      zeroForOne,
+      exactAmount,
+      hookData,
+    );
+
+    const formattedAmountOut = ethers.formatUnits(amountOut, this.USDC_DECIMALS);
+
+    return formattedAmountOut;
   }
   async getBuyTradeQuote(wallet: Wallet, trade: BuyTradeCreationDto): Promise<TradeQuote> {
     throw new Error("Not implemented");
