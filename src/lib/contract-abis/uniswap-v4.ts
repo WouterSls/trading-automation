@@ -87,7 +87,7 @@ const QUOTER_ABI = [
   "error UnexpectedCallSuccess()",
   "error UnexpectedRevertBytes(bytes revertData)",
 
-  // Public quoting functions (return decoded values)
+  // Public quoting functions
   "function quoteExactInput((address exactCurrency,(address intermediateCurrency,uint24 fee,int24 tickSpacing,address hooks,bytes hookData)[] path,uint128 exactAmount) params) returns (uint256 amountOut,uint256 gasEstimate)",
 
   "function quoteExactInputSingle(((address currency0,address currency1,uint24 fee,int24 tickSpacing,address hooks) poolKey,bool zeroForOne,uint128 exactAmount,bytes hookData) params) returns (uint256 amountOut,uint256 gasEstimate)",

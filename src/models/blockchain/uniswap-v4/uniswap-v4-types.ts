@@ -12,6 +12,9 @@ export enum FeeAmount {
   HIGH = 10000,
 }
 
+/**
+ * Tickspacing amounts for standard Fees
+ */
 export const FeeToTickSpacing = new Map<FeeAmount, number>([
   [FeeAmount.LOWEST, 1],
   [FeeAmount.LOW, 10],
@@ -30,4 +33,15 @@ export interface PoolKey {
   fee: FeeAmount; //uint24
   tickSpacing: number; //uint24
   hooks: string;
+}
+
+/**
+ * Type for Multi hop swaps
+ */
+export interface PathSegment {
+  intermediateCurrency: string;
+  fee: number;
+  tickSpacing: number;
+  hooks: string;
+  hookData: string;
 }
