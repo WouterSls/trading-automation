@@ -39,8 +39,8 @@ async function uniswapV4StrategyInteraction(
   console.log(`\t${weth.getSymbol()} balance: ${wethBalance}`);
   console.log();
 
-  console.log("Buy Trade:", JSON.stringify(buyTrade, null, 2));
-  console.log();
+  //console.log("Buy Trade:", JSON.stringify(buyTrade, null, 2));
+  //console.log();
 
   const ethUsdcPrice = await strat.getEthUsdcPrice(wallet);
   console.log("Strat:", strat.getName());
@@ -82,4 +82,3 @@ if (require.main === module) {
 
   uniswapV4StrategyInteraction(chain, ethWallet, buyTrade, sellTrade).catch(console.error);
 }
-

@@ -5,12 +5,12 @@ import {
   OutputToken,
   SellTradeCreationDto,
 } from "../../../../src/models/trading/types/_index";
-import { getHardhatWallet_1 } from "../../../../src/hooks/useSetup";
+import { getBaseWallet_1, getHardhatWallet_1 } from "../../../../src/hooks/useSetup";
 import { ChainType, getChainConfig } from "../../../../src/config/chain-config";
-import { UniswapV2Strategy } from "../../../../src/models/trading/strategies/UniswapV2Strategy";
 import { createMinimalErc20 } from "../../../../src/models/blockchain/ERC/erc-utils";
+import { AerodromeStrategy } from "../../../../src/models/trading/strategies/AerodromeStrategy";
 
-async function uniswapV2StrategyInteraction(
+async function aerodromeStrategyInteraction(
   chain: ChainType,
   wallet: Wallet,
   buyTrade?: BuyTradeCreationDto,
@@ -18,7 +18,7 @@ async function uniswapV2StrategyInteraction(
 ) {
   const chainConfig = getChainConfig(chain);
 
-  const strat = new UniswapV2Strategy(`UniswapV2-${chain}`, chain);
+  const aeroStrat = new AerodromeStrategy(`Aerodrome-${chain}`, chain);
 
   const usdcAddress = chainConfig.tokenAddresses.usdc;
   const wethAddress = chainConfig.tokenAddresses.weth;
@@ -39,24 +39,25 @@ async function uniswapV2StrategyInteraction(
   console.log(`\t${weth.getSymbol()} balance: ${wethBalance}`);
   console.log();
 
-  console.log("Buy Trade:", JSON.stringify(buyTrade, null, 2));
-  console.log();
+  //console.log("Buy Trade:", JSON.stringify(buyTrade, null, 2));
+  //console.log();
 
-  const ethUsdcPrice = await strat.getEthUsdcPrice(wallet);
-  console.log("Strat:", strat.getName());
+  const ethUsdcPrice = await aeroStrat.getEthUsdcPrice(wallet);
+  console.log("Strat:", aeroStrat.getName());
   console.log("ETH/USDC price:", ethUsdcPrice);
-  console.log("quoting trade...");
-  console.log("Input type: ", buyTrade?.inputType);
-  console.log("Input token: ", buyTrade?.inputToken);
-  console.log("Input amount: ", buyTrade?.inputAmount);
+
+  //console.log("quoting trade...");
+  //console.log("Input type: ", buyTrade?.inputType);
+  //console.log("Input token: ", buyTrade?.inputToken);
+  //console.log("Input amount: ", buyTrade?.inputAmount);
   //const tradeQuote = await strat.getBuyTradeQuote(wallet, buyTrade!);
   //console.log("Trade Quote:", JSON.stringify(tradeQuote, null, 2));
 }
 
 if (require.main === module) {
-  const chain = ChainType.ETH;
+  const chain = ChainType.BASE;
   const chainConfig = getChainConfig(chain);
-  const wallet = getHardhatWallet_1();
+  const wallet = getBaseWallet_1();
 
   const inputType = InputType.ETH;
   const tokenA = ethers.ZeroAddress;
@@ -85,5 +86,5 @@ if (require.main === module) {
     tradingPointPrice: tpPrice,
   };
 
-  uniswapV2StrategyInteraction(chain, wallet, buyTrade, sellTrade).catch(console.error);
+  aerodromeStrategyInteraction(chain, wallet, buyTrade, sellTrade).catch(console.error);
 }
