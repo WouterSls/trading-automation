@@ -1,29 +1,18 @@
 import { Contract, ethers, Wallet } from "ethers";
 
-import { ChainConfig, ChainType, getChainConfig } from "../../../config/chain-config";
+import { ChainType, getChainConfig } from "../../../config/chain-config";
 
 import { UNISWAP_V3_QUOTER_INTERFACE } from "../../../lib/contract-abis/uniswap-v3";
 import { validateNetwork } from "../../../lib/utils";
-import {
-  QuoteExactInputSingleParams,
-  QuoterExactInputResponse,
-  QuoteExactOutputSingleParams,
-  QuoterExactOutputResponse,
-  FeeAmount,
-} from "./uniswap-v3-types";
+import { FeeAmount } from "./uniswap-v3-types";
 
 export class UniswapV3QuoterV2 {
   private quoterContract: Contract;
   private quoterAddress: string;
 
-  private WETH_ADDRESS: string;
-  private USDC_ADDRESS: string;
-
   constructor(private chain: ChainType) {
     const chainConfig = getChainConfig(chain);
     this.quoterAddress = chainConfig.uniswap.v3.quoterV2Address;
-    this.WETH_ADDRESS = chainConfig.tokenAddresses.weth;
-    this.USDC_ADDRESS = chainConfig.tokenAddresses.usdc;
 
     if (!this.quoterAddress || this.quoterAddress.trim() === "") {
       throw new Error(`Quoter address not defined for chain: ${chainConfig.name}`);
@@ -34,7 +23,18 @@ export class UniswapV3QuoterV2 {
 
   getQuoterAddress = () => this.quoterAddress;
 
-  async quoteExactInput(wallet: Wallet, path: string, amountIn: bigint): Promise<QuoterExactInputResponse> {
+  /**
+   * Quotes the amount out for a multi-hop exact input swap
+   * @param wallet - The wallet instance connected to the blockchain provider
+   * @param path - The encoded path for the multi-hop swap (token addresses and fees concatenated)
+   * @param amountIn - The exact input amount to swap
+   * @returns Promise containing the quoted output amount, price after swap, ticks crossed, and gas estimate
+   */
+  async quoteExactInput(
+    wallet: Wallet,
+    path: string,
+    amountIn: bigint,
+  ): Promise<{ amountOut: bigint; sqrtPriceX96After: bigint; initializedTicksCrossed: bigint; gasEstimate: bigint }> {
     this.quoterContract = this.quoterContract.connect(wallet) as Contract;
 
     await this._networkAndQuoterCheck(wallet);
@@ -60,6 +60,18 @@ export class UniswapV3QuoterV2 {
     }
   }
 
+  /**
+   * Quotes the amount out for a single-hop exact input swap
+   * @param wallet - The wallet instance connected to the blockchain provider
+   * @param tokenIn - The input token address
+   * @param tokenOut - The output token address
+   * @param fee - The pool fee tier (from FeeAmount enum)
+   * @param recipient - The recipient address for the swap
+   * @param amountIn - The exact input amount to swap
+   * @param amountOutMin - The minimum output amount expected (for slippage protection)
+   * @param sqrtPriceLimitX96 - The price limit for the swap (0 for no limit)
+   * @returns Promise containing the quoted output amount, price after swap, ticks crossed, and gas estimate
+   */
   async quoteExactInputSingle(
     wallet: Wallet,
     tokenIn: string,
@@ -69,12 +81,12 @@ export class UniswapV3QuoterV2 {
     amountIn: bigint,
     amountOutMin: bigint,
     sqrtPriceLimitX96: bigint,
-  ): Promise<QuoterExactInputResponse> {
+  ): Promise<{ amountOut: bigint; sqrtPriceX96After: bigint; initializedTicksCrossed: bigint; gasEstimate: bigint }> {
     this.quoterContract = this.quoterContract.connect(wallet) as Contract;
 
     await this._networkAndQuoterCheck(wallet);
 
-    const ExactInputSingleParmas = {
+    const exactInputSingleParmas = {
       tokenIn,
       tokenOut,
       fee,
@@ -86,7 +98,7 @@ export class UniswapV3QuoterV2 {
 
     try {
       const { amountOut, sqrtPriceX96After, initializedTicksCrossed, gasEstimate } =
-        await this.quoterContract.quoteExactInputSingle.staticCall(ExactInputSingleParmas);
+        await this.quoterContract.quoteExactInputSingle.staticCall(exactInputSingleParmas);
 
       return { amountOut, sqrtPriceX96After, initializedTicksCrossed, gasEstimate };
     } catch (error: unknown) {
@@ -104,7 +116,18 @@ export class UniswapV3QuoterV2 {
     }
   }
 
-  async quoteExactOutput(wallet: Wallet, path: string, amountOut: bigint): Promise<QuoterExactOutputResponse> {
+  /**
+   * Quotes the amount in required for a multi-hop exact output swap
+   * @param wallet - The wallet instance connected to the blockchain provider
+   * @param path - The encoded path for the multi-hop swap (token addresses and fees concatenated, in reverse order)
+   * @param amountOut - The exact output amount desired
+   * @returns Promise containing the quoted input amount required, price after swap, ticks crossed, and gas estimate
+   */
+  async quoteExactOutput(
+    wallet: Wallet,
+    path: string,
+    amountOut: bigint,
+  ): Promise<{ amountIn: bigint; sqrtPriceX96After: bigint; initializedTicksCrossed: bigint; gasEstimate: bigint }> {
     this.quoterContract = this.quoterContract.connect(wallet) as Contract;
 
     await this._networkAndQuoterCheck(wallet);
@@ -130,26 +153,39 @@ export class UniswapV3QuoterV2 {
     }
   }
 
+  /**
+   * Quotes the amount in required for a single-hop exact output swap
+   * @param wallet - The wallet instance connected to the blockchain provider
+   * @param tokenIn - The input token address
+   * @param tokenOut - The output token address
+   * @param amountOut - The exact output amount desired
+   * @param fee - The pool fee tier (from FeeAmount enum)
+   * @param sqrtPriceLimitX96 - The price limit for the swap (0 for no limit)
+   * @returns Promise containing the quoted input amount required, price after swap, ticks crossed, and gas estimate
+   */
   async quoteExactOutputSingle(
     wallet: Wallet,
-    params: QuoteExactOutputSingleParams,
-  ): Promise<QuoterExactOutputResponse> {
+    tokenIn: string,
+    tokenOut: string,
+    amountOut: bigint,
+    fee: FeeAmount,
+    sqrtPriceLimitX96: bigint,
+  ): Promise<{ amountIn: bigint; sqrtPriceX96After: bigint; initializedTicksCrossed: bigint; gasEstimate: bigint }> {
     this.quoterContract = this.quoterContract.connect(wallet) as Contract;
 
     await this._networkAndQuoterCheck(wallet);
 
-    // Map the params to match the ABI expectation (amount -> amountOut)
-    const contractParams = {
-      tokenIn: params.tokenIn,
-      tokenOut: params.tokenOut,
-      amountOut: params.amount, // Map 'amount' to 'amountOut' for the contract call
-      fee: params.fee,
-      sqrtPriceLimitX96: params.sqrtPriceLimitX96,
+    const exactOutputSingleParams = {
+      tokenIn,
+      tokenOut,
+      amountOut,
+      fee,
+      sqrtPriceLimitX96,
     };
 
     try {
       const { amountIn, sqrtPriceX96After, initializedTicksCrossed, gasEstimate } =
-        await this.quoterContract.quoteExactOutputSingle.staticCall(contractParams);
+        await this.quoterContract.quoteExactOutputSingle.staticCall(exactOutputSingleParams);
 
       return { amountIn, sqrtPriceX96After, initializedTicksCrossed, gasEstimate };
     } catch (error: unknown) {
