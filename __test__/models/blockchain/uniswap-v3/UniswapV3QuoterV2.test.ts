@@ -367,18 +367,10 @@ describe("Uniswap V3 QuoterV2", () => {
       const amountOut = ethers.parseUnits("1", DAI_DECIMALS);
       const sqrtPriceLimitX96 = 0n;
 
-      const params = {
-        tokenIn: tokenA,
-        tokenOut: tokenB,
-        amount: amountOut,
-        fee,
-        sqrtPriceLimitX96,
-      };
-
       // Act | Assert
-      await expect(quoter.quoteExactOutputSingle(nonNetworkWallet, params)).rejects.toThrow(
-        INVALID_NETWORK_ERROR_MESSAGE,
-      );
+      await expect(
+        quoter.quoteExactOutputSingle(nonNetworkWallet, tokenA, tokenB, amountOut, fee, sqrtPriceLimitX96),
+      ).rejects.toThrow(INVALID_NETWORK_ERROR_MESSAGE);
     });
 
     it("should throw an error when using a wallet without a connection", async () => {
@@ -389,18 +381,10 @@ describe("Uniswap V3 QuoterV2", () => {
       const amountOut = ethers.parseUnits("1", DAI_DECIMALS);
       const sqrtPriceLimitX96 = 0n;
 
-      const params = {
-        tokenIn: tokenA,
-        tokenOut: tokenB,
-        amount: amountOut,
-        fee,
-        sqrtPriceLimitX96,
-      };
-
       // Act | Assert
-      await expect(quoter.quoteExactOutputSingle(offlineWallet, params)).rejects.toThrow(
-        NETWORK_VALIDATION_FAILED_MESSAGE,
-      );
+      await expect(
+        quoter.quoteExactOutputSingle(offlineWallet, tokenA, tokenB, amountOut, fee, sqrtPriceLimitX96),
+      ).rejects.toThrow(NETWORK_VALIDATION_FAILED_MESSAGE);
     });
 
     it("should return an amount in between 0.99 and 1.01 for a usdc -> 1 dai quote", async () => {
@@ -411,17 +395,13 @@ describe("Uniswap V3 QuoterV2", () => {
       const amountOut = ethers.parseUnits("1", DAI_DECIMALS);
       const sqrtPriceLimitX96 = 0n;
 
-      const params = {
-        tokenIn: tokenA,
-        tokenOut: tokenB,
-        amount: amountOut,
-        fee,
-        sqrtPriceLimitX96,
-      };
-
       const { amountIn, sqrtPriceX96After, initializedTicksCrossed, gasEstimate } = await quoter.quoteExactOutputSingle(
         wallet,
-        params,
+        tokenA,
+        tokenB,
+        amountOut,
+        fee,
+        sqrtPriceLimitX96,
       );
 
       const formattedAmountIn = parseFloat(ethers.formatUnits(amountIn, USDC_DECIMALS));
@@ -439,20 +419,16 @@ describe("Uniswap V3 QuoterV2", () => {
       const amountOut = ethers.parseUnits("1", USDC_DECIMALS);
       const sqrtPriceLimitX96 = 0n;
 
-      const params = {
-        tokenIn: tokenA,
-        tokenOut: tokenB,
-        amount: amountOut,
-        fee,
-        sqrtPriceLimitX96,
-      };
-
       const expectedInputAmount = 0n;
 
       // Act
       const { amountIn, sqrtPriceX96After, initializedTicksCrossed, gasEstimate } = await quoter.quoteExactOutputSingle(
         wallet,
-        params,
+        tokenA,
+        tokenB,
+        amountOut,
+        fee,
+        sqrtPriceLimitX96,
       );
 
       // Assert
@@ -467,18 +443,14 @@ describe("Uniswap V3 QuoterV2", () => {
       const amountOut = ethers.parseUnits("1000000", DAI_DECIMALS); // 1 million DAI
       const sqrtPriceLimitX96 = 0n;
 
-      const params = {
-        tokenIn: tokenA,
-        tokenOut: tokenB,
-        amount: amountOut,
-        fee,
-        sqrtPriceLimitX96,
-      };
-
       // Act
       const { amountIn, sqrtPriceX96After, initializedTicksCrossed, gasEstimate } = await quoter.quoteExactOutputSingle(
         wallet,
-        params,
+        tokenA,
+        tokenB,
+        amountOut,
+        fee,
+        sqrtPriceLimitX96,
       );
 
       // Assert
@@ -495,18 +467,14 @@ describe("Uniswap V3 QuoterV2", () => {
       const amountOut = 1n; // Minimum possible value (1 wei)
       const sqrtPriceLimitX96 = 0n;
 
-      const params = {
-        tokenIn: tokenA,
-        tokenOut: tokenB,
-        amount: amountOut,
-        fee,
-        sqrtPriceLimitX96,
-      };
-
       // Act
       const { amountIn, sqrtPriceX96After, initializedTicksCrossed, gasEstimate } = await quoter.quoteExactOutputSingle(
         wallet,
-        params,
+        tokenA,
+        tokenB,
+        amountOut,
+        fee,
+        sqrtPriceLimitX96,
       );
 
       // Assert
