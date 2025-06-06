@@ -1,8 +1,6 @@
 import { PoolKey, FeeAmount, FeeToTickSpacing } from "./uniswap-v4-types";
 import { keccak256, AbiCoder } from "ethers";
 import { ethers } from "ethers";
-import { TheGraphApi } from "../../../services/TheGraphApi";
-import { ChainType } from "../../../config/chain-config";
 
 export function computePoolId(key: PoolKey): string {
   // ABI-encode exactly 5 slots (5 × 32 bytes = 0xa0 length in memory)
@@ -23,17 +21,14 @@ export function computePoolId(key: PoolKey): string {
  */
 export function getLowestFeePoolKey(tokenA: string, tokenB: string, hooks: string = ethers.ZeroAddress): PoolKey {
   const fee: FeeAmount = FeeAmount.LOWEST;
-  // Sort token addresses (lower address should be currency0)
   const [currency0, currency1] = tokenA.toLowerCase() < tokenB.toLowerCase() ? [tokenA, tokenB] : [tokenB, tokenA];
 
-  // Get tick spacing based on fee
   const tickSpacing = FeeToTickSpacing.get(fee);
 
   if (!tickSpacing) {
     throw new Error(`Invalid fee amount: ${fee}`);
   }
 
-  // Create pool key
   const poolKey: PoolKey = {
     currency0,
     currency1,
@@ -54,17 +49,14 @@ export function getLowestFeePoolKey(tokenA: string, tokenB: string, hooks: strin
  */
 export function getLowPoolKey(tokenA: string, tokenB: string, hooks: string = ethers.ZeroAddress): PoolKey {
   const fee: FeeAmount = FeeAmount.LOW;
-  // Sort token addresses (lower address should be currency0)
   const [currency0, currency1] = tokenA.toLowerCase() < tokenB.toLowerCase() ? [tokenA, tokenB] : [tokenB, tokenA];
 
-  // Get tick spacing based on fee
   const tickSpacing = FeeToTickSpacing.get(fee);
 
   if (!tickSpacing) {
     throw new Error(`Invalid fee amount: ${fee}`);
   }
 
-  // Create pool key
   const poolKey: PoolKey = {
     currency0,
     currency1,
@@ -85,17 +77,14 @@ export function getLowPoolKey(tokenA: string, tokenB: string, hooks: string = et
  */
 export function getMediumPoolKey(tokenA: string, tokenB: string, hooks: string = ethers.ZeroAddress): PoolKey {
   const fee: FeeAmount = FeeAmount.MEDIUM;
-  // Sort token addresses (lower address should be currency0)
   const [currency0, currency1] = tokenA.toLowerCase() < tokenB.toLowerCase() ? [tokenA, tokenB] : [tokenB, tokenA];
 
-  // Get tick spacing based on fee
   const tickSpacing = FeeToTickSpacing.get(fee);
 
   if (!tickSpacing) {
     throw new Error(`Invalid fee amount: ${fee}`);
   }
 
-  // Create pool key
   const poolKey: PoolKey = {
     currency0,
     currency1,
@@ -116,17 +105,14 @@ export function getMediumPoolKey(tokenA: string, tokenB: string, hooks: string =
  */
 export function getHighPoolKey(tokenA: string, tokenB: string, hooks: string = ethers.ZeroAddress): PoolKey {
   const fee: FeeAmount = FeeAmount.HIGH;
-  // Sort token addresses (lower address should be currency0)
   const [currency0, currency1] = tokenA.toLowerCase() < tokenB.toLowerCase() ? [tokenA, tokenB] : [tokenB, tokenA];
 
-  // Get tick spacing based on fee
   const tickSpacing = FeeToTickSpacing.get(fee);
 
   if (!tickSpacing) {
     throw new Error(`Invalid fee amount: ${fee}`);
   }
 
-  // Create pool key
   const poolKey: PoolKey = {
     currency0,
     currency1,
