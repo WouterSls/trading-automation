@@ -5,9 +5,7 @@ import { ERC20, createMinimalErc20 } from "../../src/models/smartcontracts/ERC/_
 import { UniswapV2RouterV2 } from "../../src/models/smartcontracts/uniswap-v2/UniswapV2RouterV2";
 import { WETH_INTERFACE } from "../../src/lib/smartcontract-abis/erc20";
 import { UniswapV3SwapRouterV2, UniswapV3QuoterV2 } from "../../src/models/smartcontracts/uniswap-v3/index";
-import {
-  FeeAmount,
-} from "../../src/models/smartcontracts/uniswap-v3/uniswap-v3-types";
+import { FeeAmount } from "../../src/models/smartcontracts/uniswap-v3/uniswap-v3-types";
 
 export async function forkTesting(wallet: Wallet, chain: ChainType) {
   const chainConfig = getChainConfig(chain);
@@ -114,8 +112,6 @@ async function v3RouterTest(
     gasEstimate: gasEstimate.toString(),
   });
 
-
-
   const routerAllowance = await inputToken.getRawAllowance(wallet.address, v3Router.getRouterAddress());
   console.log(`router allowance: ${ethers.formatUnits(routerAllowance, inputToken.getDecimals())}`);
 
@@ -141,7 +137,7 @@ async function v3RouterTest(
     recipient,
     amountIn,
     amountOutMinimum,
-    sqrtPriceLimitX96
+    sqrtPriceLimitX96,
   );
 
   const txResponse = await wallet.sendTransaction(tx);
