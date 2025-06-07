@@ -1,13 +1,7 @@
 import { ethers, Wallet, TransactionRequest } from "ethers";
 
 import { ChainType, getChainConfig } from "../../../../src/config/chain-config";
-import {
-  ExactInputParams,
-  ExactInputSingleParams,
-  ExactOutputParams,
-  ExactOutputSingleParams,
-  FeeAmount,
-} from "../../../../src/models/smartcontracts/uniswap-v3/uniswap-v3-types";
+import { FeeAmount } from "../../../../src/models/smartcontracts/uniswap-v3/uniswap-v3-types";
 
 import { UniswapV3SwapRouterV2 } from "../../../../src/models/smartcontracts/uniswap-v3/UniswapV3SwapRouterV2";
 import { UniswapV3Factory } from "../../../../src/models/smartcontracts/uniswap-v3/UniswapV3Factory";
@@ -142,20 +136,24 @@ export async function exactInputSingleTrade(
   tokenOut: ERC20,
 ) {
   const inputAmount = ethers.parseUnits(amountIn.toString(), tokenIn.getDecimals());
-  const exactInputTrade: ExactInputSingleParams = {
-    tokenIn: tokenIn.getTokenAddress(),
-    tokenOut: tokenOut.getTokenAddress(),
-    fee: FeeAmount.MEDIUM,
-    recipient: wallet.address,
-    amountIn: inputAmount,
-    amountOutMinimum: 0n,
-    sqrtPriceLimitX96: 0n,
-  };
+  const fee = FeeAmount.MEDIUM;
+  const recipient = wallet.address;
+  const outputAmountMin = 0n;
+  const sqrtPriceLimitX96 = 0n;
 
   await approveSending(wallet, tokenIn, router.getRouterAddress(), amountIn);
 
   console.log("Creating transaction...");
-  const tx: TransactionRequest = await router.createExactInputSingleTransaction(wallet, exactInputTrade);
+  const tx: TransactionRequest = await router.createExactInputSingleTransaction(
+    tokenIn.getTokenAddress(),
+    tokenOut.getTokenAddress(),
+    FeeAmount.MEDIUM,
+    recipient,
+    inputAmount,
+    outputAmountMin,
+    sqrtPriceLimitX96,
+  );
+
   try {
     console.log("transaction request created:");
     console.log(tx);
@@ -180,16 +178,11 @@ export async function exactInputTrade(
   amountIn: number,
 ) {
   const addresses = tokensToTrade.map((token) => token.getTokenAddress());
-  const encodedPath = encodePath(addresses, feeAmounts);
 
   const rawAmountIn = ethers.parseUnits(amountIn.toString(), tokensToTrade[0].getDecimals());
-
-  const exactInputTrade: ExactInputParams = {
-    path: encodedPath,
-    recipient: wallet.address,
-    amountIn: rawAmountIn,
-    amountOutMinimum: 0n,
-  };
+  const encodedPath = encodePath(addresses, feeAmounts);
+  const recipient = wallet.address;
+  const amountOutMin = 0n;
 
   const maxUint256 = ethers.MaxUint256;
 
@@ -209,7 +202,12 @@ export async function exactInputTrade(
     }
   }
 
-  const tx: TransactionRequest = await router.createExactInputTransaction(wallet, exactInputTrade);
+  const tx: TransactionRequest = await router.createExactInputTransaction(
+    encodedPath,
+    recipient,
+    rawAmountIn,
+    amountOutMin,
+  );
   console.log("transaction request created: ");
   console.log(tx);
   console.log("sending transaction...");
@@ -235,16 +233,9 @@ async function exactOutputSingleTrade(
   const tokenInBalance = await tokenIn.getRawTokenBalance(wallet.address);
 
   const amountInMaximum = (tokenInBalance * 95n) / 100n;
-
-  const exactOutputTrade: ExactOutputSingleParams = {
-    tokenIn: tokenIn.getTokenAddress(),
-    tokenOut: tokenOut.getTokenAddress(),
-    fee: FeeAmount.MEDIUM,
-    recipient: wallet.address,
-    amountOut: outputAmount,
-    amountInMaximum: amountInMaximum,
-    sqrtPriceLimitX96: 0n,
-  };
+  const fee = FeeAmount.MEDIUM;
+  const recipient = wallet.address;
+  const sqrtPriceLimitX96 = 0n;
 
   const approveAmount = Number(ethers.formatUnits(amountInMaximum, tokenIn.getDecimals()));
   await approveSending(wallet, tokenIn, router.getRouterAddress(), approveAmount);
@@ -256,7 +247,15 @@ async function exactOutputSingleTrade(
    */
 
   console.log("Creating transaction...");
-  const tx: TransactionRequest = await router.createExactOutputSingleTransaction(wallet, exactOutputTrade);
+  const tx: TransactionRequest = await router.createExactOutputSingleTransaction(
+    tokenIn.getTokenAddress(),
+    tokenOut.getTokenAddress(),
+    fee,
+    recipient,
+    outputAmount,
+    amountInMaximum,
+    sqrtPriceLimitX96,
+  );
   console.log("transaction created: ", JSON.stringify(tx, null, 2));
   console.log("sending transaction...");
   const txResponse = await wallet.sendTransaction(tx);
@@ -282,24 +281,23 @@ async function exactOutputTrade(
   const outputToken = tokensToTrade[0];
 
   const encodedPath = encodePath(addresses, feeAmounts);
+  const recipient = wallet.address;
 
   const rawAmountOut = ethers.parseUnits(amountOut.toString(), outputToken.getDecimals());
 
   const tokenInBalance = await inputToken.getRawTokenBalance(wallet.address);
   const amountInMaximum = (tokenInBalance * 95n) / 100n;
 
-  const exactOutputParams: ExactOutputParams = {
-    path: encodedPath,
-    recipient: wallet.address,
-    amountOut: rawAmountOut,
-    amountInMaximum: amountInMaximum,
-  };
-
   const approveAmount = Number(ethers.formatUnits(amountInMaximum, inputToken.getDecimals()));
   await approveSending(wallet, inputToken, router.getRouterAddress(), approveAmount);
 
   console.log("Creating transaction...");
-  const tx: TransactionRequest = await router.createExactOutputTransaction(wallet, exactOutputParams);
+  const tx: TransactionRequest = await router.createExactOutputTransaction(
+    encodedPath,
+    recipient,
+    rawAmountOut,
+    amountInMaximum,
+  );
 
   try {
     console.log("transaction created: ", JSON.stringify(tx, null, 2));

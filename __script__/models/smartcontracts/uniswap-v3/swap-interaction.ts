@@ -6,10 +6,6 @@ import {
   UniswapV3QuoterV2,
   UniswapV3Factory,
   UniswapV3SwapRouterV2,
-  calculatePriceFromSqrtPriceX96,
-  FeeAmount,
-  encodePath,
-  ExactInputParams,
   UniswapV3Pool,
 } from "../../../../src/models/smartcontracts/uniswap-v3/index";
 import { WETH_INTERFACE } from "../../../../src/lib/smartcontract-abis/erc20";
