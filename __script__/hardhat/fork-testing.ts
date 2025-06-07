@@ -6,9 +6,7 @@ import { UniswapV2RouterV2 } from "../../src/models/smartcontracts/uniswap-v2/Un
 import { WETH_INTERFACE } from "../../src/lib/smartcontract-abis/erc20";
 import { UniswapV3SwapRouterV2, UniswapV3QuoterV2 } from "../../src/models/smartcontracts/uniswap-v3/index";
 import {
-  ExactInputSingleParams,
   FeeAmount,
-  QuoteExactInputSingleParams,
 } from "../../src/models/smartcontracts/uniswap-v3/uniswap-v3-types";
 
 export async function forkTesting(wallet: Wallet, chain: ChainType) {
@@ -116,15 +114,7 @@ async function v3RouterTest(
     gasEstimate: gasEstimate.toString(),
   });
 
-  const exactInputTrade: ExactInputSingleParams = {
-    tokenIn: inputToken.getTokenAddress(),
-    tokenOut: outputToken.getTokenAddress(),
-    fee: 3000,
-    recipient: wallet.address,
-    amountIn: rawTradeAmount,
-    amountOutMinimum: 0n,
-    sqrtPriceLimitX96: 0n,
-  };
+
 
   const routerAllowance = await inputToken.getRawAllowance(wallet.address, v3Router.getRouterAddress());
   console.log(`router allowance: ${ethers.formatUnits(routerAllowance, inputToken.getDecimals())}`);
@@ -144,7 +134,16 @@ async function v3RouterTest(
     console.log("approved");
   }
 
-  const tx: TransactionRequest = await v3Router.createExactInputSingleTransaction(wallet, exactInputTrade);
+  const tx: TransactionRequest = await v3Router.createExactInputSingleTransaction(
+    tokenIn,
+    tokenOut,
+    fee,
+    recipient,
+    amountIn,
+    amountOutMinimum,
+    sqrtPriceLimitX96
+  );
+
   const txResponse = await wallet.sendTransaction(tx);
   const txReceipt = await txResponse.wait();
   if (!txReceipt) throw new Error("tx failed");
