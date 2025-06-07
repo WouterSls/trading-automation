@@ -3,7 +3,7 @@ import { ChainType, getOutputTokenAddress, getChainConfig } from "../../config/c
 import { ITradingStrategy } from "./ITradingStrategy";
 import { BuyTrade, BuyTradeCreationDto, TradeQuote, SellTrade, SellTradeCreationDto } from "./types/_index";
 import { decodeLogs } from "../../lib/utils";
-import { ERC20_INTERFACE } from "../../lib/contract-abis/erc20";
+import { ERC20_INTERFACE } from "../../lib/smartcontract-abis/erc20";
 import { TRADING_CONFIG } from "../../config/trading-config";
 
 export class Trader {

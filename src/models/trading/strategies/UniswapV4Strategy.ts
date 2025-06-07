@@ -1,8 +1,8 @@
-import { ERC20 } from "../../blockchain/ERC/ERC20";
+import { ERC20 } from "../../smartcontracts/ERC/ERC20";
 import { ethers, TransactionRequest, Wallet } from "ethers";
 import { ChainType, getChainConfig } from "../../../config/chain-config";
 
-import { FeeToTickSpacing, PoolKey } from "../../blockchain/uniswap-v4/uniswap-v4-types";
+import { FeeToTickSpacing, PoolKey } from "../../smartcontracts/uniswap-v4/uniswap-v4-types";
 import {
   ensureInfiniteApproval,
   ensureStandardApproval,
@@ -10,8 +10,8 @@ import {
 } from "../../../lib/approval-strategies";
 
 import { ITradingStrategy } from "../ITradingStrategy";
-import { ERC20_INTERFACE } from "../../../lib/contract-abis/erc20";
-import { FeeAmount } from "../../blockchain/uniswap-v3/uniswap-v3-types";
+import { ERC20_INTERFACE } from "../../../lib/smartcontract-abis/erc20";
+import { FeeAmount } from "../../smartcontracts/uniswap-v3/uniswap-v3-types";
 import {
   BuyTrade,
   SellTrade,
@@ -20,11 +20,11 @@ import {
   SellTradeCreationDto,
   TradeQuote,
 } from "../types/_index";
-import { createMinimalErc20 } from "../../blockchain/ERC/erc-utils";
+import { createMinimalErc20 } from "../../smartcontracts/ERC/erc-utils";
 import { validateNetwork } from "../../../lib/utils";
 import { TRADING_CONFIG } from "../../../config/trading-config";
-import { UniswapV4Quoter } from "../../blockchain/uniswap-v4/UniswapV4Quoter";
-import { UniversalRouter } from "../../blockchain/universal-router/UniversalRouter";
+import { UniswapV4Quoter } from "../../smartcontracts/uniswap-v4/UniswapV4Quoter";
+import { UniversalRouter } from "../../smartcontracts/universal-router/UniversalRouter";
 
 export class UniswapV4Strategy implements ITradingStrategy {
   private quoter: UniswapV4Quoter;

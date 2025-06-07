@@ -8,7 +8,7 @@ import {
 import { getHardhatWallet_1 } from "../../../../src/hooks/useSetup";
 import { ChainType, getChainConfig } from "../../../../src/config/chain-config";
 import { UniswapV2Strategy } from "../../../../src/models/trading/strategies/UniswapV2Strategy";
-import { createMinimalErc20 } from "../../../../src/models/blockchain/ERC/erc-utils";
+import { createMinimalErc20 } from "../../../../src/models/smartcontracts/ERC/erc-utils";
 
 async function uniswapV2StrategyInteraction(
   chain: ChainType,

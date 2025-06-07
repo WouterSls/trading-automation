@@ -3,15 +3,15 @@ import { TransactionRequest, Wallet, ethers } from "ethers";
 import { ChainType, getChainConfig } from "../../../config/chain-config";
 import { TRADING_CONFIG } from "../../../config/trading-config";
 
-import { ERC20, createMinimalErc20 } from "../../blockchain/ERC/_index";
-import { AerodromeRouter } from "../../blockchain/aerodrome/AerodromeRouter";
-import { AerodromePoolFactory } from "../../blockchain/aerodrome/AerodromePoolFactory";
-import { TradeRoute } from "../../blockchain/aerodrome/aerodrome-types";
+import { ERC20, createMinimalErc20 } from "../../smartcontracts/ERC/_index";
+import { AerodromeRouter } from "../../smartcontracts/aerodrome/AerodromeRouter";
+import { AerodromePoolFactory } from "../../smartcontracts/aerodrome/AerodromePoolFactory";
+import { TradeRoute } from "../../smartcontracts/aerodrome/aerodrome-types";
 
 import { ITradingStrategy } from "../ITradingStrategy";
 import { BuyTradeCreationDto, SellTradeCreationDto, InputType, TradeQuote } from "../types/_index";
 
-import { ERC20_INTERFACE } from "../../../lib/contract-abis/_index";
+import { ERC20_INTERFACE } from "../../../lib/smartcontract-abis/_index";
 import { ensureInfiniteApproval, ensureStandardApproval, validateNetwork } from "../../../lib/_index";
 
 export class AerodromeStrategy implements ITradingStrategy {

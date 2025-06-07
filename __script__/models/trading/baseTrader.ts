@@ -1,12 +1,12 @@
 import { ethers, Wallet } from "ethers";
 import { getBaseWallet_1, getCoingeckoApi, getHardhatWallet_1, getTheGraphApi } from "../../../src/hooks/useSetup";
-import { createMinimalErc20 } from "../../../src/models/blockchain/ERC/erc-utils";
+import { createMinimalErc20 } from "../../../src/models/smartcontracts/ERC/erc-utils";
 import { TraderFactory } from "../../../src/models/trading/TraderFactory";
 import { GeckoTerminalApi } from "../../../src/services/GeckoTerminalApi";
 import { ChainType, getChainConfig } from "../../../src/config/chain-config";
 import { BuyTrade, BuyTradeCreationDto, InputType } from "../../../src/models/trading/types/_index";
 import { ITradingStrategy } from "../../../src/models/trading/ITradingStrategy";
-import { encodePath, FeeAmount, UniswapV3QuoterV2 } from "../../../src/models/blockchain/uniswap-v3";
+import { encodePath, FeeAmount, UniswapV3QuoterV2 } from "../../../src/models/smartcontracts/uniswap-v3";
 
 // Define types for trade paths
 interface SingleHopPath {

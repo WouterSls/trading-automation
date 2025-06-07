@@ -1,18 +1,19 @@
 import { ethers, TransactionRequest, Wallet } from "ethers";
 import { ChainType, getChainConfig } from "../../../config/chain-config";
 
-import { UniswapV3QuoterV2 } from "../../blockchain/uniswap-v3/UniswapV3QuoterV2";
-import { UniswapV3Factory } from "../../blockchain/uniswap-v3/UniswapV3Factory";
-import { UniswapV3SwapRouterV2 } from "../../blockchain/uniswap-v3/UniswapV3SwapRouterV2";
+import { UniswapV3QuoterV2 } from "../../smartcontracts/uniswap-v3/UniswapV3QuoterV2";
+import { UniswapV3Factory } from "../../smartcontracts/uniswap-v3/UniswapV3Factory";
+import { UniswapV3SwapRouterV2 } from "../../smartcontracts/uniswap-v3/UniswapV3SwapRouterV2";
 
 import { ITradingStrategy } from "../ITradingStrategy";
-import { ERC20_INTERFACE } from "../../../lib/contract-abis/erc20";
-import { FeeAmount } from "../../blockchain/uniswap-v3/uniswap-v3-types";
-import { BuyTradeCreationDto, SellTradeCreationDto, TradeQuote } from "../types/_index";
+import { ERC20_INTERFACE } from "../../../lib/smartcontract-abis/erc20";
+import { FeeAmount } from "../../smartcontracts/uniswap-v3/uniswap-v3-types";
+import { BuyTradeCreationDto, InputType, SellTradeCreationDto, TradeQuote } from "../types/_index";
 import { validateNetwork } from "../../../lib/utils";
 import { TRADING_CONFIG } from "../../../config/trading-config";
 import { ensureInfiniteApproval, ensureStandardApproval } from "../../../lib/approval-strategies";
-import { encodePath } from "../../blockchain/uniswap-v3";
+import { encodePath } from "../../smartcontracts/uniswap-v3";
+import { createMinimalErc20 } from "../../smartcontracts/ERC/erc-utils";
 
 export class UniswapV3Strategy implements ITradingStrategy {
   private quoter: UniswapV3QuoterV2;
@@ -167,7 +168,35 @@ export class UniswapV3Strategy implements ITradingStrategy {
    * @returns Token price in USDC as a string
    */
   async getBuyTradeQuote(wallet: Wallet, trade: BuyTradeCreationDto): Promise<TradeQuote> {
-    throw new Error("Not implemented");
+    await validateNetwork(wallet,this.chain);
+
+    const outputToken = await createMinimalErc20(trade.outputToken,wallet.provider!);
+
+    let outputAmount = "0";
+    let priceImpact = 0;
+    let route: string[] = [];
+
+    const isETHInputETHAmount = trade.inputType === InputType.ETH && trade.inputToken === ethers.ZeroAddress;
+    const isETHInputUSDAmount = trade.inputType === InputType.USD && trade.inputToken === ethers.ZeroAddress;
+    const isTOKENInputTOKENAmount = trade.inputType === InputType.TOKEN && trade.inputToken !== ethers.ZeroAddress
+
+    if (isETHInputETHAmount) {
+
+    }
+
+    if (isETHInputUSDAmount) {
+
+    }
+
+    if (isTOKENInputTOKENAmount) {
+
+    }
+
+    return {
+      outputAmount,
+      priceImpact,
+      route
+    }
   }
 
   /**
@@ -187,9 +216,45 @@ export class UniswapV3Strategy implements ITradingStrategy {
    * @returns Transaction request object ready to be sent
    */
   async createBuyTransaction(wallet: Wallet, trade: BuyTradeCreationDto): Promise<TransactionRequest> {
-    return new Promise((resolve, reject) => {
-      reject(new Error("Not implemented"));
-    });
+    await validateNetwork(wallet, this.chain);
+
+    const outputToken = await createMinimalErc20(trade.outputToken, wallet.provider!);
+
+    const recipient = wallet.address;
+    const deadline = TRADING_CONFIG.DEADLINE;
+
+    let tx: TransactionRequest = {};
+
+    const isETHInputETHAmount = trade.inputType === InputType.ETH && trade.inputToken === ethers.ZeroAddress;
+    const isETHInputUSDAmount = trade.inputType === InputType.USD && trade.inputToken === ethers.ZeroAddress;
+    const isTOKENInputTOKENAmount = trade.inputType === InputType.TOKEN && trade.inputToken !== ethers.ZeroAddress;
+
+    if (isETHInputETHAmount) {
+
+      const tokenIn = this.WETH_ADDRESS || ethers.ZeroAddress;
+      const tokenOut = outputToken.getTokenAddress();
+      const fee = FeeAmount.MEDIUM;
+
+      let amountOutMin = 0n
+      const sqrtPriceLimitX96 = 0n
+
+      const amountIn = ethers.parseEther(trade.inputAmount);
+
+      const {amountOut} = await this.quoter.quoteExactInputSingle(wallet, tokenIn,tokenIn,fee,recipient,amountIn,amountOutMin,sqrtPriceLimitX96);
+      amountOutMin = (amountOut * 95n) / 100n;
+
+      tx = this.router.createExactInputSingleTransaction(tokenIn,tokenOut,fee,recipient,amountIn,amountOutMin,sqrtPriceLimitX96);
+      tx.value = amountIn;
+    }
+
+    if (isETHInputUSDAmount) {
+
+    }
+
+    if (isTOKENInputTOKENAmount) {
+    }
+
+    return tx;
   }
 
   /**

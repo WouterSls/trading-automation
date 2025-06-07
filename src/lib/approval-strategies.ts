@@ -1,6 +1,6 @@
 import { ethers, Wallet } from "ethers";
-import { createMinimalErc20 } from "../models/blockchain/ERC/erc-utils";
-import { ERC20 } from "../models/blockchain/ERC/ERC20";
+import { createMinimalErc20 } from "../models/smartcontracts/ERC/erc-utils";
+import { ERC20 } from "../models/smartcontracts/ERC/ERC20";
 
 /**
  * Standard ERC20 approval strategy

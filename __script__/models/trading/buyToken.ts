@@ -1,6 +1,6 @@
 import { ethers, Wallet } from "ethers";
 import { getHardhatWallet_1 } from "../../../src/hooks/useSetup";
-import { createMinimalErc20 } from "../../../src/models/blockchain/ERC/erc-utils";
+import { createMinimalErc20 } from "../../../src/models/smartcontracts/ERC/erc-utils";
 import { TraderFactory } from "../../../src/models/trading/TraderFactory";
 import { GeckoTerminalApi } from "../../../src/services/GeckoTerminalApi";
 import { ChainType, getChainConfig } from "../../../src/config/chain-config";

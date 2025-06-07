@@ -3,13 +3,13 @@ import { TransactionRequest, Wallet, ethers } from "ethers";
 import { ChainType, getChainConfig } from "../../../config/chain-config";
 import { TRADING_CONFIG } from "../../../config/trading-config";
 
-import { ERC20, createMinimalErc20 } from "../../blockchain/ERC/_index";
-import { UniswapV2RouterV2, UniswapV2Factory } from "../../blockchain/uniswap-v2/index";
+import { ERC20, createMinimalErc20 } from "../../smartcontracts/ERC/_index";
+import { UniswapV2RouterV2, UniswapV2Factory } from "../../smartcontracts/uniswap-v2/index";
 
 import { ITradingStrategy } from "../ITradingStrategy";
 import { BuyTradeCreationDto, SellTradeCreationDto, InputType, TradeQuote, OutputToken } from "../types/_index";
 
-import { ERC20_INTERFACE } from "../../../lib/contract-abis/_index";
+import { ERC20_INTERFACE } from "../../../lib/smartcontract-abis/_index";
 import { ensureInfiniteApproval, ensureStandardApproval, validateNetwork } from "../../../lib/_index";
 
 export class UniswapV2Strategy implements ITradingStrategy {
