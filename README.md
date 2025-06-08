@@ -49,7 +49,7 @@ The project is organized into the following structure:
 - **hooks/**: Custom hooks and setup utilities
 - **lib/**: Utility functions and type definitions
 - **models/**: Core business logic and abstractions
-  - **blockchain/**: Blockchain interaction models
+  - **smartcontracts/**: Smartcontract interaction models
   - **trading/**: Trading-specific models and logic
 - **services/**: External API integrations
 
@@ -57,7 +57,7 @@ The project is organized into the following structure:
 
 - **hardhat/**: Hardhat-related scripts for testing and development
 - **models/**: Executable scripts for models
-  - **blockchain/**: Blockchain interaction scripts
+  - **smartcontracts/**: Blockchain interaction scripts
   - **trading/**: Trading operation scripts
 - **services/**: Scripts for external service interactions
   - Alchemy wallet information retrieval
