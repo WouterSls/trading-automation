@@ -61,7 +61,7 @@ export class UniversalRouter {
    * @param inputs list of encoded inputs for each command
    * @returns Transaction request
    */
-  async createExecuteTransaction(commands: string, inputs: string[], deadline?: number): Promise<TransactionRequest> {
+  createExecuteTransaction(commands: string, inputs: string[], deadline?: number): TransactionRequest {
     const dl = deadline ?? Math.floor(Date.now() / 1000) + 1200;
 
     const encodedData = this.routerContract.interface.encodeFunctionData("execute", [commands, inputs, dl]);
@@ -74,6 +74,7 @@ export class UniversalRouter {
     return tx;
   }
 
+  //TODO: turn into utils function and extract ecndoing to UniswapV4 router
   /**
    * Create a bytes input for a V4_SWAP command using SWAP_EXACT_INPUT_SINGLE
    * @param poolKey The pool key for the swap

@@ -67,6 +67,10 @@ export interface IV4ExactInputSingleParams {
   hookData: string;
 }
 
+export interface IV4ExactInputParams {
+
+}
+
 export interface IV4SettleParams {
   inputCurrency: string;
   amountIn: bigint;
