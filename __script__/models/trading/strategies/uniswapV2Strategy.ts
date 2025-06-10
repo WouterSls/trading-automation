@@ -45,12 +45,23 @@ async function uniswapV2StrategyInteraction(
   const ethUsdcPrice = await strat.getEthUsdcPrice(wallet);
   console.log("Strat:", strat.getName());
   console.log("ETH/USDC price:", ethUsdcPrice);
+  console.log();
   console.log("quoting trade...");
   console.log("Input type: ", buyTrade?.inputType);
   console.log("Input token: ", buyTrade?.inputToken);
   console.log("Input amount: ", buyTrade?.inputAmount);
-  //const tradeQuote = await strat.getBuyTradeQuote(wallet, buyTrade!);
-  //console.log("Trade Quote:", JSON.stringify(tradeQuote, null, 2));
+  const buyQuote = await strat.getBuyTradeQuote(wallet, buyTrade!);
+  /** 
+  console.log();
+  console.log("Buy Quote:", JSON.stringify(buyQuote, null, 2));
+  console.log("buying token...");
+  const buyTx = await strat.createBuyTransaction(wallet, buyTrade!);
+  console.log("Buy Transaction:");
+  console.log(buyTx);
+  console.log("sending transaction...");
+  await wallet.sendTransaction(buyTx);
+  console.log("transaction sent!");
+*/
 }
 
 if (require.main === module) {

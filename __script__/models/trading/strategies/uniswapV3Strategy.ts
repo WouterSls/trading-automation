@@ -39,26 +39,33 @@ async function uniswapV3StrategyInteraction(
   console.log(`\t${weth.getSymbol()} balance: ${wethBalance}`);
   console.log();
 
-  //console.log("Buy Trade:", JSON.stringify(buyTrade, null, 2));
-  //console.log();
-
   const ethUsdcPrice = await strat.getEthUsdcPrice(wallet);
   console.log("Strat:", strat.getName());
   console.log("ETH/USDC price:", ethUsdcPrice);
-
-  //console.log("quoting trade...");
-  //console.log("Input type: ", buyTrade?.inputType);
-  //console.log("Input token: ", buyTrade?.inputToken);
-  //console.log("Input amount: ", buyTrade?.inputAmount);
-  //const tradeQuote = await strat.getBuyTradeQuote(wallet, buyTrade!);
-  //console.log("Trade Quote:", JSON.stringify(tradeQuote, null, 2));
+  console.log();
+  /**
+  console.log("quoting trade...");
+  console.log("Input type: ", buyTrade?.inputType);
+  console.log("Input token: ", buyTrade?.inputToken);
+  console.log("Input amount: ", buyTrade?.inputAmount);
+  const buyQuote = await strat.getBuyTradeQuote(wallet, buyTrade!);
+  console.log();
+  console.log("Buy Quote:", JSON.stringify(buyQuote, null, 2));
+  console.log("buying token...");
+  const buyTx = await strat.createBuyTransaction(wallet, buyTrade!);
+  console.log("Buy Transaction:");
+  console.log(buyTx);
+  console.log("sending transaction...");
+  await wallet.sendTransaction(buyTx);
+  console.log("transaction sent!");
+ */
 }
 
 if (require.main === module) {
   const chain = ChainType.ETH;
   const chainConfig = getChainConfig(chain);
   const wallet = getHardhatWallet_1();
-  const ethWallet = getEthWallet_1();
+  //const ethWallet = getEthWallet_1();
 
   const inputType = InputType.ETH;
   const tokenA = ethers.ZeroAddress;
@@ -87,5 +94,5 @@ if (require.main === module) {
     tradingPointPrice: tpPrice,
   };
 
-  uniswapV3StrategyInteraction(chain, ethWallet, buyTrade, sellTrade).catch(console.error);
+  uniswapV3StrategyInteraction(chain, wallet, buyTrade, sellTrade).catch(console.error);
 }
