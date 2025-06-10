@@ -2,8 +2,9 @@ import { AbiCoder, Contract, dnsEncode, Wallet } from "ethers";
 import { IV4ExactInputParams, IV4ExactInputSingleParams } from "../universal-router/universal-router-types";
 
 /**
- * @description UniswapV4Router is a helper class to encode transaction data to use in the universal router.
- * It's not a deployed contract, it acts as an intermediary between the universal router and the uniswap v4 for swaps.
+ * @description UniswapV4Router is an abstract contract not meant to be deployed
+ *  This abstraction is created for the purpose to encode pool actions to be used as input for the universal router.
+ *  It acts as an intermediary between the universal router and the uniswap v4 for swaps.
  */
 //TODO: Static class?
 export class UniswapV4Router {
