@@ -96,81 +96,15 @@ export class UniswapV3Strategy implements ITradingStrategy {
   }
 
   /**
-   * Gets the WETH liquidity for a given token pair (can be used to get ETH liquidity)
-   * @param wallet Connected wallet to query liquidity
-   * @param tokenAddress Address of the token to check liquidity for
-   * @returns WETH liquidity amount as a string
-   */
-  async getTokenWethLiquidity(wallet: Wallet, tokenAddress: string): Promise<string> {
-    try {
-      const feeTiers = [FeeAmount.LOWEST, FeeAmount.LOW, FeeAmount.MEDIUM, FeeAmount.HIGH];
-
-      let bestLiquidity = "";
-      let bestPoolAddress = "";
-
-      for (const feeTier of feeTiers) {
-        const poolAddress = await this.factory.getPoolAddress(wallet, tokenAddress, this.WETH_ADDRESS, feeTier);
-        if (!poolAddress || poolAddress === ethers.ZeroAddress) continue;
-
-        const encodedData = ERC20_INTERFACE.encodeFunctionData("balanceOf", [poolAddress]);
-
-        const tx: TransactionRequest = {
-          to: this.WETH_ADDRESS,
-          data: encodedData,
-        };
-
-        const ethLiquidity = await wallet.call(tx);
-        const ethLiquidityFormatted = ethers.formatEther(ethLiquidity);
-
-        console.log("fee:", feeTier);
-        console.log("pool address:", poolAddress);
-        console.log("pool weth balance: ", ethLiquidityFormatted);
-
-        if (ethLiquidity > bestLiquidity) {
-          bestLiquidity = ethLiquidityFormatted;
-          bestPoolAddress = poolAddress;
-          console.log("new best liquidity:", bestLiquidity);
-        }
-      }
-
-      const ethLiquidityFormatted = ethers.formatEther(parseFloat(bestLiquidity));
-      return ethLiquidityFormatted;
-    } catch (error) {
-      console.error(
-        `Error checking V3 liquidity for ${tokenAddress}: ${error instanceof Error ? error.message : "Unknown error"}`,
-      );
-      return "0";
-    }
-  }
-
-  /**
-   * Gets the current token price in USDC by using WETH as intermediary trade token
-   * @param wallet Connected wallet to query the price
-   * @param tokenAddress Address of the token to get price for
-   * @returns Token price in USDC as a string
-   */
-  async getTokenUsdcPrice(wallet: Wallet, tokenAddress: string): Promise<string> {
-    const VIRTUAL_ADDRESS = "0x0b3e328455c4059EEb9e3f84b5543F74E24e7E1b";
-    const path = [tokenAddress, this.WETH_ADDRESS, this.USDC_ADDRESS];
-    const fees = [FeeAmount.MEDIUM, FeeAmount.MEDIUM];
-    const encodedPath = encodePath(path, fees);
-    const amountIn = ethers.parseUnits("1", 18);
-
-    const { amountOut } = await this.quoter.quoteExactInput(wallet, encodedPath, amountIn);
-    const amountOutFormatted = ethers.formatUnits(amountOut, this.USDC_DECIMALS);
-    return amountOutFormatted;
-  }
-
-  /**
    * Gets a comprehensive quote for a buy trade by mirroring the exact transaction creation logic
    * @param wallet Connected wallet to query the price
    * @param trade Buy trade creation parameters
    * @returns Token price in USDC as a string
    */
   async getBuyTradeQuote(wallet: Wallet, trade: BuyTradeCreationDto): Promise<TradeQuote> {
-    await validateNetwork(wallet,this.chain);
+    await validateNetwork(wallet, this.chain);
 
-    const outputToken = await createMinimalErc20(trade.outputToken,wallet.provider!);
+    const outputToken = await createMinimalErc20(trade.outputToken, wallet.provider!);
 
     let outputAmount = "0";
     let priceImpact = 0;
@@ -178,25 +112,22 @@ export class UniswapV3Strategy implements ITradingStrategy {
 
     const isETHInputETHAmount = trade.inputType === InputType.ETH && trade.inputToken === ethers.ZeroAddress;
     const isETHInputUSDAmount = trade.inputType === InputType.USD && trade.inputToken === ethers.ZeroAddress;
-    const isTOKENInputTOKENAmount = trade.inputType === InputType.TOKEN && trade.inputToken !== ethers.ZeroAddress
+    const isTOKENInputTOKENAmount = trade.inputType === InputType.TOKEN && trade.inputToken !== ethers.ZeroAddress;
 
     if (isETHInputETHAmount) {
-
     }
 
     if (isETHInputUSDAmount) {
-
     }
 
     if (isTOKENInputTOKENAmount) {
-
     }
 
     return {
       outputAmount,
       priceImpact,
-      route
-    }
+      route,
+    };
   }
 
   /**
@@ -230,25 +161,41 @@ export class UniswapV3Strategy implements ITradingStrategy {
     const isTOKENInputTOKENAmount = trade.inputType === InputType.TOKEN && trade.inputToken !== ethers.ZeroAddress;
 
     if (isETHInputETHAmount) {
-
+      // TODO: find best pool/pools for trade
       const tokenIn = this.WETH_ADDRESS || ethers.ZeroAddress;
       const tokenOut = outputToken.getTokenAddress();
       const fee = FeeAmount.MEDIUM;
 
-      let amountOutMin = 0n
-      const sqrtPriceLimitX96 = 0n
+      let amountOutMin = 0n;
+      const sqrtPriceLimitX96 = 0n;
 
       const amountIn = ethers.parseEther(trade.inputAmount);
 
-      const {amountOut} = await this.quoter.quoteExactInputSingle(wallet, tokenIn,tokenIn,fee,recipient,amountIn,amountOutMin,sqrtPriceLimitX96);
+      const { amountOut } = await this.quoter.quoteExactInputSingle(
+        wallet,
+        tokenIn,
+        tokenOut,
+        fee,
+        recipient,
+        amountIn,
+        amountOutMin,
+        sqrtPriceLimitX96,
+      );
       amountOutMin = (amountOut * 95n) / 100n;
 
-      tx = this.router.createExactInputSingleTransaction(tokenIn,tokenOut,fee,recipient,amountIn,amountOutMin,sqrtPriceLimitX96);
+      tx = this.router.createExactInputSingleTransaction(
+        tokenIn,
+        tokenOut,
+        fee,
+        recipient,
+        amountIn,
+        amountOutMin,
+        sqrtPriceLimitX96,
+      );
       tx.value = amountIn;
     }
 
     if (isETHInputUSDAmount) {
-
     }
 
     if (isTOKENInputTOKENAmount) {
