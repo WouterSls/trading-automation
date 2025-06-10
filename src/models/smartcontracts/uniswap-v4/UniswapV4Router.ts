@@ -1,5 +1,13 @@
-import { AbiCoder, Contract, dnsEncode, Wallet } from "ethers";
-import { IV4ExactInputParams, IV4ExactInputSingleParams } from "../universal-router/universal-router-types";
+import { AbiCoder, Contract, dnsEncode, ethers, Wallet } from "ethers";
+import {
+  IV4ExactInputParams,
+  IV4ExactInputSingleParams,
+  IV4SettleParams,
+  IV4TakeParams,
+  V4PoolAction,
+  V4PoolActionConstants,
+} from "../universal-router/universal-router-types";
+import { PoolKey } from "./uniswap-v4-types";
 
 /**
  * @description UniswapV4Router is an abstract contract not meant to be deployed
@@ -10,7 +18,57 @@ import { IV4ExactInputParams, IV4ExactInputSingleParams } from "../universal-rou
 export class UniswapV4Router {
   constructor() {}
 
-  encodeSwapExactInputSingle(swapParams: IV4ExactInputSingleParams) {
+  encodeV4SwapExactInputSingle(poolKey: PoolKey, zeroForOne: boolean, amountIn: bigint, amountOutMinimum: bigint, recipient: string): string {
+
+    const swapParams: IV4ExactInputSingleParams = {
+      poolKey: poolKey,
+      zeroForOne: zeroForOne,
+      amountIn: amountIn,
+      amountOutMinimum: amountOutMinimum,
+      hookData: recipient,
+    };
+
+    const settleParams: IV4SettleParams = {
+      inputCurrency: poolKey.currency0,
+      amountIn: amountIn,
+      bool: zeroForOne,
+    };
+
+    const takeParams: IV4TakeParams = {
+      outputCurrency: poolKey.currency1,
+      recipient: recipient,
+      amount: V4PoolActionConstants.OPEN_DELTA,
+    };
+
+    const actions = ethers.concat([V4PoolAction.SWAP_EXACT_IN_SINGLE, V4PoolAction.SETTLE, V4PoolAction.TAKE]);
+    const encodedSwapExactInputSingleParams = this.encodeSwapExactInputSingle(swapParams);
+    const encodedSettleParams = this.encodeSettleAll(settleParams);
+    const encodedTakeParams = this.encodeTakeAll(takeParams);
+
+    const encodedInput = this.encodeSwapCommandInput(
+      actions,
+      encodedSwapExactInputSingleParams,
+      encodedSettleParams,
+      encodedTakeParams,
+    );
+
+    return encodedInput;
+  }
+
+  private encodeSwapCommandInput(
+    actions: string,
+    encodedSwapParams: string,
+    encodedSettleParams: string,
+    encodedTakeParams: string,
+  ) {
+    const encodedSwapCommandInput = AbiCoder.defaultAbiCoder().encode(
+      ["bytes", "bytes[]"],
+      [actions, [encodedSwapParams, encodedSettleParams, encodedTakeParams]],
+    );
+    return encodedSwapCommandInput;
+  }
+
+  private encodeSwapExactInputSingle(swapParams: IV4ExactInputSingleParams) {
     const poolKeyTuple = [
       swapParams.poolKey.currency0,
       swapParams.poolKey.currency1,
@@ -32,16 +90,25 @@ export class UniswapV4Router {
     return encodedData;
   }
 
-  encodeSwapExactInput(swapParams:IV4ExactInputParams) {
-    const encodedData = AbiCoder.defaultAbiCoder().encode(
-      [],
-      []
-    )
+  private encodeSwapExactInput(swapParams: IV4ExactInputParams) {
+    const encodedData = AbiCoder.defaultAbiCoder().encode([], []);
 
     return encodedData;
   }
 
-  encodeSettleAll() {}
+  private encodeSettleAll(settleParams: IV4SettleParams) {
+    const encodedParams = AbiCoder.defaultAbiCoder().encode(
+      ["address", "uint128", "bool"],
+      [settleParams.inputCurrency, settleParams.amountIn, settleParams.bool],
+    );
+    return encodedParams;
+  }
 
-  encodeTakeAll() {}
+  private encodeTakeAll(takeParams: IV4TakeParams) {
+    const encodedParams = AbiCoder.defaultAbiCoder().encode(
+      ["address", "address", "uint256"],
+      [takeParams.outputCurrency, takeParams.recipient, takeParams.amount],
+    );
+    return encodedParams;
+  }
 }
