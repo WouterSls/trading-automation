@@ -9,6 +9,7 @@ import { getEthWallet_1, getHardhatWallet_1 } from "../../../src/hooks/useSetup"
 import { ChainType, getChainConfig } from "../../../src/config/chain-config";
 import { createMinimalErc20 } from "../../../src/models/smartcontracts/ERC/erc-utils";
 import { UniswapV4Strategy } from "../../../src/models/trading/strategies/UniswapV4Strategy";
+import { TraderFactory } from "../../../src/models/trading/TraderFactory";
 
 async function uniswapV4StrategyInteraction(
   chain: ChainType,
@@ -17,8 +18,6 @@ async function uniswapV4StrategyInteraction(
   sellTrade?: SellTradeCreationDto,
 ) {
   const chainConfig = getChainConfig(chain);
-
-  const strat = new UniswapV4Strategy(`UniswapV4-${chain}`, chain);
 
   const usdcAddress = chainConfig.tokenAddresses.usdc;
   const wethAddress = chainConfig.tokenAddresses.weth;
@@ -39,19 +38,20 @@ async function uniswapV4StrategyInteraction(
   console.log(`\t${weth.getSymbol()} balance: ${wethBalance}`);
   console.log();
 
-  //console.log("Buy Trade:", JSON.stringify(buyTrade, null, 2));
-  //console.log();
-
-  const ethUsdcPrice = await strat.getEthUsdcPrice(wallet);
-  console.log("Strat:", strat.getName());
-  console.log("ETH/USDC price:", ethUsdcPrice);
+  const trader = await TraderFactory.createTrader(wallet);
+  const strategies = trader.getStrategies();
+  for (const strat of strategies) {
+    console.log(strat.getName());
+    const price = await strat.getEthUsdcPrice(wallet);
+    console.log(`\tETH/USDC: ${price}`);
+  }
 }
 
 if (require.main === module) {
   const chain = ChainType.ETH;
   const chainConfig = getChainConfig(chain);
-  //const wallet = getHardhatWallet_1();
-  const ethWallet = getEthWallet_1();
+  const wallet = getHardhatWallet_1();
+  //const ethWallet = getEthWallet_1();
 
   const inputType = InputType.ETH;
   const tokenA = ethers.ZeroAddress;
@@ -80,5 +80,5 @@ if (require.main === module) {
     tradingPointPrice: tpPrice,
   };
 
-  uniswapV4StrategyInteraction(chain, ethWallet, buyTrade, sellTrade).catch(console.error);
+  uniswapV4StrategyInteraction(chain, wallet, buyTrade, sellTrade).catch(console.error);
 }
