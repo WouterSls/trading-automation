@@ -11,13 +11,10 @@ import { createMinimalErc20 } from "../../../src/models/smartcontracts/ERC/erc-u
 import { UniswapV4Strategy } from "../../../src/models/trading/strategies/UniswapV4Strategy";
 import { TraderFactory } from "../../../src/models/trading/TraderFactory";
 
-async function uniswapV4StrategyInteraction(
-  chain: ChainType,
-  wallet: Wallet,
-  buyTrade?: BuyTradeCreationDto,
-  sellTrade?: SellTradeCreationDto,
-) {
+async function uniswapV4StrategyInteraction(chain: ChainType, wallet: Wallet) {
   const chainConfig = getChainConfig(chain);
+
+  const blockNumber = await wallet.provider!.getBlockNumber();
 
   const usdcAddress = chainConfig.tokenAddresses.usdc;
   const wethAddress = chainConfig.tokenAddresses.weth;
@@ -31,27 +28,13 @@ async function uniswapV4StrategyInteraction(
   console.log("--------------------------------");
   console.log("Chain", chain);
   console.log("--------------------------------");
+  console.log("Block:", blockNumber);
   console.log("Wallet Info:");
   console.log("\twallet address", wallet.address);
   console.log("\tETH balance", ethers.formatEther(ethBalance));
   console.log(`\t${usdc.getSymbol()} balance: ${usdcBalance}`);
   console.log(`\t${weth.getSymbol()} balance: ${wethBalance}`);
   console.log();
-
-  const trader = await TraderFactory.createTrader(wallet);
-  const strategies = trader.getStrategies();
-  for (const strat of strategies) {
-    console.log(strat.getName());
-    const price = await strat.getEthUsdcPrice(wallet);
-    console.log(`\tETH/USDC: ${price}`);
-  }
-}
-
-if (require.main === module) {
-  const chain = ChainType.ETH;
-  const chainConfig = getChainConfig(chain);
-  const wallet = getHardhatWallet_1();
-  //const ethWallet = getEthWallet_1();
 
   const inputType = InputType.ETH;
   const tokenA = ethers.ZeroAddress;
@@ -80,5 +63,34 @@ if (require.main === module) {
     tradingPointPrice: tpPrice,
   };
 
-  uniswapV4StrategyInteraction(chain, wallet, buyTrade, sellTrade).catch(console.error);
+  console.log("--------------------------------");
+  console.log("Trades");
+  console.log("--------------------------------");
+  console.log("Buy Trade:");
+  console.log("\tToken:", buyTrade.outputToken);
+  console.log("\tInput type:", buyTrade.inputType);
+  console.log("\tInput token: ", buyTrade.inputToken);
+  console.log("\tInput amount:", buyTrade.inputAmount);
+  console.log();
+
+  const trader = await TraderFactory.createTrader(wallet);
+  const strategies = trader.getStrategies();
+  for (const strat of strategies) {
+    console.log(strat.getName());
+    const price = await strat.getEthUsdcPrice(wallet);
+    console.log(`\tETH/USDC: ${price}`);
+    const quote = await strat.getBuyTradeQuote(wallet, buyTrade);
+    console.log("\tQuote");
+    console.log("\t Output amount:", quote.outputAmount);
+    console.log("\t Route:", quote.route);
+  }
+}
+
+if (require.main === module) {
+  const chain = ChainType.ETH;
+  const chainConfig = getChainConfig(chain);
+  const wallet = getHardhatWallet_1();
+  //const wallet = getEthWallet_1();
+
+  uniswapV4StrategyInteraction(chain, wallet).catch(console.error);
 }
