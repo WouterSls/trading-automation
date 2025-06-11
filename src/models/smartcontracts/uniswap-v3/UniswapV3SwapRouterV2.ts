@@ -232,12 +232,27 @@ export class UniswapV3SwapRouterV2 {
   }
 
   /**
+   * Function for encoding exactInput transaction data
+   * Can be used in multicall transaction crafting
+   *
+   * @param encodedPath The encoded path including the path of tokens to trade along of with the fee amounts
+   * @param recipient The recipient of the tokens
+   * @param amountIn The amount of input tokens to trade
+   * @param amountOutMin The minimum amount of tokens to receive
+   * @returns The encoded transaction data
+   */
+  encodeWrapETH(value: bigint): string {
+    const encodedData = this.routerContract.interface.encodeFunctionData("wrapETH", [value]);
+    return encodedData;
+  }
+
+  /**
    * Creates a multicall transaction for batching multiple router operations
    * @param data Array of encoded function data to execute in batch
    * @param deadline Optional deadline timestamp (defaults to 20 minutes from now)
    * @returns Transaction request for the multicall
    */
-  createMulticallTransaction(data: string[], deadline: number): TransactionRequest {
+  createMulticallTransaction(deadline: number, data: string[]): TransactionRequest {
     const encodedData = this.routerContract.interface.encodeFunctionData("multicall", [deadline, data]);
 
     const tx: TransactionRequest = {
