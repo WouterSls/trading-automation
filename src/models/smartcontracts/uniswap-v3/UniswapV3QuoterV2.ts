@@ -24,43 +24,6 @@ export class UniswapV3QuoterV2 {
   getQuoterAddress = () => this.quoterAddress;
 
   /**
-   * Quotes the amount out for a multi-hop exact input swap
-   * @param wallet - The wallet instance connected to the blockchain provider
-   * @param path - The encoded path for the multi-hop swap (token addresses and fees concatenated)
-   * @param amountIn - The exact input amount to swap
-   * @returns Promise containing the quoted output amount, price after swap, ticks crossed, and gas estimate
-   */
-  async quoteExactInput(
-    wallet: Wallet,
-    path: string,
-    amountIn: bigint,
-  ): Promise<{ amountOut: bigint; sqrtPriceX96After: bigint; initializedTicksCrossed: bigint; gasEstimate: bigint }> {
-    this.quoterContract = this.quoterContract.connect(wallet) as Contract;
-
-    await this._networkAndQuoterCheck(wallet);
-
-    try {
-      const { amountOut, sqrtPriceX96After, initializedTicksCrossed, gasEstimate } =
-        await this.quoterContract.quoteExactInput.staticCall(path, amountIn);
-
-      return { amountOut, sqrtPriceX96After, initializedTicksCrossed, gasEstimate };
-    } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : "An unknown error occurred";
-
-      if (errorMessage.toLowerCase().includes("no data present")) {
-        return {
-          amountOut: 0n,
-          sqrtPriceX96After: 0n,
-          initializedTicksCrossed: 0n,
-          gasEstimate: 0n,
-        };
-      }
-
-      throw error;
-    }
-  }
-
-  /**
    * Quotes the amount out for a single-hop exact input swap
    * @param wallet - The wallet instance connected to the blockchain provider
    * @param tokenIn - The input token address
@@ -117,32 +80,32 @@ export class UniswapV3QuoterV2 {
   }
 
   /**
-   * Quotes the amount in required for a multi-hop exact output swap
+   * Quotes the amount out for a multi-hop exact input swap
    * @param wallet - The wallet instance connected to the blockchain provider
-   * @param path - The encoded path for the multi-hop swap (token addresses and fees concatenated, in reverse order)
-   * @param amountOut - The exact output amount desired
-   * @returns Promise containing the quoted input amount required, price after swap, ticks crossed, and gas estimate
+   * @param path - The encoded path for the multi-hop swap (token addresses and fees concatenated)
+   * @param amountIn - The exact input amount to swap
+   * @returns Promise containing the quoted output amount, price after swap, ticks crossed, and gas estimate
    */
-  async quoteExactOutput(
+  async quoteExactInput(
     wallet: Wallet,
     path: string,
-    amountOut: bigint,
-  ): Promise<{ amountIn: bigint; sqrtPriceX96After: bigint; initializedTicksCrossed: bigint; gasEstimate: bigint }> {
+    amountIn: bigint,
+  ): Promise<{ amountOut: bigint; sqrtPriceX96After: bigint; initializedTicksCrossed: bigint; gasEstimate: bigint }> {
     this.quoterContract = this.quoterContract.connect(wallet) as Contract;
 
     await this._networkAndQuoterCheck(wallet);
 
     try {
-      const { amountIn, sqrtPriceX96After, initializedTicksCrossed, gasEstimate } =
-        await this.quoterContract.quoteExactOutput.staticCall(path, amountOut);
+      const { amountOut, sqrtPriceX96After, initializedTicksCrossed, gasEstimate } =
+        await this.quoterContract.quoteExactInput.staticCall(path, amountIn);
 
-      return { amountIn, sqrtPriceX96After, initializedTicksCrossed, gasEstimate };
+      return { amountOut, sqrtPriceX96After, initializedTicksCrossed, gasEstimate };
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : "An unknown error occurred";
 
       if (errorMessage.toLowerCase().includes("no data present")) {
         return {
-          amountIn: 0n,
+          amountOut: 0n,
           sqrtPriceX96After: 0n,
           initializedTicksCrossed: 0n,
           gasEstimate: 0n,
@@ -186,6 +149,43 @@ export class UniswapV3QuoterV2 {
     try {
       const { amountIn, sqrtPriceX96After, initializedTicksCrossed, gasEstimate } =
         await this.quoterContract.quoteExactOutputSingle.staticCall(exactOutputSingleParams);
+
+      return { amountIn, sqrtPriceX96After, initializedTicksCrossed, gasEstimate };
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : "An unknown error occurred";
+
+      if (errorMessage.toLowerCase().includes("no data present")) {
+        return {
+          amountIn: 0n,
+          sqrtPriceX96After: 0n,
+          initializedTicksCrossed: 0n,
+          gasEstimate: 0n,
+        };
+      }
+
+      throw error;
+    }
+  }
+
+  /**
+   * Quotes the amount in required for a multi-hop exact output swap
+   * @param wallet - The wallet instance connected to the blockchain provider
+   * @param path - The encoded path for the multi-hop swap (token addresses and fees concatenated, in reverse order)
+   * @param amountOut - The exact output amount desired
+   * @returns Promise containing the quoted input amount required, price after swap, ticks crossed, and gas estimate
+   */
+  async quoteExactOutput(
+    wallet: Wallet,
+    path: string,
+    amountOut: bigint,
+  ): Promise<{ amountIn: bigint; sqrtPriceX96After: bigint; initializedTicksCrossed: bigint; gasEstimate: bigint }> {
+    this.quoterContract = this.quoterContract.connect(wallet) as Contract;
+
+    await this._networkAndQuoterCheck(wallet);
+
+    try {
+      const { amountIn, sqrtPriceX96After, initializedTicksCrossed, gasEstimate } =
+        await this.quoterContract.quoteExactOutput.staticCall(path, amountOut);
 
       return { amountIn, sqrtPriceX96After, initializedTicksCrossed, gasEstimate };
     } catch (error: unknown) {
