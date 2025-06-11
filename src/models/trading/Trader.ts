@@ -1,7 +1,7 @@
 import { ethers, TransactionReceipt, TransactionRequest, Wallet } from "ethers";
 import { ChainType, getOutputTokenAddress, getChainConfig } from "../../config/chain-config";
 import { ITradingStrategy } from "./ITradingStrategy";
-import { BuyTrade, BuyTradeCreationDto, TradeQuote, SellTrade, SellTradeCreationDto } from "./types/_index";
+import { BuyTrade, BuyTradeCreationDto, Quote, SellTrade, SellTradeCreationDto } from "./types/_index";
 import { decodeLogs } from "../../lib/utils";
 import { ERC20_INTERFACE } from "../../lib/smartcontract-abis/erc20";
 import { TRADING_CONFIG } from "../../config/trading-config";
@@ -97,7 +97,7 @@ export class Trader {
    */
   private async getBestBuyStrategy(trade: BuyTradeCreationDto): Promise<ITradingStrategy> {
     let bestStrategy: ITradingStrategy | null = null;
-    let bestQuote: TradeQuote | null = null;
+    let bestQuote: Quote | null = null;
 
     console.log("Comparing buy trade quotes across strategies...");
 
@@ -109,7 +109,7 @@ export class Trader {
         console.log(`${strategy.getName()}:`);
         console.log(`  Output: ${quote.outputAmount}`);
         console.log(`  Price Impact: ${quote.priceImpact}%`);
-        console.log(`  Route: ${quote.route.join(" → ")}`);
+        console.log(`  Route: ${quote.route.path.join(" → ")}`);
 
         if (!bestQuote || bestQuote.outputAmount < quote.outputAmount) {
           bestQuote = quote;
@@ -142,7 +142,7 @@ export class Trader {
    */
   private async getBestSellStrategy(trade: SellTradeCreationDto): Promise<ITradingStrategy> {
     let bestStrategy: ITradingStrategy | null = null;
-    let bestQuote: TradeQuote | null = null;
+    let bestQuote: Quote | null = null;
 
     console.log("Comparing sell trade quotes across strategies...");
 
@@ -154,7 +154,7 @@ export class Trader {
         console.log(`${strategy.getName()}:`);
         console.log(`  Output: ${quote.outputAmount}`);
         console.log(`  Price Impact: ${quote.priceImpact}%`);
-        console.log(`  Route: ${quote.route.join(" → ")}`);
+        console.log(`  Route: ${quote.route.path.join(" → ")}`);
 
         if (!bestQuote || bestQuote.outputAmount < quote.outputAmount) {
           bestQuote = quote;
