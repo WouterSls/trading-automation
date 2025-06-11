@@ -1,13 +1,16 @@
+import { PoolKey } from "../../smartcontracts/uniswap-v4/uniswap-v4-types";
+
 export interface Quote {
   outputAmount: string;
   priceImpact: number;
-  tradeInfo: TradeInfo;
+  route: Route;
   //gasEstimate: string;
   //confidence: number; // 0-1 based on liquidity depth
 }
 
-export interface TradeInfo {
-  wethNeeded: boolean;
-  route: string[];
-  fee: number;
+export interface Route {
+  path: string[];
+  fees: number[];
+  encodedPath: string | null;
+  poolKey: PoolKey | null;
 }
