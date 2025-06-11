@@ -1,8 +1,10 @@
 import { ethers, Wallet } from "ethers";
 import {
+  BuyTrade,
   BuyTradeCreationDto,
   InputType,
   OutputToken,
+  Quote,
   SellTradeCreationDto,
 } from "../../../src/models/trading/types/_index";
 import { getEthWallet_1, getHardhatWallet_1 } from "../../../src/hooks/useSetup";
@@ -75,15 +77,36 @@ async function uniswapV4StrategyInteraction(chain: ChainType, wallet: Wallet) {
 
   const trader = await TraderFactory.createTrader(wallet);
   const strategies = trader.getStrategies();
+
+  const uniV2 = strategies.filter((strat) => strat.getName().includes("UniswapV2"))[0];
+  const uniV3 = strategies.filter((strat) => strat.getName().includes("UniswapV3"))[0];
+
+  const buyTx = await uniV3.createBuyTransaction(wallet, buyTrade);
+  console.log("TX");
+  console.log("--------------------------------");
+  console.log(buyTx);
+  console.log("--------------------------------");
+
+  console.log("Sending...");
+  const txResponse = await wallet.sendTransaction(buyTx);
+  const txReceipt = await txResponse.wait(1);
+  console.log("Confirmed!");
+
+  return;
+  const uniV4 = strategies.filter((strat) => strat.getName().includes("UniswapV4"))[0];
+
   for (const strat of strategies) {
     console.log(strat.getName());
     const price = await strat.getEthUsdcPrice(wallet);
     console.log(`\tETH/USDC: ${price}`);
-    const quote = await strat.getBuyTradeQuote(wallet, buyTrade);
+    const quote: Quote = await strat.getBuyTradeQuote(wallet, buyTrade);
     console.log("\tQuote");
     console.log("\t Output amount:", quote.outputAmount);
-    console.log("\t Route:", quote.route);
+    console.log("\t Route:", quote.route.path);
   }
+
+  const tradeExecution: BuyTrade = await trader.buy(buyTrade);
+  console.log(tradeExecution);
 }
 
 if (require.main === module) {

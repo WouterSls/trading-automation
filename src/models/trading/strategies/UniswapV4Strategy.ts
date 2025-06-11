@@ -9,13 +9,7 @@ import {
 } from "../../../lib/approval-strategies";
 
 import { ITradingStrategy } from "../ITradingStrategy";
-import { ERC20_INTERFACE } from "../../../lib/smartcontract-abis/erc20";
-import {
-  BuyTradeCreationDto,
-  SellTradeCreationDto,
-  TradeQuote,
-  InputType,
-} from "../types/_index";
+import { BuyTradeCreationDto, SellTradeCreationDto, Quote, InputType, Route } from "../types/_index";
 import { createMinimalErc20 } from "../../smartcontracts/ERC/erc-utils";
 import { validateNetwork } from "../../../lib/utils";
 import { TRADING_CONFIG } from "../../../config/trading-config";
@@ -23,11 +17,14 @@ import { UniswapV4Quoter } from "../../smartcontracts/uniswap-v4/UniswapV4Quoter
 import { UniswapV4Router } from "../../smartcontracts/uniswap-v4/UniswapV4Router";
 import { UniversalRouter } from "../../smartcontracts/universal-router/UniversalRouter";
 import { CommandType } from "../../smartcontracts/universal-router/universal-router-types";
+import { RouteOptimizer } from "../RouteOptimizer";
 
 export class UniswapV4Strategy implements ITradingStrategy {
   private quoter: UniswapV4Quoter;
   private router: UniswapV4Router;
   private universalRouter: UniversalRouter;
+
+  private routeOptimzer: RouteOptimizer;
 
   private WETH_ADDRESS: string;
   private USDC_ADDRESS: string;
@@ -47,6 +44,8 @@ export class UniswapV4Strategy implements ITradingStrategy {
     this.quoter = new UniswapV4Quoter(chain);
     this.router = new UniswapV4Router();
     this.universalRouter = new UniversalRouter(chain);
+
+    this.routeOptimzer = new RouteOptimizer(chain);
   }
 
   /**
@@ -108,10 +107,56 @@ export class UniswapV4Strategy implements ITradingStrategy {
 
     return formattedAmountOut;
   }
-  async getBuyTradeQuote(wallet: Wallet, trade: BuyTradeCreationDto): Promise<TradeQuote> {
-    throw new Error("Not implemented");
+  async getBuyTradeQuote(wallet: Wallet, trade: BuyTradeCreationDto): Promise<Quote> {
+    await validateNetwork(wallet, this.chain);
+
+    const outputToken = await createMinimalErc20(trade.outputToken, wallet.provider!);
+
+    let outputAmount = "0";
+    let priceImpact = 0;
+    let route: Route = {
+      path: [],
+      fees: [],
+      encodedPath: null,
+      poolKey: null,
+    };
+
+    const isETHInputETHAmount = trade.inputType === InputType.ETH && trade.inputToken === ethers.ZeroAddress;
+    const isETHInputUSDAmount = trade.inputType === InputType.USD && trade.inputToken === ethers.ZeroAddress;
+    const isTOKENInputTOKENAmount = trade.inputType === InputType.TOKEN && trade.inputToken !== ethers.ZeroAddress;
+
+    if (isETHInputETHAmount) {
+      const amountIn = ethers.parseEther(trade.inputAmount);
+      const hookData = ethers.ZeroAddress;
+
+      route = await this.routeOptimzer.uniV4GetOptimizedRoute(trade.inputToken, outputToken.getTokenAddress());
+
+      const isZeroForOne = route.poolKey!.currency0 === trade.inputToken;
+
+      const { amountOut, gasEstimate } = await this.quoter.quoteExactInputSingle(
+        wallet,
+        route.poolKey!,
+        isZeroForOne,
+        amountIn,
+        hookData,
+      );
+
+      outputAmount = ethers.formatUnits(amountOut, outputToken.getDecimals());
+    }
+
+    if (isETHInputUSDAmount) {
+    }
+
+    if (isTOKENInputTOKENAmount) {
+    }
+
+    return {
+      outputAmount,
+      priceImpact,
+      route,
+    };
   }
-  async getSellTradeQuote(wallet: Wallet, trade: SellTradeCreationDto): Promise<TradeQuote> {
+  async getSellTradeQuote(wallet: Wallet, trade: SellTradeCreationDto): Promise<Quote> {
     throw new Error("Not implemented");
   }
 

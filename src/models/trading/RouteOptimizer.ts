@@ -1,38 +1,63 @@
 import { ethers } from "ethers";
-import { PoolKey } from "../smartcontracts/uniswap-v4/uniswap-v4-types";
 import { getLowPoolKey } from "../smartcontracts/uniswap-v4/uniswap-v4-utils";
 import { encodePath, FeeAmount } from "../smartcontracts/uniswap-v3";
-
-const WETH_ADDRESS = "";
+import { ChainType, getChainConfig } from "../../config/chain-config";
+import { Route } from "./types/quoting-types";
 
 export class RouteOptimizer {
-  async uniV2GetBestPath(tokenIn: string, tokenOut: string): Promise<string[]> {
-    let bestPath: string[] = [];
+  private WETH_ADDRESS;
+
+  constructor(private chain: ChainType) {
+    const chainConfig = getChainConfig(chain);
+    this.WETH_ADDRESS = chainConfig.tokenAddresses.weth;
+  }
+
+  async uniV2GetOptimizedRoute(tokenIn: string, tokenOut: string): Promise<Route> {
+    const route: Route = {
+      path: [],
+      fees: [],
+      encodedPath: null,
+      poolKey: null,
+    };
+
+    if (tokenIn === ethers.ZeroAddress) {
+      tokenIn = this.WETH_ADDRESS;
+    }
+    route.path = [tokenIn, tokenOut];
+    // route.path = [tokenIn,this.WETH_ADDRESS,tokenOut];
 
     // Action plan
     // 1. Quote route directly
     // 2. Quote Using Known Liquid pairs
     // 3. Create Custom Routes based on TheGraph Info
 
-    // TODO: fix WETH_ADDRESS = "";
-    if (tokenIn === ethers.ZeroAddress) {
-      bestPath = [WETH_ADDRESS, tokenOut];
-    } else {
-      bestPath = [tokenIn, tokenOut];
-    }
-
-    return bestPath;
+    return route;
   }
 
-  async uniV3GetBestEncodedPath(tokenIn: string, tokenOut: string): Promise<string> {
-    const path = [tokenIn, tokenOut];
-    const fees = [FeeAmount.MEDIUM];
-    let bestEncodedPath = encodePath(path, fees);
-    return bestEncodedPath;
+  async uniV3GetOptimizedRoute(tokenIn: string, tokenOut: string): Promise<Route> {
+    const route: Route = {
+      path: [],
+      fees: [],
+      encodedPath: null,
+      poolKey: null,
+    };
+    route.path = [tokenIn, tokenOut];
+    route.fees = [FeeAmount.MEDIUM];
+    route.encodedPath = encodePath(route.path, route.fees);
+    return route;
   }
 
-  async uniV4GetBestPoolKey(tokenIn: string, tokenOut: string): Promise<PoolKey> {
-    const poolKey: PoolKey = getLowPoolKey(tokenIn, tokenOut);
-    return poolKey;
+  async uniV4GetOptimizedRoute(tokenIn: string, tokenOut: string): Promise<Route> {
+    const route: Route = {
+      path: [],
+      fees: [],
+      encodedPath: null,
+      poolKey: null,
+    };
+
+    route.poolKey = getLowPoolKey(tokenIn, tokenOut);
+    route.path = [tokenIn, tokenOut];
+
+    return route;
   }
 }

@@ -6,19 +6,20 @@ import { UniswapV3Factory } from "../../smartcontracts/uniswap-v3/UniswapV3Facto
 import { UniswapV3SwapRouterV2 } from "../../smartcontracts/uniswap-v3/UniswapV3SwapRouterV2";
 
 import { ITradingStrategy } from "../ITradingStrategy";
-import { ERC20_INTERFACE } from "../../../lib/smartcontract-abis/erc20";
 import { FeeAmount } from "../../smartcontracts/uniswap-v3/uniswap-v3-types";
-import { BuyTradeCreationDto, InputType, SellTradeCreationDto, TradeQuote } from "../types/_index";
+import { BuyTradeCreationDto, InputType, SellTradeCreationDto, Quote, Route } from "../types/_index";
 import { validateNetwork } from "../../../lib/utils";
 import { TRADING_CONFIG } from "../../../config/trading-config";
 import { ensureInfiniteApproval, ensureStandardApproval } from "../../../lib/approval-strategies";
-import { encodePath } from "../../smartcontracts/uniswap-v3";
 import { createMinimalErc20 } from "../../smartcontracts/ERC/erc-utils";
+import { RouteOptimizer } from "../RouteOptimizer";
 
 export class UniswapV3Strategy implements ITradingStrategy {
   private quoter: UniswapV3QuoterV2;
   private factory: UniswapV3Factory;
   private router: UniswapV3SwapRouterV2;
+
+  private routeOptimizer: RouteOptimizer;
 
   private WETH_ADDRESS: string;
   private USDC_ADDRESS: string;
@@ -38,6 +39,8 @@ export class UniswapV3Strategy implements ITradingStrategy {
     this.quoter = new UniswapV3QuoterV2(chain);
     this.factory = new UniswapV3Factory(chain);
     this.router = new UniswapV3SwapRouterV2(chain);
+
+    this.routeOptimizer = new RouteOptimizer(chain);
   }
 
   /**
@@ -101,20 +104,55 @@ export class UniswapV3Strategy implements ITradingStrategy {
    * @param trade Buy trade creation parameters
    * @returns Token price in USDC as a string
    */
-  async getBuyTradeQuote(wallet: Wallet, trade: BuyTradeCreationDto): Promise<TradeQuote> {
+  async getBuyTradeQuote(wallet: Wallet, trade: BuyTradeCreationDto): Promise<Quote> {
     await validateNetwork(wallet, this.chain);
 
     const outputToken = await createMinimalErc20(trade.outputToken, wallet.provider!);
 
     let outputAmount = "0";
     let priceImpact = 0;
-    let route: string[] = [];
+    let route: Route = {
+      path: [],
+      fees: [],
+      encodedPath: null,
+      poolKey: null,
+    };
 
     const isETHInputETHAmount = trade.inputType === InputType.ETH && trade.inputToken === ethers.ZeroAddress;
     const isETHInputUSDAmount = trade.inputType === InputType.USD && trade.inputToken === ethers.ZeroAddress;
     const isTOKENInputTOKENAmount = trade.inputType === InputType.TOKEN && trade.inputToken !== ethers.ZeroAddress;
 
     if (isETHInputETHAmount) {
+      const recipient = wallet.address;
+      const amountIn = ethers.parseEther(trade.inputAmount);
+      const amountOutMin = 0n;
+      const sqrtPriceLimitX96 = 0n;
+
+      route = await this.routeOptimizer.uniV3GetOptimizedRoute(this.WETH_ADDRESS, outputToken.getTokenAddress());
+
+      const isMultiHop = route.path.length > 2 && route.encodedPath;
+      const isSingleHop = route.path.length === 2 && route.encodedPath;
+
+      if (isMultiHop) {
+        //quoteExactInput
+      }
+
+      if (isSingleHop) {
+        //quoteExactInputSingle
+        const { amountOut, sqrtPriceX96After, initializedTicksCrossed, gasEstimate } =
+          await this.quoter.quoteExactInputSingle(
+            wallet,
+            route.path[0],
+            route.path[1],
+            route.fees[0],
+            recipient,
+            amountIn,
+            amountOutMin,
+            sqrtPriceLimitX96,
+          );
+
+        outputAmount = ethers.formatUnits(amountOut, outputToken.getDecimals());
+      }
     }
 
     if (isETHInputUSDAmount) {
@@ -136,7 +174,7 @@ export class UniswapV3Strategy implements ITradingStrategy {
    * @param trade Sell trade creation parameters
    * @returns Token price in USDC as a string
    */
-  async getSellTradeQuote(wallet: Wallet, trade: SellTradeCreationDto): Promise<TradeQuote> {
+  async getSellTradeQuote(wallet: Wallet, trade: SellTradeCreationDto): Promise<Quote> {
     throw new Error("Not implemented");
   }
 
@@ -162,37 +200,57 @@ export class UniswapV3Strategy implements ITradingStrategy {
 
     if (isETHInputETHAmount) {
       // TODO: find best pool/pools for trade
-      const tokenIn = this.WETH_ADDRESS || ethers.ZeroAddress;
-      const tokenOut = outputToken.getTokenAddress();
-      const fee = FeeAmount.MEDIUM;
-
+      const recipient = wallet.address;
+      const amountIn = ethers.parseEther(trade.inputAmount);
       let amountOutMin = 0n;
       const sqrtPriceLimitX96 = 0n;
 
-      const amountIn = ethers.parseEther(trade.inputAmount);
+      const route = await this.routeOptimizer.uniV3GetOptimizedRoute(this.WETH_ADDRESS, outputToken.getTokenAddress());
 
-      const { amountOut } = await this.quoter.quoteExactInputSingle(
-        wallet,
-        tokenIn,
-        tokenOut,
-        fee,
-        recipient,
-        amountIn,
-        amountOutMin,
-        sqrtPriceLimitX96,
-      );
-      amountOutMin = (amountOut * 95n) / 100n;
+      const wrapData = this.router.encodeWrapETH(amountIn);
 
-      tx = this.router.createExactInputSingleTransaction(
-        tokenIn,
-        tokenOut,
-        fee,
-        recipient,
-        amountIn,
-        amountOutMin,
-        sqrtPriceLimitX96,
-      );
-      tx.value = amountIn;
+      const isMultiHop = route.path.length > 2 && route.encodedPath;
+      const isSingleHop = route.path.length === 2 && route.encodedPath;
+
+      if (isSingleHop) {
+        const { amountOut, gasEstimate } = await this.quoter.quoteExactInputSingle(
+          wallet,
+          route.path[0],
+          route.path[1],
+          route.fees[0],
+          recipient,
+          amountIn,
+          amountOutMin,
+          sqrtPriceLimitX96,
+        );
+        amountOutMin = (amountOut * 95n) / 100n;
+
+        const swapData = this.router.encodeExactInputSingle(
+          route.path[0],
+          route.path[1],
+          route.fees[0],
+          recipient,
+          amountIn,
+          amountOutMin,
+          sqrtPriceLimitX96,
+        );
+
+        tx = this.router.createMulticallTransaction(deadline, [wrapData, swapData]);
+
+        //tx.data = wrapData;
+        //tx.to = this.router.getRouterAddress();
+
+        tx.value = amountIn;
+      }
+
+      if (isMultiHop) {
+        const { amountOut } = await this.quoter.quoteExactInput(wallet, route.encodedPath!, amountIn);
+        amountOutMin = (amountOut * 95n) / 100n;
+
+        const swapData = this.router.encodeExactInput(route.encodedPath!, recipient, amountIn, amountOutMin);
+
+        tx = this.router.createMulticallTransaction(deadline, [wrapData, swapData]);
+      }
     }
 
     if (isETHInputUSDAmount) {
