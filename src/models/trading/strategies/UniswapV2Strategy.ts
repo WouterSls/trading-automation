@@ -7,14 +7,17 @@ import { ERC20, createMinimalErc20 } from "../../smartcontracts/ERC/_index";
 import { UniswapV2RouterV2, UniswapV2Factory } from "../../smartcontracts/uniswap-v2/index";
 
 import { ITradingStrategy } from "../ITradingStrategy";
-import { BuyTradeCreationDto, SellTradeCreationDto, InputType, TradeQuote, OutputToken } from "../types/_index";
+import { BuyTradeCreationDto, SellTradeCreationDto, InputType, Quote, OutputToken, TradeInfo } from "../types/_index";
 
 import { ERC20_INTERFACE } from "../../../lib/smartcontract-abis/_index";
 import { ensureInfiniteApproval, ensureStandardApproval, validateNetwork } from "../../../lib/_index";
+import { RouteOptimizer } from "../RouteOptimizer";
 
 export class UniswapV2Strategy implements ITradingStrategy {
   private router: UniswapV2RouterV2;
   private factory: UniswapV2Factory;
+
+  private routeOptimizer: RouteOptimizer;
 
   private WETH_ADDRESS: string;
   private USDC_ADDRESS: string;
@@ -33,6 +36,8 @@ export class UniswapV2Strategy implements ITradingStrategy {
 
     this.router = new UniswapV2RouterV2(chain);
     this.factory = new UniswapV2Factory(chain);
+
+    this.routeOptimizer = new RouteOptimizer();
   }
 
   /**
@@ -81,14 +86,19 @@ export class UniswapV2Strategy implements ITradingStrategy {
    * @param trade Buy trade creation parameters
    * @returns TradeQuote with all execution details
    */
-  async getBuyTradeQuote(wallet: Wallet, trade: BuyTradeCreationDto): Promise<TradeQuote> {
+  async getBuyTradeQuote(wallet: Wallet, trade: BuyTradeCreationDto): Promise<Quote> {
     await validateNetwork(wallet, this.chain);
 
     const outputToken = await createMinimalErc20(trade.outputToken, wallet.provider!);
 
     let outputAmount = "0";
     let priceImpact = 0;
-    let route: string[] = [];
+
+    let tradeInfo: TradeInfo = {
+      route: [],
+      wethNeeded: false,
+      fee: 0,
+    };
 
     const isETHInputETHAmount = trade.inputType === InputType.ETH && trade.inputToken === ethers.ZeroAddress;
     const isETHInputUSDAmount = trade.inputType === InputType.USD && trade.inputToken === ethers.ZeroAddress;
@@ -97,9 +107,8 @@ export class UniswapV2Strategy implements ITradingStrategy {
     if (isETHInputETHAmount) {
       const amountIn = ethers.parseEther(trade.inputAmount);
 
-      // TODO: add optimal path calculation
-      route = ["ETH", "WETH", outputToken.getSymbol()];
-      const path = [this.WETH_ADDRESS, outputToken.getTokenAddress()];
+      const path = await this.routeOptimizer.uniV2GetBestPath(trade.inputToken, trade.outputToken);
+      tradeInfo.route = path;
 
       const amountsOut = await this.router.getAmountsOut(wallet, amountIn, path);
       const tokensReceived = amountsOut[amountsOut.length - 1];
@@ -113,9 +122,8 @@ export class UniswapV2Strategy implements ITradingStrategy {
       const ethValueFixed = ethValue.toFixed(18);
       const amountIn = ethers.parseEther(ethValueFixed);
 
-      // TODO: add optimal path calculation
-      route = ["ETH", "WETH", outputToken.getSymbol()];
-      const path = [this.WETH_ADDRESS, outputToken.getTokenAddress()];
+      const path = await this.routeOptimizer.uniV2GetBestPath(trade.inputToken, trade.outputToken);
+      tradeInfo.route = path;
 
       const amountsOut = await this.router.getAmountsOut(wallet, amountIn, path);
       const tokensReceived = amountsOut[amountsOut.length - 1];
@@ -127,9 +135,8 @@ export class UniswapV2Strategy implements ITradingStrategy {
       const tokenIn = await createMinimalErc20(trade.inputToken, wallet.provider!);
       const amountIn = ethers.parseUnits(trade.inputAmount, tokenIn.getDecimals());
 
-      // TODO: add optimal path calculation
-      route = [tokenIn.getSymbol(), "WETH", outputToken.getSymbol()];
-      const path = [tokenIn.getTokenAddress(), this.WETH_ADDRESS, outputToken.getSymbol()];
+      const path = await this.routeOptimizer.uniV2GetBestPath(tokenIn.getTokenAddress(), outputToken.getTokenAddress());
+      tradeInfo.route = path;
 
       const amountsOut = await this.router.getAmountsOut(wallet, amountIn, path);
       const tokensReceived = amountsOut[amountsOut.length - 1];
@@ -142,7 +149,7 @@ export class UniswapV2Strategy implements ITradingStrategy {
     return {
       outputAmount,
       priceImpact,
-      route,
+      tradeInfo,
     };
   }
 
@@ -152,14 +159,19 @@ export class UniswapV2Strategy implements ITradingStrategy {
    * @param trade Sell trade creation parameters
    * @returns TradeQuote with all execution details including price impact validation
    */
-  async getSellTradeQuote(wallet: Wallet, trade: SellTradeCreationDto): Promise<TradeQuote> {
+  async getSellTradeQuote(wallet: Wallet, trade: SellTradeCreationDto): Promise<Quote> {
     await validateNetwork(wallet, this.chain);
 
     const inputToken = await createMinimalErc20(trade.inputToken, wallet.provider!);
 
     let outputAmount = "0";
     let priceImpact = 0;
-    let route: string[] = [];
+
+    let tradeInfo: TradeInfo = {
+      route: [],
+      wethNeeded: false,
+      fee: 0,
+    };
 
     const sellAmount = parseFloat(trade.inputAmount);
     const usdSellPrice = parseFloat(trade.tradingPointPrice);
@@ -172,7 +184,7 @@ export class UniswapV2Strategy implements ITradingStrategy {
       const amountIn = ethers.parseUnits(trade.inputAmount, inputToken.getDecimals());
 
       // TODO: add optimal path calculation -> in quotedOutput calculation function
-      route = [inputToken.getSymbol(), "WETH", "ETH"];
+      tradeInfo.route = [inputToken.getSymbol(), "WETH", "ETH"];
 
       const theoreticalOutput = await this.getTheoreticalEthOutput(wallet, sellAmount, usdSellPrice);
       const quotedOutput = await this.getActualEthOutput(wallet, inputToken, amountIn);
@@ -186,7 +198,7 @@ export class UniswapV2Strategy implements ITradingStrategy {
       const amountIn = ethers.parseUnits(trade.inputAmount, inputToken.getDecimals());
 
       // TODO: add optimal path calculation -> in qoutedOutput calculation function
-      route = [inputToken.getSymbol(), "WETH", "USDC"];
+      tradeInfo.route = [inputToken.getSymbol(), "WETH", "USDC"];
 
       const theoreticalOutput = await this.getTheoreticalUsdcTokenOutput(sellAmount, usdSellPrice);
       const quotedOutput = await this.getActualUsdcOutput(wallet, inputToken, amountIn);
@@ -202,7 +214,7 @@ export class UniswapV2Strategy implements ITradingStrategy {
       const outputToken = await createMinimalErc20(trade.outputToken, wallet.provider!);
 
       // TODO: add optimal path calculation
-      route = [inputToken.getSymbol(), outputToken.getSymbol()];
+      tradeInfo.route = [inputToken.getSymbol(), outputToken.getSymbol()];
       const path = [inputToken.getTokenAddress(), outputToken.getTokenAddress()];
 
       const OUTPUT_TOKEN_USD_PRICE = 9999999; // temp value
@@ -222,7 +234,7 @@ export class UniswapV2Strategy implements ITradingStrategy {
     return {
       outputAmount,
       priceImpact,
-      route,
+      tradeInfo,
     };
   }
 
