@@ -82,7 +82,13 @@ async function uniswapV4StrategyInteraction(chain: ChainType, wallet: Wallet) {
   const uniV3 = strategies.filter((strat) => strat.getName().includes("UniswapV3"))[0];
 
   const buyTx = await uniV3.createBuyTransaction(wallet, buyTrade);
-  console.log("TX");
+  const quote = await uniV3.getBuyTradeQuote(wallet, buyTrade);
+  console.log("quote");
+  console.log("--------------------------------");
+  console.log(quote);
+  console.log();
+  console.log("--------------------------------");
+  console.log("buy tx");
   console.log("--------------------------------");
   console.log(buyTx);
   console.log("--------------------------------");

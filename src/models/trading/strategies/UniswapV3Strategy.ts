@@ -10,14 +10,20 @@ import { FeeAmount } from "../../smartcontracts/uniswap-v3/uniswap-v3-types";
 import { BuyTradeCreationDto, InputType, SellTradeCreationDto, Quote, Route } from "../types/_index";
 import { validateNetwork } from "../../../lib/utils";
 import { TRADING_CONFIG } from "../../../config/trading-config";
-import { ensureInfiniteApproval, ensureStandardApproval } from "../../../lib/approval-strategies";
+import {
+  ensureInfiniteApproval,
+  ensurePermit2Approval,
+  ensureStandardApproval,
+} from "../../../lib/approval-strategies";
 import { createMinimalErc20 } from "../../smartcontracts/ERC/erc-utils";
 import { RouteOptimizer } from "../RouteOptimizer";
+import { Permit2 } from "../../smartcontracts/permit2/Permit2";
 
 export class UniswapV3Strategy implements ITradingStrategy {
   private quoter: UniswapV3QuoterV2;
   private factory: UniswapV3Factory;
   private router: UniswapV3SwapRouterV2;
+  private permit2: Permit2;
 
   private routeOptimizer: RouteOptimizer;
 
@@ -39,6 +45,7 @@ export class UniswapV3Strategy implements ITradingStrategy {
     this.quoter = new UniswapV3QuoterV2(chain);
     this.factory = new UniswapV3Factory(chain);
     this.router = new UniswapV3SwapRouterV2(chain);
+    this.permit2 = new Permit2(chain);
 
     this.routeOptimizer = new RouteOptimizer(chain);
   }
@@ -63,7 +70,8 @@ export class UniswapV3Strategy implements ITradingStrategy {
     if (TRADING_CONFIG.INFINITE_APPROVAL) {
       return await ensureInfiniteApproval(wallet, tokenAddress, amount, spender);
     } else {
-      return await ensureStandardApproval(wallet, tokenAddress, amount, spender);
+      return null;
+      //return await ensurePermit2Approval(wallet, tokenAddress, amount, this.permit2.getPermit2Address(), spender);
     }
   }
 
@@ -130,28 +138,26 @@ export class UniswapV3Strategy implements ITradingStrategy {
 
       route = await this.routeOptimizer.uniV3GetOptimizedRoute(this.WETH_ADDRESS, outputToken.getTokenAddress());
 
-      const isMultiHop = route.path.length > 2 && route.encodedPath;
       const isSingleHop = route.path.length === 2 && route.encodedPath;
+      const isMultiHop = route.path.length > 2 && route.encodedPath;
+
+      if (isSingleHop) {
+        const { amountOut, gasEstimate } = await this.quoter.quoteExactInputSingle(
+          wallet,
+          route.path[0],
+          route.path[1],
+          route.fees[0],
+          recipient,
+          amountIn,
+          amountOutMin,
+          sqrtPriceLimitX96,
+        );
+
+        outputAmount = ethers.formatUnits(amountOut, outputToken.getDecimals());
+      }
 
       if (isMultiHop) {
         //quoteExactInput
-      }
-
-      if (isSingleHop) {
-        //quoteExactInputSingle
-        const { amountOut, sqrtPriceX96After, initializedTicksCrossed, gasEstimate } =
-          await this.quoter.quoteExactInputSingle(
-            wallet,
-            route.path[0],
-            route.path[1],
-            route.fees[0],
-            recipient,
-            amountIn,
-            amountOutMin,
-            sqrtPriceLimitX96,
-          );
-
-        outputAmount = ethers.formatUnits(amountOut, outputToken.getDecimals());
       }
     }
 
@@ -199,7 +205,6 @@ export class UniswapV3Strategy implements ITradingStrategy {
     const isTOKENInputTOKENAmount = trade.inputType === InputType.TOKEN && trade.inputToken !== ethers.ZeroAddress;
 
     if (isETHInputETHAmount) {
-      // TODO: find best pool/pools for trade
       const recipient = wallet.address;
       const amountIn = ethers.parseEther(trade.inputAmount);
       let amountOutMin = 0n;
@@ -207,13 +212,11 @@ export class UniswapV3Strategy implements ITradingStrategy {
 
       const route = await this.routeOptimizer.uniV3GetOptimizedRoute(this.WETH_ADDRESS, outputToken.getTokenAddress());
 
-      const wrapData = this.router.encodeWrapETH(amountIn);
-
-      const isMultiHop = route.path.length > 2 && route.encodedPath;
       const isSingleHop = route.path.length === 2 && route.encodedPath;
+      const isMultiHop = route.path.length > 2 && route.encodedPath;
 
       if (isSingleHop) {
-        const { amountOut, gasEstimate } = await this.quoter.quoteExactInputSingle(
+        const { amountOut } = await this.quoter.quoteExactInputSingle(
           wallet,
           route.path[0],
           route.path[1],
@@ -225,7 +228,7 @@ export class UniswapV3Strategy implements ITradingStrategy {
         );
         amountOutMin = (amountOut * 95n) / 100n;
 
-        const swapData = this.router.encodeExactInputSingle(
+        tx = this.router.createExactInputSingleTransaction(
           route.path[0],
           route.path[1],
           route.fees[0],
@@ -235,21 +238,12 @@ export class UniswapV3Strategy implements ITradingStrategy {
           sqrtPriceLimitX96,
         );
 
-        tx = this.router.createMulticallTransaction(deadline, [wrapData, swapData]);
-
-        //tx.data = wrapData;
-        //tx.to = this.router.getRouterAddress();
-
         tx.value = amountIn;
       }
 
       if (isMultiHop) {
         const { amountOut } = await this.quoter.quoteExactInput(wallet, route.encodedPath!, amountIn);
         amountOutMin = (amountOut * 95n) / 100n;
-
-        const swapData = this.router.encodeExactInput(route.encodedPath!, recipient, amountIn, amountOutMin);
-
-        tx = this.router.createMulticallTransaction(deadline, [wrapData, swapData]);
       }
     }
 
@@ -257,6 +251,7 @@ export class UniswapV3Strategy implements ITradingStrategy {
     }
 
     if (isTOKENInputTOKENAmount) {
+      // TODO: implement complex single atomic transaction handling with multicall or Universal Router
     }
 
     return tx;

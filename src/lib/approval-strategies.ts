@@ -1,6 +1,7 @@
-import { ethers, Wallet } from "ethers";
+import { ethers, TransactionRequest, Wallet } from "ethers";
 import { createMinimalErc20 } from "../models/smartcontracts/ERC/erc-utils";
 import { ERC20 } from "../models/smartcontracts/ERC/ERC20";
+import { ERC20_INTERFACE } from "./smartcontract-abis/erc20";
 
 /**
  * Standard ERC20 approval strategy
@@ -92,15 +93,26 @@ export async function ensurePermit2Approval(
   amount: string,
   permit2Address: string,
   routerAddress: string,
-  strategyName: string,
 ): Promise<void> {
   try {
-    //TODO: implement
-    throw new Error("NOT IMPLEMENTED");
-    console.log(`[${strategyName}] Checking Permit2 approval for ${tokenAddress}...`);
-
     // Ste, checkTokenAllowance p 1: Check if token is approved to Permit2 contract
-    const needsPermit2Approval = true;
+    const balanceOfTxData = ERC20_INTERFACE.encodeFunctionData("balanceOf", [permit2Address]);
+    const tx: TransactionRequest = {
+      to: tokenAddress,
+      data: balanceOfTxData,
+    };
+    const allowance = await wallet.call(tx);
+    console.log("allowance");
+    console.log(allowance);
+    console.log("parsed");
+    console.log(ethers.parseUnits(allowance));
+    console.log("ethers max Uint256");
+    console.log(ethers.MaxUint256);
+
+    const needsPermit2Approval = ethers.parseUnits(allowance) < ethers.MaxUint256 / 2n;
+    console.log(needsPermit2Approval);
+
+    throw new Error("Stop");
 
     if (needsPermit2Approval) {
       console.log("Approving token to Permit2 contract...");

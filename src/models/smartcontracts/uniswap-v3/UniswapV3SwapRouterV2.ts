@@ -247,6 +247,16 @@ export class UniswapV3SwapRouterV2 {
   }
 
   /**
+   * Function for encoding refundETH transaction data
+   * Can be used in multicall transaction crafting for handling dust ETH after wrapping
+   * @returns The encoded transaction data
+   */
+  encodeRefundETH(): string {
+    const encodedData = this.routerContract.interface.encodeFunctionData("refundETH", []);
+    return encodedData;
+  }
+
+  /**
    * Creates a multicall transaction for batching multiple router operations
    * @param data Array of encoded function data to execute in batch
    * @param deadline Optional deadline timestamp (defaults to 20 minutes from now)
