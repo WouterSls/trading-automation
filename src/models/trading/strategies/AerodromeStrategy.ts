@@ -9,7 +9,7 @@ import { AerodromePoolFactory } from "../../smartcontracts/aerodrome/AerodromePo
 import { TradeRoute } from "../../smartcontracts/aerodrome/aerodrome-types";
 
 import { ITradingStrategy } from "../ITradingStrategy";
-import { BuyTradeCreationDto, SellTradeCreationDto, InputType, TradeQuote } from "../types/_index";
+import { BuyTradeCreationDto, SellTradeCreationDto, InputType, Quote } from "../types/_index";
 
 import { ERC20_INTERFACE } from "../../../lib/smartcontract-abis/_index";
 import { ensureInfiniteApproval, ensureStandardApproval, validateNetwork } from "../../../lib/_index";
@@ -176,11 +176,11 @@ export class AerodromeStrategy implements ITradingStrategy {
     return amountFormatted;
   }
 
-  async getBuyTradeQuote(wallet: Wallet, trade: BuyTradeCreationDto): Promise<TradeQuote> {
+  async getBuyTradeQuote(wallet: Wallet, trade: BuyTradeCreationDto): Promise<Quote> {
     throw new Error("Not implemented");
   }
 
-  async getSellTradeQuote(wallet: Wallet, trade: SellTradeCreationDto): Promise<TradeQuote> {
+  async getSellTradeQuote(wallet: Wallet, trade: SellTradeCreationDto): Promise<Quote> {
     throw new Error("Not implemented");
   }
 
