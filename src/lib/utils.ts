@@ -5,6 +5,7 @@ import { ChainType, mapNetworkNameToChainType } from "../config/chain-config";
 import { UNISWAP_V3_POOL_INTERFACE } from "./smartcontract-abis/uniswap-v3";
 import { UNISWAP_V2_PAIR_INTERFACE } from "./smartcontract-abis/uniswap-v2";
 import { calculatePriceFromSqrtPriceX96 } from "../models/smartcontracts/uniswap-v3/uniswap-v3-utils";
+import { UNIVERSAL_ROUTER_INTERFACE } from "./smartcontract-abis/universal-router";
 
 export async function validateNetwork(wallet: Wallet, chainType: ChainType) {
   try {
@@ -129,4 +130,97 @@ export function decodeLogs(logs: ReadonlyArray<ethers.Log>) {
   }
 
   return decodedLogs;
+}
+
+export function decodeError(errorData: string) {
+  if (!errorData || errorData === "0x") {
+    return {
+      type: "No error data",
+      selector: null,
+      decoded: null,
+    };
+  }
+
+  const selector = errorData.slice(0, 10);
+
+  // List of interfaces to try decoding against
+  const interfaces = [
+    { name: "Universal Router", interface: UNIVERSAL_ROUTER_INTERFACE },
+    { name: "ERC20", interface: ERC20_INTERFACE },
+    { name: "WETH", interface: WETH_INTERFACE },
+    { name: "Uniswap V3 Pool", interface: UNISWAP_V3_POOL_INTERFACE },
+    { name: "Uniswap V2 Pair", interface: UNISWAP_V2_PAIR_INTERFACE },
+  ];
+
+  // Try to decode against each interface
+  for (const { name, interface: contractInterface } of interfaces) {
+    try {
+      const decoded = contractInterface.parseError(errorData);
+      if (decoded) {
+        return {
+          type: "Decoded",
+          contract: name,
+          selector,
+          errorName: decoded.name,
+          signature: decoded.signature,
+          args: decoded.args,
+          decoded,
+        };
+      }
+    } catch (e) {
+      // Interface doesn't have this error, continue to next
+      continue;
+    }
+  }
+
+  // If no interface could decode it, provide raw analysis
+  return {
+    type: "Unknown",
+    selector,
+    rawData: errorData,
+    possibleParams: analyzeErrorParams(errorData),
+  };
+}
+
+function analyzeErrorParams(errorData: string) {
+  if (errorData.length <= 10) {
+    return { analysis: "No parameters" };
+  }
+
+  const paramData = errorData.slice(10);
+  const paramCount = paramData.length / 64;
+
+  if (paramCount !== Math.floor(paramCount)) {
+    return { analysis: "Invalid parameter length" };
+  }
+
+  const params = [];
+  for (let i = 0; i < paramCount; i++) {
+    const paramHex = paramData.slice(i * 64, (i + 1) * 64);
+    const paramValue = BigInt("0x" + paramHex);
+
+    // Try to interpret as address if it looks like one
+    if (paramHex.startsWith("000000000000000000000000") && paramHex.length === 64) {
+      const address = "0x" + paramHex.slice(24);
+      params.push({
+        index: i,
+        hex: "0x" + paramHex,
+        uint256: paramValue.toString(),
+        possibleAddress: address,
+        type: "address-like",
+      });
+    } else {
+      params.push({
+        index: i,
+        hex: "0x" + paramHex,
+        uint256: paramValue.toString(),
+        type: "uint256",
+      });
+    }
+  }
+
+  return {
+    analysis: `${paramCount} parameters detected`,
+    parameters: params,
+  };
 }
