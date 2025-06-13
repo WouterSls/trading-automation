@@ -12,6 +12,8 @@ import { ChainType, getChainConfig } from "../../../src/config/chain-config";
 import { createMinimalErc20 } from "../../../src/models/smartcontracts/ERC/erc-utils";
 import { UniswapV4Strategy } from "../../../src/models/trading/strategies/UniswapV4Strategy";
 import { TraderFactory } from "../../../src/models/trading/TraderFactory";
+import { UNIVERSAL_ROUTER_INTERFACE } from "../../../src/lib/smartcontract-abis/universal-router";
+import { decodeError } from "../../../src/lib/utils";
 
 async function uniswapV4StrategyInteraction(chain: ChainType, wallet: Wallet) {
   const chainConfig = getChainConfig(chain);
@@ -80,26 +82,65 @@ async function uniswapV4StrategyInteraction(chain: ChainType, wallet: Wallet) {
 
   const uniV2 = strategies.filter((strat) => strat.getName().includes("UniswapV2"))[0];
   const uniV3 = strategies.filter((strat) => strat.getName().includes("UniswapV3"))[0];
+  const uniV4 = strategies.filter((strat) => strat.getName().includes("UniswapV4"))[0];
 
-  const buyTx = await uniV3.createBuyTransaction(wallet, buyTrade);
-  const quote = await uniV3.getBuyTradeQuote(wallet, buyTrade);
+  /**
+  const quote = await uniV4.getBuyTradeQuote(wallet, buyTrade);
   console.log("quote");
   console.log("--------------------------------");
   console.log(quote);
   console.log();
+ */
+
+  const buyTx = await uniV4.createBuyTransaction(wallet, buyTrade);
   console.log("--------------------------------");
-  console.log("buy tx");
+  console.log("Transaction Request:");
   console.log("--------------------------------");
   console.log(buyTx);
   console.log("--------------------------------");
 
   console.log("Sending...");
-  const txResponse = await wallet.sendTransaction(buyTx);
-  const txReceipt = await txResponse.wait(1);
-  console.log("Confirmed!");
+
+  // Pre-transaction validation
+  console.log("Performing pre-transaction checks...");
+
+  // Check ETH balance
+  const requiredEth = buyTx.value || 0n;
+  if (ethBalance < BigInt(requiredEth)) {
+    console.error(
+      `Insufficient ETH balance. Required: ${ethers.formatEther(requiredEth)}, Available: ${ethers.formatEther(ethBalance)}`,
+    );
+    return;
+  }
+
+  // Check if Universal Router contract exists
+  const universalRouterAddress = buyTx.to;
+  const routerCode = await wallet.provider!.getCode(universalRouterAddress!);
+  if (routerCode === "0x") {
+    console.error(`Universal Router contract not found at address: ${universalRouterAddress}`);
+    return;
+  }
+
+  console.log("✓ ETH balance sufficient");
+  console.log("✓ Universal Router contract exists");
+  console.log(`✓ Transaction value: ${ethers.formatEther(requiredEth)} ETH`);
+
+  try {
+    const txResponse = await wallet.sendTransaction(buyTx);
+    const txReceipt = await txResponse.wait();
+    console.log("Confirmed!");
+  } catch (error: any) {
+    console.log("Transaction failed!");
+
+    if (error.data) {
+      console.log("\n=== COMPREHENSIVE ERROR ANALYSIS ===");
+      const errorAnalysis = decodeError(error.data);
+      console.log("Error Analysis:", JSON.stringify(errorAnalysis, null, 2));
+      console.log("=== END ERROR ANALYSIS ===\n");
+    }
+  }
 
   return;
-  const uniV4 = strategies.filter((strat) => strat.getName().includes("UniswapV4"))[0];
 
   for (const strat of strategies) {
     console.log(strat.getName());
