@@ -97,7 +97,12 @@ export async function v4SwapInteraction(wallet: Wallet, tradeCreationDto: SellTr
   //await testPermit2TransferFrom(wallet, chain);
 
   // Permit2 Permit -> Permit router contract
-  const nonce = await permit2.getPermitNonce(wallet, wallet.address, usdc.getTokenAddress(), router.getRouterAddress());
+  const nonce = await permit2.getPermit2Nonce(
+    wallet,
+    wallet.address,
+    usdc.getTokenAddress(),
+    router.getRouterAddress(),
+  );
   const permitSingle: IPermitSingle = {
     details: {
       token: usdc.getTokenAddress(),
