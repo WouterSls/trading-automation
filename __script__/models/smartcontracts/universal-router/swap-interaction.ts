@@ -1,6 +1,6 @@
 import { ethers, Wallet } from "ethers";
 import { getHardhatWallet_1 } from "../../../../src/hooks/useSetup";
-import { ChainType, getChainConfig } from "../../../../src/config/chain-config";
+import { ChainType, getChainConfig, getOutputTokenAddress } from "../../../../src/config/chain-config";
 import { UniversalRouter } from "../../../../src/models/smartcontracts/universal-router/UniversalRouter";
 import { CommandType } from "../../../../src/models/smartcontracts/universal-router/universal-router-types";
 import { OutputToken, SellTradeCreationDto } from "../../../../src/models/trading/types/_index";
@@ -32,14 +32,36 @@ export async function v4SwapInteraction(wallet: Wallet, tradeCreationDto: SellTr
   console.log(`\t${weth.getSymbol()} balance: ${wethBalance}`);
   console.log();
 
-  const poolKey = getLowPoolKey(tradeCreationDto.inputToken, tradeCreationDto.outputToken);
+  console.log(tradeCreationDto.inputToken);
+  console.log(tradeCreationDto.outputToken);
+  const outputTokenAddress = getOutputTokenAddress(chain, tradeCreationDto.outputToken);
+
+  const poolKey = getLowPoolKey(tradeCreationDto.inputToken, outputTokenAddress);
+  console.log(poolKey);
   const zeroForOne = poolKey.currency0 === tradeCreationDto.inputToken;
   const inputAmount = tradeCreationDto.inputAmount;
   const minOutputAmount = 0n;
   const recipient = wallet.address;
 
   const command: CommandType = CommandType.V4_SWAP;
+
+  console.log("--------------------------------");
+  console.log("V4 Swap Input Parameters:");
+  console.log("--------------------------------");
+  console.log("\tpoolKey:", poolKey);
+  console.log("\tzeroForOne:", zeroForOne);
+  console.log("\tinputAmount:", inputAmount.toString());
+  console.log("\tminOutputAmount:", minOutputAmount.toString());
+  console.log("\trecipient:", recipient);
+  console.log("--------------------------------");
+  console.log();
+
   const input = router.encodeV4SwapInput(poolKey, zeroForOne, inputAmount, minOutputAmount, recipient);
+  console.log("Encoded V4 Swap Command Input");
+  console.log("----------------------------------");
+  console.log(input);
+  console.log("----------------------------------");
+  console.log();
 
   const deadline = Number(Math.floor(Date.now() / 1000) + 1200);
   const ethValue = "10";
@@ -51,20 +73,19 @@ export async function v4SwapInteraction(wallet: Wallet, tradeCreationDto: SellTr
   console.log("Creating V4 swap execute transaction...");
   const tx = await router.createExecuteTransaction(command, [input], deadline);
   tx.value = ethers.parseEther(ethValue);
-  console.log("Transaction request:");
+  console.log("--------------------------------");
+  console.log("Transaction Request:");
+  console.log("--------------------------------");
   console.log(tx);
+  console.log("--------------------------------");
 
   const txResponse = await wallet.sendTransaction(tx);
-  console.log("txResponse:", txResponse);
   const txReceipt = await txResponse.wait();
   if (!txReceipt) {
     throw new Error("Transaction failed");
   }
-  console.log("txReceipt:", txReceipt);
   const logs = txReceipt.logs;
-  console.log("logs:", logs);
   console.log();
-  console.log("Decoding logs...");
   const decodedLogs = decodeLogs(logs);
   console.log("decodedLogs:", decodedLogs);
 }
