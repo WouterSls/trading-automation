@@ -9,6 +9,25 @@ import {
 } from "../universal-router/universal-router-types";
 import { PoolKey } from "./uniswap-v4-types";
 
+// Type-safe parameter types for each pool action
+export type SwapExactInputSingleParams = [
+  poolKey: PoolKey,
+  zeroForOne: boolean,
+  amountIn: bigint,
+  amountOutMinimum: bigint,
+  hookData: string,
+];
+
+export type SettleAllParams = [inputCurrency: string, amountIn: bigint, zeroForOne: boolean];
+
+export type TakeAllParams = [outputCurrency: string, recipient: string, amount: number];
+
+// Discriminated union for type-safe pool action parameters
+export type PoolActionParams =
+  | { action: V4PoolAction.SWAP_EXACT_IN_SINGLE; params: SwapExactInputSingleParams }
+  | { action: V4PoolAction.SETTLE_ALL; params: SettleAllParams }
+  | { action: V4PoolAction.TAKE_ALL; params: TakeAllParams };
+
 /**
  * @description UniswapV4Router is an abstract contract not meant to be deployed
  *  This abstraction is created for the purpose to encode pool actions to be used as input for the universal router.
@@ -18,8 +37,13 @@ import { PoolKey } from "./uniswap-v4-types";
 export class UniswapV4Router {
   constructor() {}
 
-  encodeV4SwapExactInputSingle(poolKey: PoolKey, zeroForOne: boolean, amountIn: bigint, amountOutMinimum: bigint, recipient: string): string {
-
+  encodeV4SwapExactInputSingle(
+    poolKey: PoolKey,
+    zeroForOne: boolean,
+    amountIn: bigint,
+    amountOutMinimum: bigint,
+    recipient: string,
+  ): string {
     const swapParams: IV4ExactInputSingleParams = {
       poolKey: poolKey,
       zeroForOne: zeroForOne,
@@ -41,40 +65,51 @@ export class UniswapV4Router {
     };
 
     const actions = ethers.concat([V4PoolAction.SWAP_EXACT_IN_SINGLE, V4PoolAction.SETTLE, V4PoolAction.TAKE]);
-    const encodedSwapExactInputSingleParams = this.encodeSwapExactInputSingle(swapParams);
-    const encodedSettleParams = this.encodeSettleAll(settleParams);
-    const encodedTakeParams = this.encodeTakeAll(takeParams);
 
-    const encodedInput = this.encodeSwapCommandInput(
-      actions,
+    const encodedSwapExactInputSingleParams = this.encodeSwapExactInputSingle(
+      poolKey,
+      zeroForOne,
+      amountIn,
+      amountOutMinimum,
+      ethers.ZeroAddress,
+    );
+    const encodedSettleParams = this.encodeSettleAll(
+      settleParams.inputCurrency,
+      settleParams.amountIn,
+      settleParams.bool,
+    );
+    const encodedTakeParams = this.encodeTakeAll(takeParams.outputCurrency, takeParams.recipient, takeParams.amount);
+
+    const encodedInput = this.encodeV4SwapCommandInput(actions, [
       encodedSwapExactInputSingleParams,
       encodedSettleParams,
       encodedTakeParams,
-    );
+    ]);
 
     return encodedInput;
   }
 
-  private encodeSwapCommandInput(
-    actions: string,
-    encodedSwapParams: string,
-    encodedSettleParams: string,
-    encodedTakeParams: string,
-  ) {
+  public encodeV4SwapCommandInput(actions: string, encodedActionsData: string[]) {
     const encodedSwapCommandInput = AbiCoder.defaultAbiCoder().encode(
       ["bytes", "bytes[]"],
-      [actions, [encodedSwapParams, encodedSettleParams, encodedTakeParams]],
+      [actions, encodedActionsData],
     );
     return encodedSwapCommandInput;
   }
 
-  private encodeSwapExactInputSingle(swapParams: IV4ExactInputSingleParams) {
+  public encodeSwapExactInputSingle(
+    poolKey: PoolKey,
+    zeroForOne: boolean,
+    amountIn: bigint,
+    amountOutMinimum: bigint,
+    hookData: string,
+  ) {
     const poolKeyTuple = [
-      swapParams.poolKey.currency0,
-      swapParams.poolKey.currency1,
-      swapParams.poolKey.fee,
-      swapParams.poolKey.tickSpacing,
-      swapParams.poolKey.hooks,
+      poolKey.currency0,
+      poolKey.currency1,
+      poolKey.fee,
+      poolKey.tickSpacing,
+      poolKey.hooks,
     ] as const;
 
     const encodedData = AbiCoder.defaultAbiCoder().encode(
@@ -85,7 +120,7 @@ export class UniswapV4Router {
         "uint128", // amountOutMinimum
         "bytes", // hookData
       ],
-      [poolKeyTuple, swapParams.zeroForOne, swapParams.amountIn, swapParams.amountOutMinimum, swapParams.hookData],
+      [poolKeyTuple, zeroForOne, amountIn, amountOutMinimum, hookData],
     );
     return encodedData;
   }
@@ -96,19 +131,47 @@ export class UniswapV4Router {
     return encodedData;
   }
 
-  private encodeSettleAll(settleParams: IV4SettleParams) {
+  public encodeSettleAll(inputCurrency: string, amountIn: bigint, zeroForOne: boolean) {
     const encodedParams = AbiCoder.defaultAbiCoder().encode(
       ["address", "uint128", "bool"],
-      [settleParams.inputCurrency, settleParams.amountIn, settleParams.bool],
+      [inputCurrency, amountIn, zeroForOne],
     );
     return encodedParams;
   }
 
-  private encodeTakeAll(takeParams: IV4TakeParams) {
+  public encodeTakeAll(outputCurrency: string, recipient: string, amount: number) {
     const encodedParams = AbiCoder.defaultAbiCoder().encode(
       ["address", "address", "uint256"],
-      [takeParams.outputCurrency, takeParams.recipient, takeParams.amount],
+      [outputCurrency, recipient, amount],
     );
     return encodedParams;
+  }
+
+  /**
+   * Type-safe method to encode pool actions
+   * @param v4PoolAction The pool action to encode
+   * @param params The parameters for the specific pool action
+   * @returns Encoded data string
+   */
+  public encodePoolAction(v4PoolAction: V4PoolAction.SWAP_EXACT_IN_SINGLE, params: SwapExactInputSingleParams): string;
+  public encodePoolAction(v4PoolAction: V4PoolAction.SETTLE_ALL, params: SettleAllParams): string;
+  public encodePoolAction(v4PoolAction: V4PoolAction.TAKE_ALL, params: TakeAllParams): string;
+  public encodePoolAction(v4PoolAction: V4PoolAction, params: any[]): string {
+    switch (v4PoolAction) {
+      case V4PoolAction.SWAP_EXACT_IN_SINGLE:
+        const [poolKey, zeroForOne, amountIn, amountOutMinimum, hookData] = params as SwapExactInputSingleParams;
+        return this.encodeSwapExactInputSingle(poolKey, zeroForOne, amountIn, amountOutMinimum, hookData);
+
+      case V4PoolAction.SETTLE_ALL:
+        const [inputCurrency, settlAmountIn, settleZeroForOne] = params as SettleAllParams;
+        return this.encodeSettleAll(inputCurrency, settlAmountIn, settleZeroForOne);
+
+      case V4PoolAction.TAKE_ALL:
+        const [outputCurrency, recipient, amount] = params as TakeAllParams;
+        return this.encodeTakeAll(outputCurrency, recipient, amount);
+
+      default:
+        throw new Error(`Unsupported pool action: ${v4PoolAction}`);
+    }
   }
 }

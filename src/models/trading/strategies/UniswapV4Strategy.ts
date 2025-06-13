@@ -14,14 +14,24 @@ import { createMinimalErc20 } from "../../smartcontracts/ERC/erc-utils";
 import { validateNetwork } from "../../../lib/utils";
 import { TRADING_CONFIG } from "../../../config/trading-config";
 import { UniswapV4Quoter } from "../../smartcontracts/uniswap-v4/UniswapV4Quoter";
-import { UniswapV4Router } from "../../smartcontracts/uniswap-v4/UniswapV4Router";
+import {
+  UniswapV4Router,
+  SwapExactInputSingleParams,
+  SettleAllParams,
+  TakeAllParams,
+} from "../../smartcontracts/uniswap-v4/UniswapV4Router";
 import { UniversalRouter } from "../../smartcontracts/universal-router/UniversalRouter";
-import { CommandType } from "../../smartcontracts/universal-router/universal-router-types";
+import {
+  CommandType,
+  V4PoolAction,
+  V4PoolActionConstants,
+} from "../../smartcontracts/universal-router/universal-router-types";
+import { encodeSettleParams, encodeTakeParams } from "../../smartcontracts/universal-router/universal-router-utils";
 import { RouteOptimizer } from "../RouteOptimizer";
 
 export class UniswapV4Strategy implements ITradingStrategy {
   private quoter: UniswapV4Quoter;
-  private router: UniswapV4Router;
+  private uniswapV4router: UniswapV4Router;
   private universalRouter: UniversalRouter;
 
   private routeOptimzer: RouteOptimizer;
@@ -42,7 +52,7 @@ export class UniswapV4Strategy implements ITradingStrategy {
     this.USDC_ADDRESS = chainConfig.tokenAddresses.usdc;
 
     this.quoter = new UniswapV4Quoter(chain);
-    this.router = new UniswapV4Router();
+    this.uniswapV4router = new UniswapV4Router();
     this.universalRouter = new UniversalRouter(chain);
 
     this.routeOptimzer = new RouteOptimizer(chain);
@@ -107,6 +117,7 @@ export class UniswapV4Strategy implements ITradingStrategy {
 
     return formattedAmountOut;
   }
+
   async getBuyTradeQuote(wallet: Wallet, trade: BuyTradeCreationDto): Promise<Quote> {
     await validateNetwork(wallet, this.chain);
 
@@ -131,11 +142,19 @@ export class UniswapV4Strategy implements ITradingStrategy {
 
       route = await this.routeOptimzer.uniV4GetOptimizedRoute(trade.inputToken, outputToken.getTokenAddress());
 
-      const isZeroForOne = route.poolKey!.currency0 === trade.inputToken;
+      if (!route.poolKey) {
+        return {
+          outputAmount,
+          priceImpact,
+          route,
+        };
+      }
+
+      const isZeroForOne = route.poolKey.currency0 === trade.inputToken;
 
       const { amountOut, gasEstimate } = await this.quoter.quoteExactInputSingle(
         wallet,
-        route.poolKey!,
+        route.poolKey,
         isZeroForOne,
         amountIn,
         hookData,
@@ -156,6 +175,7 @@ export class UniswapV4Strategy implements ITradingStrategy {
       route,
     };
   }
+
   async getSellTradeQuote(wallet: Wallet, trade: SellTradeCreationDto): Promise<Quote> {
     throw new Error("Not implemented");
   }
@@ -175,28 +195,69 @@ export class UniswapV4Strategy implements ITradingStrategy {
     const isTOKENInputTOKENAmount = trade.inputType === InputType.TOKEN && trade.inputToken !== ethers.ZeroAddress;
 
     if (isETHInputETHAmount) {
-      // TODO: find poolkey for token to trade
-      // Exact input single || Exact input
+      console.log("ETH input ETH amount");
       const tokenIn = trade.inputToken;
       const tokenOut = outputToken.getTokenAddress();
-      const fee = FeeAmount.MEDIUM;
 
-      const poolKey: PoolKey = {
-        currency0: tokenIn,
-        currency1: tokenOut,
-        fee: fee,
-        tickSpacing: FeeToTickSpacing.get(fee)!,
-        hooks: ethers.ZeroAddress,
-      };
+      const route = await this.routeOptimzer.uniV4GetOptimizedRoute(tokenIn, tokenOut);
+      const poolKey = route.poolKey;
+      const hookData = ethers.ZeroAddress;
 
-      const zeroForOne = true;
+      const zeroForOne = poolKey!.currency0 === tokenIn;
+
       const amountIn = ethers.parseEther(trade.inputAmount);
       const minOutputAmount = 0n;
 
-      const command: CommandType = CommandType.V4_SWAP;
-      const input = this.router.encodeV4SwapExactInputSingle(poolKey, zeroForOne, amountIn, minOutputAmount, recipient);
+      const isSingleHop = route.path.length === 2 && route.poolKey;
+      const isMultiHop = route.path.length > 2 && route.poolKey;
+      console.log("--------------------------------");
+      console.log("V4 Swap Input Parameters:");
+      console.log("--------------------------------");
+      console.log("\tpoolKey:", poolKey);
+      console.log("\tzeroForOne:", zeroForOne);
+      console.log("\tinputAmount:", amountIn.toString());
+      console.log("\tminOutputAmount:", minOutputAmount.toString());
+      console.log("\trecipient:", recipient);
+      console.log("--------------------------------");
+      console.log();
 
-      tx = this.universalRouter.createExecuteTransaction(command, [input], deadline);
+      if (isSingleHop) {
+        console.log("Single Hop");
+
+        const actions = ethers.concat([V4PoolAction.SWAP_EXACT_IN_SINGLE, V4PoolAction.SETTLE, V4PoolAction.TAKE]);
+
+        const swapParams: SwapExactInputSingleParams = [
+          route.poolKey!,
+          zeroForOne,
+          amountIn,
+          minOutputAmount,
+          hookData,
+        ];
+        const swapData = this.uniswapV4router.encodePoolAction(V4PoolAction.SWAP_EXACT_IN_SINGLE, swapParams);
+
+        const inputCurrency = zeroForOne ? route.poolKey!.currency0 : route.poolKey!.currency1;
+        const settleParams = { inputCurrency, amountIn, bool: zeroForOne };
+        const settleData = encodeSettleParams(settleParams);
+
+        const outputCurrency = zeroForOne ? route.poolKey!.currency1 : route.poolKey!.currency0;
+        const takeParams = { outputCurrency, recipient, amount: V4PoolActionConstants.OPEN_DELTA };
+        const takeData = encodeTakeParams(takeParams);
+
+        const command: CommandType = CommandType.V4_SWAP;
+        const v4SwapInput = this.uniswapV4router.encodeV4SwapCommandInput(actions, [swapData, settleData, takeData]);
+        console.log("Encoded V4 Swap Command Input");
+        console.log("----------------------------------");
+        console.log(v4SwapInput);
+        console.log("----------------------------------");
+        console.log();
+
+        tx = this.universalRouter.createExecuteTransaction(command, [v4SwapInput], deadline);
+        tx.value = amountIn;
+        return tx;
+      }
+
+      if (isMultiHop) {
+      }
     }
 
     if (isETHInputUSDAmount) {
