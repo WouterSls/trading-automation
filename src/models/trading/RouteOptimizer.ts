@@ -35,16 +35,42 @@ export class RouteOptimizer {
   }
 
   async uniV3GetOptimizedRoute(tokenIn: string, tokenOut: string): Promise<Route> {
-    const route: Route = {
-      path: [],
-      fees: [],
-      encodedPath: null,
+    if (tokenIn === ethers.ZeroAddress) tokenIn = this.WETH_ADDRESS;
+    const routes: Route[] = [];
+
+    const directRoutes = await this.createDirectRoutes(tokenIn, tokenOut);
+    routes.push(...directRoutes);
+
+    return routes[2];
+  }
+
+  private async createDirectRoutes(tokenIn: string, tokenOut: string): Promise<Route[]> {
+    const lowestRoute: Route = {
+      path: [tokenIn, tokenOut],
+      fees: [FeeAmount.LOWEST],
+      encodedPath: encodePath([tokenIn, tokenOut], [FeeAmount.LOWEST]),
       poolKey: null,
     };
-    route.path = [tokenIn, tokenOut];
-    route.fees = [FeeAmount.MEDIUM];
-    route.encodedPath = encodePath(route.path, route.fees);
-    return route;
+    const lowRoute: Route = {
+      path: [tokenIn, tokenOut],
+      fees: [FeeAmount.LOW],
+      encodedPath: encodePath([tokenIn, tokenOut], [FeeAmount.LOW]),
+      poolKey: null,
+    };
+    const medRoute: Route = {
+      path: [tokenIn, tokenOut],
+      fees: [FeeAmount.MEDIUM],
+      encodedPath: encodePath([tokenIn, tokenOut], [FeeAmount.MEDIUM]),
+      poolKey: null,
+    };
+    const highRoute: Route = {
+      path: [tokenIn, tokenOut],
+      fees: [FeeAmount.HIGH],
+      encodedPath: encodePath([tokenIn, tokenOut], [FeeAmount.HIGH]),
+      poolKey: null,
+    };
+
+    return [lowestRoute, lowRoute, medRoute, highRoute];
   }
 
   async uniV4GetOptimizedRoute(tokenIn: string, tokenOut: string): Promise<Route> {
