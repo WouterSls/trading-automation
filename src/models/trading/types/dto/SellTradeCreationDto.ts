@@ -1,11 +1,12 @@
 import { ChainType } from "../../../../config/chain-config";
-import { OutputToken } from "../OutputToken";
+import { OutputType } from "../trading-types";
 
 export type SellTradeCreationDto = {
   tradeType: "SELL";
   chain: ChainType;
   inputToken: string;
   inputAmount: string;
-  outputToken: OutputToken;
+  outputType: OutputType;
+  outputToken: string;
   tradingPointPrice: string;
 };
