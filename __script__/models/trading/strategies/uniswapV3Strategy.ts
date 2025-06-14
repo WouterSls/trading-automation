@@ -2,7 +2,7 @@ import { ethers, Wallet } from "ethers";
 import {
   BuyTradeCreationDto,
   InputType,
-  OutputToken,
+  OutputType,
   SellTradeCreationDto,
 } from "../../../../src/models/trading/types/_index";
 import { getEthWallet_1, getHardhatWallet_1 } from "../../../../src/hooks/useSetup";
@@ -73,7 +73,7 @@ if (require.main === module) {
 
   const tokenB = chainConfig.tokenAddresses.usdc;
   const amountB = "100";
-  const outputToken = OutputToken.ETH;
+  const outputToken = ethers.ZeroAddress;
   const tpPrice = "1";
 
   const buyTrade: BuyTradeCreationDto = {
@@ -90,6 +90,7 @@ if (require.main === module) {
     chain: chain,
     inputToken: tokenB,
     inputAmount: amountB.toString(),
+    outputType: OutputType.TOKEN,
     outputToken: outputToken,
     tradingPointPrice: tpPrice,
   };

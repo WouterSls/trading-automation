@@ -2,7 +2,7 @@ import { ethers, Wallet } from "ethers";
 import {
   BuyTradeCreationDto,
   InputType,
-  OutputToken,
+  OutputType,
   SellTradeCreationDto,
 } from "../../../../src/models/trading/types/_index";
 import { getEthWallet_1, getHardhatWallet_1 } from "../../../../src/hooks/useSetup";
@@ -54,28 +54,31 @@ if (require.main === module) {
   const ethWallet = getEthWallet_1();
 
   const inputType = InputType.ETH;
-  const tokenA = ethers.ZeroAddress;
-  const amountA = "1";
-
-  const tokenB = chainConfig.tokenAddresses.usdc;
-  const amountB = "100";
-  const outputToken = OutputToken.ETH;
-  const tpPrice = "1";
+  const inputToken = ethers.ZeroAddress;
+  const inputAmount = "1";
+  const tokenToBuy = chainConfig.tokenAddresses.usdc;
 
   const buyTrade: BuyTradeCreationDto = {
     tradeType: "BUY",
     chain: chain,
     inputType: inputType,
-    inputToken: tokenA,
-    inputAmount: amountA.toString(),
-    outputToken: tokenB,
+    inputToken: inputToken,
+    inputAmount: inputAmount,
+    outputToken: tokenToBuy,
   };
+
+  const tokenToSell = chainConfig.tokenAddresses.usdc;
+  const amountToSell = "100";
+  const outputType = OutputType.ETH;
+  const outputToken = ethers.ZeroAddress;
+  const tpPrice = "1";
 
   const sellTrade: SellTradeCreationDto = {
     tradeType: "SELL",
     chain: chain,
-    inputToken: tokenB,
-    inputAmount: amountB.toString(),
+    inputToken: tokenToSell,
+    inputAmount: amountToSell,
+    outputType: outputType,
     outputToken: outputToken,
     tradingPointPrice: tpPrice,
   };
