@@ -195,7 +195,6 @@ export class UniswapV4Strategy implements ITradingStrategy {
     const isTOKENInputTOKENAmount = trade.inputType === InputType.TOKEN && trade.inputToken !== ethers.ZeroAddress;
 
     if (isETHInputETHAmount) {
-      console.log("ETH input ETH amount");
       const tokenIn = trade.inputToken;
       const tokenOut = outputToken.getTokenAddress();
 
@@ -210,20 +209,8 @@ export class UniswapV4Strategy implements ITradingStrategy {
 
       const isSingleHop = route.path.length === 2 && route.poolKey;
       const isMultiHop = route.path.length > 2 && route.poolKey;
-      console.log("--------------------------------");
-      console.log("V4 Swap Input Parameters:");
-      console.log("--------------------------------");
-      console.log("\tpoolKey:", poolKey);
-      console.log("\tzeroForOne:", zeroForOne);
-      console.log("\tinputAmount:", amountIn.toString());
-      console.log("\tminOutputAmount:", minOutputAmount.toString());
-      console.log("\trecipient:", recipient);
-      console.log("--------------------------------");
-      console.log();
 
       if (isSingleHop) {
-        console.log("Single Hop");
-
         const actions = ethers.concat([V4PoolAction.SWAP_EXACT_IN_SINGLE, V4PoolAction.SETTLE, V4PoolAction.TAKE]);
 
         const swapParams: SwapExactInputSingleParams = [
@@ -245,11 +232,6 @@ export class UniswapV4Strategy implements ITradingStrategy {
 
         const command: CommandType = CommandType.V4_SWAP;
         const v4SwapInput = this.uniswapV4router.encodeV4SwapCommandInput(actions, [swapData, settleData, takeData]);
-        console.log("Encoded V4 Swap Command Input");
-        console.log("----------------------------------");
-        console.log(v4SwapInput);
-        console.log("----------------------------------");
-        console.log();
 
         tx = this.universalRouter.createExecuteTransaction(command, [v4SwapInput], deadline);
         tx.value = amountIn;
