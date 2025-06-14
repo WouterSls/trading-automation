@@ -3,7 +3,7 @@ import { getHardhatWallet_1 } from "../../../../src/hooks/useSetup";
 import { ChainType, getChainConfig, getOutputTokenAddress } from "../../../../src/config/chain-config";
 import { UniversalRouter } from "../../../../src/models/smartcontracts/universal-router/UniversalRouter";
 import { CommandType } from "../../../../src/models/smartcontracts/universal-router/universal-router-types";
-import { OutputToken, SellTradeCreationDto } from "../../../../src/models/trading/types/_index";
+import { OutputType, SellTradeCreationDto } from "../../../../src/models/trading/types/_index";
 import { decodeLogs } from "../../../../src/lib/utils";
 import { getLowPoolKey } from "../../../../src/models/smartcontracts/uniswap-v4/uniswap-v4-utils";
 import { createMinimalErc20 } from "../../../../src/models/smartcontracts/ERC/erc-utils";
@@ -93,6 +93,7 @@ export async function v4SwapInteraction(wallet: Wallet, tradeCreationDto: SellTr
 if (require.main === module) {
   const wallet = getHardhatWallet_1();
   const chain = ChainType.ETH;
+  const chainConfig = getChainConfig(chain);
 
   const ethInputAmount = ethers.parseEther("1");
 
@@ -100,7 +101,8 @@ if (require.main === module) {
     chain: chain,
     inputToken: ethers.ZeroAddress,
     inputAmount: ethInputAmount.toString(),
-    outputToken: OutputToken.USDC,
+    outputType: OutputType.TOKEN,
+    outputToken: chainConfig.tokenAddresses.usdc,
     tradingPointPrice: "0",
     tradeType: "SELL",
   };
