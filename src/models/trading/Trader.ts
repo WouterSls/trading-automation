@@ -40,7 +40,13 @@ export class Trader {
     if (!txReceipt) throw new Error("Transaction failed");
     console.log("Transaction confirmed!");
 
-    const buyTrade: BuyTrade = await this.createBuyTrade(trade.outputToken, ethUsdcPrice, tx, txReceipt);
+    const buyTrade: BuyTrade = await this.createBuyTrade(
+      bestStrategy.getName(),
+      trade.outputToken,
+      ethUsdcPrice,
+      tx,
+      txReceipt,
+    );
     return buyTrade;
   }
 
@@ -85,7 +91,14 @@ export class Trader {
     const inputTokenAddress = trade.inputToken;
     const outputTokenAddress = getOutputTokenAddress(trade.chain, trade.outputToken);
 
-    const sellTrade = await this.createSellTrade(inputTokenAddress, outputTokenAddress, ethUsdcPrice, tx, txReceipt);
+    const sellTrade = await this.createSellTrade(
+      bestStrategy.getName(),
+      inputTokenAddress,
+      outputTokenAddress,
+      ethUsdcPrice,
+      tx,
+      txReceipt,
+    );
 
     return sellTrade;
   }
@@ -181,6 +194,7 @@ export class Trader {
   }
 
   private async createBuyTrade(
+    strategyName: string,
     outputTokenAddress: string,
     ethPriceUsd: string,
     tx: TransactionRequest,
@@ -236,6 +250,7 @@ export class Trader {
     }
 
     const buyTrade: BuyTrade = new BuyTrade(
+      strategyName,
       txHash,
       confirmedBlock,
       gasCost,
@@ -250,6 +265,7 @@ export class Trader {
   }
 
   private async createSellTrade(
+    strategyName: string,
     inputTokenAddress: string,
     outputTokenAddress: string,
     ethPriceUsd: string,
@@ -409,6 +425,7 @@ export class Trader {
     }
 
     const sellTrade: SellTrade = new SellTrade(
+      strategyName,
       txHash,
       confirmedBlock,
       gasCost,
