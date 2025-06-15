@@ -262,16 +262,4 @@ export class UniswapV4Strategy implements ITradingStrategy {
       reject(new Error("Not implemented"));
     });
   }
-
-  private shouldRetry(error: any, attempt: number): boolean {
-    if (error.message.toLowerCase().includes("insufficient funds")) return false;
-    if (error.message.toLowerCase().includes("insufficient allowance")) return false;
-    if (error.message.toLowerCase().includes("user rejected")) return false;
-
-    // TODO: MOVE TO CONFIG?
-    const maxRetries = 3;
-    if (attempt >= maxRetries) return false;
-
-    return true;
-  }
 }
