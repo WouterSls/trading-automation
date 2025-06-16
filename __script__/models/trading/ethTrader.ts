@@ -110,13 +110,13 @@ async function uniswapV4StrategyInteraction(chain: ChainType, wallet: Wallet) {
     const price = await strat.getEthUsdcPrice(wallet);
     console.log(`\tETH/USDC Price: ${price}`);
     const quote: Quote = await strat.getBuyTradeQuote(wallet, buyTrade);
-    console.log("\tquoted output amount:", quote.outputAmount);
+    console.log("\tquoted output amount:", quote.outputAmount, `${buyTradeOutputToken.getSymbol()}`);
     console.log("\tRoute:", quote.route.path.join(" -> "));
-    buyTxs.push(await strat.createBuyTransaction(wallet, buyTrade));
+    //buyTxs.push(await strat.createBuyTransaction(wallet, buyTrade));
   }
 
-  console.log("Transaction request:");
-  console.log(buyTxs);
+  //console.log("Transaction request:");
+  //console.log(buyTxs);
 
   return;
 
