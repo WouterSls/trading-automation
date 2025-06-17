@@ -272,44 +272,4 @@ export class UniswapV3SwapRouterV2 {
 
     return tx;
   }
-
-  /**
-   * Validates that the wallet is on the correct network and that the factory address is valid
-   * @param wallet Wallet instance -> blockchain provider
-   * @returns true if the wallet is on the correct network and that the factory address is valid, false otherwise
-   */
-  private async _networkAndRouterCheck(wallet: Wallet): Promise<void> {
-    await validateNetwork(wallet, this.chain);
-
-    const code = await wallet.provider!.getCode(this.routerAddress);
-    if (code === "0x" || code === "0x0") {
-      throw new Error(`No contract found at router address: ${this.routerAddress}`);
-    }
-
-    try {
-      await this.routerContract.positionManager();
-    } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : "Unknown error";
-
-      const functionNotFoundError =
-        errorMessage.includes("function not found") ||
-        errorMessage.includes("not a function") ||
-        errorMessage.includes("unknown function");
-
-      const missingProviderError =
-        errorMessage.toLowerCase().includes("cannot read property") ||
-        errorMessage.toLowerCase().includes("cannot read properties") ||
-        errorMessage.includes("missing provider");
-
-      if (functionNotFoundError) {
-        throw new Error(`Contract at ${this.routerAddress} is not a Uniswap V3 Router`);
-      }
-
-      if (missingProviderError) {
-        throw new Error(`Wallet has missing provider: ${errorMessage}`);
-      }
-
-      throw new Error(`${errorMessage}`);
-    }
-  }
 }
