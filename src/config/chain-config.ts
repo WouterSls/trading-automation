@@ -13,9 +13,16 @@ export interface ChainConfig {
   fallbackRpcUrl?: string;
   explorerUrl?: string;
   tokenAddresses: {
-    weth: string;
+    usdt: string;
     usdc: string;
+    usds: string;
     dai: string;
+    wbtc: string;
+    weth: string;
+    wsteth: string;
+    uni: string;
+    aero: string;
+    virtual: string;
   };
   uniswap: {
     v2: {
@@ -52,9 +59,16 @@ export const supportedChains: Record<ChainType, ChainConfig> = {
     fallbackRpcUrl: "https://eth-mainnet.g.alchemy.com/v2/demo",
     explorerUrl: "https://etherscan.io",
     tokenAddresses: {
-      weth: "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
+      usdt: "0xdac17f958d2ee523a2206206994597c13d831ec7",
       usdc: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+      usds: "0xdC035D45d973E3EC169d2276DDab16f1e407384F",
       dai: "0x6b175474e89094c44da98b954eedeac495271d0f",
+      wbtc: "0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599",
+      weth: "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
+      wsteth: "0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0",
+      uni: "0x1f9840a85d5af5bf1d1762f925bdaddc4201f984",
+      aero: ethers.ZeroAddress,
+      virtual: "0x44ff8620b8ca30902395a7bd3f2407e1a091bf73",
     },
     uniswap: {
       v2: {
@@ -89,9 +103,16 @@ export const supportedChains: Record<ChainType, ChainConfig> = {
     fallbackRpcUrl: "https://arb1.arbitrum.io/rpc",
     explorerUrl: "https://arbiscan.io",
     tokenAddresses: {
-      weth: "0x82aF49447D8a07e3bd95BD0d56f35241523fBab1",
+      usdt: "0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9",
       usdc: "0xaf88d065e77c8cC2239327C5EDb3A432268e5831",
+      usds: "0x6491c05A82219b8D1479057361ff1654749b876b",
       dai: "0xDA10009cBd5D07dd0CeCc66161FC93D7c9000da1",
+      wbtc: "0x2f2a2543B76A4166549F7aaB2e75Bef0aefC5B0f",
+      weth: "0x82aF49447D8a07e3bd95BD0d56f35241523fBab1",
+      wsteth: "0x0fBcbaEA96Ce0cF7Ee00A8c19c3ab6f5Dc8E1921",
+      uni: "0xfa7f8980b0f1e64a2062791cc3b0871572f1f7f0",
+      aero: ethers.ZeroAddress,
+      virtual: ethers.ZeroAddress,
     },
     uniswap: {
       v2: {
@@ -126,9 +147,16 @@ export const supportedChains: Record<ChainType, ChainConfig> = {
     fallbackRpcUrl: "https://base-mainnet.g.alchemy.com/v2/demo",
     explorerUrl: "https://basescan.org",
     tokenAddresses: {
-      weth: "0x4200000000000000000000000000000000000006",
+      usdt: ethers.ZeroAddress,
       usdc: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+      usds: "0x820C137fa70C8691f0e44Dc420a5e53c168921Dc",
       dai: "0x50c5725949a6f0c72e6c4a641f24049a917db0cb",
+      wbtc: "0x0555E30da8f98308EdB960aa94C0Db47230d2B9c",
+      weth: "0x4200000000000000000000000000000000000006",
+      wsteth: "0xc1CBa3fCea344f92D9239c08C0568f6F2F0ee452",
+      uni: ethers.ZeroAddress,
+      aero: "0x940181a94a35a4569e4529a3cdfb74e38fd98631",
+      virtual: "0x0b3e328455c4059eeb9e3f84b5543f74e24e7e1b",
     },
     uniswap: {
       v2: {
