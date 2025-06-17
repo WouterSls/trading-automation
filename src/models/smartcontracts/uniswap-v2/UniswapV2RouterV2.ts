@@ -41,6 +41,33 @@ export class UniswapV2RouterV2 {
   }
 
   /**
+   * Function for encoding getAmountsOut call data
+   * Can be used in multicall transaction crafting
+   *
+   * @param amountIn the amount of input tokens (first token in path)
+   * @param path the path to trade along side of
+   * @returns The encoded function call data
+   */
+  encodeGetAmountsOut(amountIn: bigint, path: string[]): string {
+    const encodedData = this.routerContract.interface.encodeFunctionData("getAmountsOut", [amountIn, path]);
+
+    return encodedData;
+  }
+
+  /**
+   * Function for decoding getAmountsOut call result data
+   * Can be used in multicall transaction crafting
+   *
+   * @param data - the resulting hex byte data from the call request
+   * @returns the amount of tokens received on each hop
+   */
+  decodeGetAmountsOutResult(data: ethers.BytesLike): bigint[] {
+    const [amountsOut] = this.routerContract.interface.decodeFunctionResult("getAmountsOut", data);
+
+    return amountsOut;
+  }
+
+  /**
    * Creates a swapExactETHForToken transaction
    * @param amountOutMin the minimum amount of tokens to receive
    * @param path the path to trade along side of
@@ -132,6 +159,8 @@ export class UniswapV2RouterV2 {
 
     return tx;
   }
+
+
 
   /**
    * Validates that the wallet is on the correct network and that the router address is valid

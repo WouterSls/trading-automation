@@ -1,5 +1,5 @@
 import { ethers, Contract, Wallet } from "ethers";
-import { MulticallRequest } from "../types/route-types";
+import { MulticallRequest } from "../../trading/types/route-types";
 import { ChainType, getChainConfig } from "../../../config/chain-config";
 
 export class MulticallService {

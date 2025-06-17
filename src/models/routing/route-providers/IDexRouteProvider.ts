@@ -1,5 +1,5 @@
 import { Wallet } from "ethers";
-import { EnhancedRoute, RouteQuery, MulticallRequest, RouteResult, DexConfiguration } from "../types/route-types";
+import { EnhancedRoute, RouteQuery, MulticallRequest, RouteResult, DexConfiguration } from "../../trading/types/route-types";
 
 export interface IDexRouteProvider {
   /**

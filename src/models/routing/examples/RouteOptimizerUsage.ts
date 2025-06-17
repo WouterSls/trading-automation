@@ -2,7 +2,7 @@ import { ethers, Wallet } from "ethers";
 import { ChainType } from "../../../config/chain-config";
 import { RouteOptimizer } from "../RouteOptimizer";
 import { EnhancedRouteOptimizer } from "../EnhancedRouteOptimizer";
-import { BuyTradeCreationDto, InputType } from "../types/_index";
+import { BuyTradeCreationDto, InputType } from "../../trading/types/_index";
 
 /**
  * Example usage of the enhanced route optimizer with multicall support

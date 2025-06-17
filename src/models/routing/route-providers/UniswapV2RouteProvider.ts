@@ -1,6 +1,6 @@
 import { ethers, Wallet, Contract } from "ethers";
 import { BaseRouteProvider } from "./BaseRouteProvider";
-import { EnhancedRoute, RouteQuery, MulticallRequest, RouteResult, DexConfiguration } from "../types/route-types";
+import { EnhancedRoute, RouteQuery, MulticallRequest, RouteResult, DexConfiguration } from "../../trading/types/route-types";
 
 export class UniswapV2RouteProvider extends BaseRouteProvider {
   private factoryContract: Contract;
