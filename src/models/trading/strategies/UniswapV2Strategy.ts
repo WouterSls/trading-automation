@@ -11,7 +11,7 @@ import { BuyTradeCreationDto, SellTradeCreationDto, InputType, Quote, OutputType
 
 import { ERC20_INTERFACE } from "../../../lib/smartcontract-abis/_index";
 import { ensureInfiniteApproval, ensureStandardApproval, validateNetwork } from "../../../lib/_index";
-import { RouteOptimizer } from "../RouteOptimizer";
+import { RouteOptimizer } from "../../routing/RouteOptimizer";
 
 export class UniswapV2Strategy implements ITradingStrategy {
   private router: UniswapV2RouterV2;

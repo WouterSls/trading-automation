@@ -27,7 +27,7 @@ import {
   V4PoolActionConstants,
 } from "../../smartcontracts/universal-router/universal-router-types";
 import { encodeSettleParams, encodeTakeParams } from "../../smartcontracts/universal-router/universal-router-utils";
-import { RouteOptimizer } from "../RouteOptimizer";
+import { RouteOptimizer } from "../../routing/RouteOptimizer";
 
 export class UniswapV4Strategy implements ITradingStrategy {
   private quoter: UniswapV4Quoter;

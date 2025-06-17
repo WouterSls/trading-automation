@@ -16,7 +16,7 @@ import {
   ensureStandardApproval,
 } from "../../../lib/approval-strategies";
 import { createMinimalErc20 } from "../../smartcontracts/ERC/erc-utils";
-import { RouteOptimizer } from "../RouteOptimizer";
+import { RouteOptimizer } from "../../routing/RouteOptimizer";
 import { Permit2 } from "../../smartcontracts/permit2/Permit2";
 
 export class UniswapV3Strategy implements ITradingStrategy {
