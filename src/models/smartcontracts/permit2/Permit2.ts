@@ -34,6 +34,7 @@ export class Permit2 {
     const provider = wallet.provider;
     if (!provider) throw new Error("No provider linked to wallet");
 
+    //TODO: test if we can use initialized variable
     const chainId = (await provider.getNetwork()).chainId;
 
     const domain = {
