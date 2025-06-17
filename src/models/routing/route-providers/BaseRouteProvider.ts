@@ -1,9 +1,8 @@
 import { ethers } from "ethers";
 import { ChainType, getChainConfig } from "../../../config/chain-config";
-import { IDexRouteProvider } from "./IDexRouteProvider";
-import { EnhancedRoute, DexConfiguration, RouteMetadata } from "../../trading/types/route-types";
+import { EnhancedRoute, DexConfiguration, RouteMetadata } from "../route-types";
 
-export abstract class BaseRouteProvider implements IDexRouteProvider {
+export abstract class BaseRouteProvider {
   protected WETH_ADDRESS: string;
   protected USDC_ADDRESS: string;
   protected chainConfig: any;

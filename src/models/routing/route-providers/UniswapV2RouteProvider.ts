@@ -1,6 +1,6 @@
 import { ethers, Wallet, Contract } from "ethers";
 import { BaseRouteProvider } from "./BaseRouteProvider";
-import { EnhancedRoute, RouteQuery, MulticallRequest, RouteResult, DexConfiguration } from "../../trading/types/route-types";
+import { EnhancedRoute, RouteQuery, MulticallRequest, RouteResult, DexConfiguration } from "../route-types";
 
 export class UniswapV2RouteProvider extends BaseRouteProvider {
   private factoryContract: Contract;
@@ -154,36 +154,6 @@ export class UniswapV2RouteProvider extends BaseRouteProvider {
     }
 
     return routeResults;
-  }
-
-  async hasDirectRoute(wallet: Wallet, tokenIn: string, tokenOut: string): Promise<boolean> {
-    try {
-      const normalizedTokenIn = this.normalizeTokenAddress(tokenIn);
-      const normalizedTokenOut = this.normalizeTokenAddress(tokenOut);
-
-      const pairAddress = await this.factoryContract.connect(wallet).getPair(normalizedTokenIn, normalizedTokenOut);
-      return pairAddress !== ethers.ZeroAddress;
-    } catch (error) {
-      console.warn("Error checking direct route:", error);
-      return false;
-    }
-  }
-
-  /**
-   * Checks if all pairs exist for a route based on multicall results
-   */
-  private async checkPairsExist(route: EnhancedRoute, results: Map<string, any>, routeId: string): Promise<boolean> {
-    for (let i = 0; i < route.path.length - 1; i++) {
-      const tokenA = route.path[i];
-      const tokenB = route.path[i + 1];
-      const pairKey = `${routeId}-pair-${tokenA}-${tokenB}`;
-      const pairAddress = results.get(pairKey);
-
-      if (!pairAddress || pairAddress === ethers.ZeroAddress) {
-        return false;
-      }
-    }
-    return true;
   }
 
   /**

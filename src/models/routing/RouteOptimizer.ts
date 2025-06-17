@@ -10,7 +10,7 @@ import { ChainType, getChainConfig } from "../../config/chain-config";
 import { Route } from "../trading/types/quoting-types";
 import { PoolKey } from "../smartcontracts/uniswap-v4/uniswap-v4-types";
 import { EnhancedRouteOptimizer } from "./EnhancedRouteOptimizer";
-import { EnhancedRoute } from "../trading/types/route-types";
+import { EnhancedRoute } from "./route-types";
 import { UniswapV2RouterV2 } from "../smartcontracts/uniswap-v2";
 import { UniswapV4Quoter } from "../smartcontracts/uniswap-v4/UniswapV4Quoter";
 import { Call3, Call3Result } from "../smartcontracts/multicall3/multicall3-types";
@@ -18,6 +18,9 @@ import { Multicall3 } from "../smartcontracts/multicall3/Multicall3";
 
 export class RouteOptimizer {
   private WETH_ADDRESS;
+  private USDC_ADDRESS;
+  private DAI_ADDRESS;
+
   private enhancedOptimizer: EnhancedRouteOptimizer;
 
   private uniswapV2RouterV2: UniswapV2RouterV2;
@@ -28,7 +31,11 @@ export class RouteOptimizer {
 
   constructor(chain: ChainType) {
     const chainConfig = getChainConfig(chain);
+
     this.WETH_ADDRESS = chainConfig.tokenAddresses.weth;
+    this.DAI_ADDRESS = chainConfig.tokenAddresses.dai;
+    this.USDC_ADDRESS = chainConfig.tokenAddresses.usdc;
+
     this.enhancedOptimizer = new EnhancedRouteOptimizer(chain);
 
     this.uniswapV2RouterV2 = new UniswapV2RouterV2(chain);
@@ -36,28 +43,29 @@ export class RouteOptimizer {
     this.uniswapV4Quoter = new UniswapV4Quoter(chain);
 
     this.multicall3 = new Multicall3(chain);
-
   }
 
-  // ----------------- UNISWAP V2 ----------------- 
-  async uniV2GetOptimizedRoute(wallet: Wallet,tokenIn: string, amountIn:bigint, tokenOut: string): Promise<Route> {
+  // ----------------- UNISWAP V2 -----------------
+  async uniV2GetOptimizedRoute(wallet: Wallet, tokenIn: string, amountIn: bigint, tokenOut: string): Promise<Route> {
     if (tokenIn === ethers.ZeroAddress) {
       tokenIn = this.WETH_ADDRESS;
     }
 
-    const multiCalls: Call3[] = []
+    const multiCalls: Call3[] = [];
 
+    // 1 result call
     const directQuoteCall3 = this.createDirectQuoteCall3(tokenIn, amountIn, tokenOut);
-    const multihopQuotesCall3 = this.createMultiHopQuotesCall3()
+    // 5 result calls
+    const multihopQuotesCall3 = this.createMultiHopQuotesCall3();
+    // 5 result calls
     const theGraphQuotesCall3 = this.createTheGraphQuotesCall3();
 
-    multiCalls.push(directQuoteCall3,...multihopQuotesCall3,...theGraphQuotesCall3)
+    multiCalls.push(directQuoteCall3, ...multihopQuotesCall3, ...theGraphQuotesCall3);
 
-
-    const result = await this.multicall3.aggregate3StaticCall(wallet,multiCalls);
+    const result = await this.multicall3.aggregate3StaticCall(wallet, multiCalls);
 
     const bestRoute = this.decodeUniV2Multicall3Result(result);
-     
+
     const route: Route = {
       path: bestRoute.path,
       fees: bestRoute.fees,
@@ -68,38 +76,45 @@ export class RouteOptimizer {
     return route;
   }
 
-  private createDirectQuoteCall3(tokenIn: string, amountIn: bigint, tokeOut: string): Call3 {
-    const path = [tokenIn, tokeOut];
-    const callData = this.uniswapV2RouterV2.encodeGetAmountsOut(amountIn,path)
+  private createDirectQuoteCall3(tokenIn: string, amountIn: bigint, tokenOut: string): Call3 {
+    const path = [tokenIn, tokenOut];
+    const callData = this.uniswapV2RouterV2.encodeGetAmountsOut(amountIn, path);
     const directQuoteCall3: Call3 = {
       target: this.uniswapV2RouterV2.getRouterAddress(),
       allowFailure: true,
-      callData: callData
-    }
+      callData: callData,
+    };
 
     return directQuoteCall3;
   }
 
-  private createMultiHopQuotesCall3(): Call3[] {
-    return []
+  private createMultiHopQuotesCall3(tokenIn: string, amountIn: bigint, tokenOut: string): Call3[] {
+    const pathWeth = [tokenIn, this.WETH_ADDRESS, tokenOut];
+    const pathUsdc = [tokenIn, this.USDC_ADDRESS, tokenOut];
+    const pathWethUsdc = [tokenIn, this.WETH_ADDRESS, this.USDC_ADDRESS, tokenOut];
+    const pathUsdcWeth = [tokenIn, this.USDC_ADDRESS, this.WETH_ADDRESS, tokenOut];
+    const pathDai = [tokenIn, this.DAI_ADDRESS, tokenOut];
+    return [];
   }
 
   private createTheGraphQuotesCall3(): Call3[] {
     // TODO: implement
-    return[]
+    return [];
   }
 
-  private decodeUniV2Multicall3Result(multicallResults: Call3Result[]): Route{
+  private decodeUniV2Multicall3Result(multicallResults: Call3Result[]): Route {
+    const directQuoteResult = multicallResults[0];
+    const multiHopQuoteResult = multicallResults.slice(1, 6);
+
     return {
       path: [],
       fees: [FeeAmount.MEDIUM],
       encodedPath: null,
-      poolKey: null
-    }
+      poolKey: null,
+    };
   }
 
-
-  // ----------------- UNISWAP V3 ----------------- 
+  // ----------------- UNISWAP V3 -----------------
   async uniV3GetOptimizedRoute(tokenIn: string, tokenOut: string): Promise<Route> {
     if (tokenIn === ethers.ZeroAddress) tokenIn = this.WETH_ADDRESS;
     const routes: Route[] = [];
@@ -139,7 +154,7 @@ export class RouteOptimizer {
     return [lowestRoute, lowRoute, medRoute, highRoute];
   }
 
-  // ----------------- UNISWAP V4 ----------------- 
+  // ----------------- UNISWAP V4 -----------------
   async uniV4GetOptimizedRoute(tokenIn: string, tokenOut: string): Promise<Route> {
     const route: Route = {
       path: [],
@@ -166,7 +181,7 @@ export class RouteOptimizer {
     return [lowestPoolKey, lowPoolKey, medPoolKey, highPoolKey];
   }
 
-  // ----------------- MISC. ----------------- 
+  // ----------------- MISC. -----------------
   /**
    * Convert EnhancedRoute to legacy Route format for backwards compatibility
    */

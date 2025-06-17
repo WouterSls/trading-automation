@@ -3,7 +3,7 @@ import { ChainType } from "../../config/chain-config";
 import { IDexRouteProvider } from "./route-providers/IDexRouteProvider";
 import { UniswapV2RouteProvider } from "./route-providers/UniswapV2RouteProvider";
 import { MulticallService } from "./services/MulticallService";
-import { EnhancedRoute, RouteQuery, RouteResult, MulticallRequest } from "../trading/types/route-types";
+import { EnhancedRoute, RouteQuery, RouteResult, MulticallRequest } from "./route-types";
 
 export class EnhancedRouteOptimizer {
   private providers: Map<string, IDexRouteProvider> = new Map();
