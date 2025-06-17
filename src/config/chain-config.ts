@@ -41,6 +41,7 @@ export interface ChainConfig {
     poolFactoryAddress: string;
     routerAddress: string;
   };
+  multicall3Address: string;
 }
 
 export const supportedChains: Record<ChainType, ChainConfig> = {
@@ -79,6 +80,7 @@ export const supportedChains: Record<ChainType, ChainConfig> = {
       poolFactoryAddress: ethers.ZeroAddress,
       routerAddress: ethers.ZeroAddress,
     },
+    multicall3Address: "0xcA11bde05977b3631167028862bE2a173976CA11",
   },
   [ChainType.ARB]: {
     id: 42161n,
@@ -115,6 +117,7 @@ export const supportedChains: Record<ChainType, ChainConfig> = {
       poolFactoryAddress: ethers.ZeroAddress,
       routerAddress: ethers.ZeroAddress,
     },
+    multicall3Address: "0xcA11bde05977b3631167028862bE2a173976CA11",
   },
   [ChainType.BASE]: {
     id: 8453n,
@@ -151,6 +154,7 @@ export const supportedChains: Record<ChainType, ChainConfig> = {
       poolFactoryAddress: "0x420DD381b31aEf6683db6B902084cB0FFECe40Da",
       routerAddress: "0xcF77a3Ba9A5CA399B7c97c74d54e5b1Beb874E43",
     },
+    multicall3Address: "0xcA11bde05977b3631167028862bE2a173976CA11",
   },
 };
 
