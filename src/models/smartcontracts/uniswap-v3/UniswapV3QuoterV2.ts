@@ -67,7 +67,10 @@ export class UniswapV3QuoterV2 {
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : "An unknown error occurred";
 
-      if (errorMessage.toLowerCase().includes("no data present")) {
+      if (
+        errorMessage.toLowerCase().includes("no data present") ||
+        errorMessage.toLowerCase().includes("unexpected error")
+      ) {
         return {
           amountOut: 0n,
           sqrtPriceX96After: 0n,
@@ -77,6 +80,64 @@ export class UniswapV3QuoterV2 {
       }
       throw error;
     }
+  }
+
+  /**
+   * Function for encoding quoteExactInputSingle call data
+   * Can be used in multicall transaction crafting
+   *
+   * @param tokenIn - The input token address
+   * @param tokenOut - The output token address
+   * @param fee - The pool fee tier (from FeeAmount enum)
+   * @param recipient - The recipient address for the swap
+   * @param amountIn - The exact input amount to swap
+   * @param amountOutMin - The minimum output amount expected (for slippage protection)
+   * @param sqrtPriceLimitX96 - The price limit for the swap (0 for no limit)
+   * @returns The encoded function call data
+   */
+  encodeQuoteExactInputSingle(
+    tokenIn: string,
+    tokenOut: string,
+    fee: FeeAmount,
+    recipient: string,
+    amountIn: bigint,
+    amountOutMin: bigint,
+    sqrtPriceLimitX96: bigint,
+  ): string {
+    const exactInputSingleParams = {
+      tokenIn,
+      tokenOut,
+      fee,
+      recipient,
+      amountIn,
+      amountOutMin,
+      sqrtPriceLimitX96,
+    };
+
+    const encodedData = this.quoterContract.interface.encodeFunctionData("quoteExactInputSingle", [
+      exactInputSingleParams,
+    ]);
+
+    return encodedData;
+  }
+
+  /**
+   * Function for encoding quoteExactInputSingle call data
+   * Can be used in multicall transaction crafting
+   *
+   * @param data - the resulting hex byte data from the  call request
+   * @returns amountOut, sqrtPriceX96After, initiliazedTicksCrossed, gasEstimate
+   */
+  decodeQuoteExactInputSingleResult(data: ethers.BytesLike): {
+    amountOut: bigint;
+    sqrtPriceX96After: bigint;
+    initializedTicksCrossed: bigint;
+    gasEstimate: bigint;
+  } {
+    const { amountOut, sqrtPriceX96After, initializedTicksCrossed, gasEstimate } =
+      UNISWAP_V3_QUOTER_INTERFACE.decodeFunctionResult("quoteExactInputSingle", data);
+
+    return { amountOut, sqrtPriceX96After, initializedTicksCrossed, gasEstimate };
   }
 
   /**
@@ -103,7 +164,10 @@ export class UniswapV3QuoterV2 {
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : "An unknown error occurred";
 
-      if (errorMessage.toLowerCase().includes("no data present")) {
+      if (
+        errorMessage.toLowerCase().includes("no data present") ||
+        errorMessage.toLowerCase().includes("unexpected error")
+      ) {
         return {
           amountOut: 0n,
           sqrtPriceX96After: 0n,
@@ -114,6 +178,20 @@ export class UniswapV3QuoterV2 {
 
       throw error;
     }
+  }
+
+  /**
+   * Function for encoding quoteExactInput call data
+   * Can be used in multicall transaction crafting
+   *
+   * @param path - The encoded path for the multi-hop swap (token addresses and fees concatenated)
+   * @param amountIn - The exact input amount to swap
+   * @returns The encoded function call data
+   */
+  encodeQuoteExactInput(path: string, amountIn: bigint): string {
+    const encodedData = this.quoterContract.interface.encodeFunctionData("quoteExactInput", [path, amountIn]);
+
+    return encodedData;
   }
 
   /**
@@ -154,7 +232,10 @@ export class UniswapV3QuoterV2 {
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : "An unknown error occurred";
 
-      if (errorMessage.toLowerCase().includes("no data present")) {
+      if (
+        errorMessage.toLowerCase().includes("no data present") ||
+        errorMessage.toLowerCase().includes("unexpected error")
+      ) {
         return {
           amountIn: 0n,
           sqrtPriceX96After: 0n,
@@ -191,7 +272,10 @@ export class UniswapV3QuoterV2 {
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : "An unknown error occurred";
 
-      if (errorMessage.toLowerCase().includes("no data present")) {
+      if (
+        errorMessage.toLowerCase().includes("no data present") ||
+        errorMessage.toLowerCase().includes("unexpected error")
+      ) {
         return {
           amountIn: 0n,
           sqrtPriceX96After: 0n,
