@@ -1,5 +1,5 @@
 import { ChainType } from "../../../../config/chain-config";
-import { InputType } from "../InputType";
+import { InputType, OutputType } from "../_index";
 
 export type BuyTradeCreationDto = {
   tradeType: "BUY";

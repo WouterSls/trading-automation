@@ -1,6 +1,6 @@
 import { ethers, Wallet } from "ethers";
 import { getHardhatWallet_1 } from "../../../../src/hooks/useSetup";
-import { ChainType, getChainConfig, getOutputTokenAddress } from "../../../../src/config/chain-config";
+import { ChainType, getChainConfig } from "../../../../src/config/chain-config";
 import { UniversalRouter } from "../../../../src/models/smartcontracts/universal-router/UniversalRouter";
 import { CommandType } from "../../../../src/models/smartcontracts/universal-router/universal-router-types";
 import { OutputType, SellTradeCreationDto } from "../../../../src/models/trading/types/_index";
@@ -34,7 +34,7 @@ export async function v4SwapInteraction(wallet: Wallet, tradeCreationDto: SellTr
 
   console.log(tradeCreationDto.inputToken);
   console.log(tradeCreationDto.outputToken);
-  const outputTokenAddress = getOutputTokenAddress(chain, tradeCreationDto.outputToken);
+  const outputTokenAddress = tradeCreationDto.outputToken;
 
   const poolKey = getLowPoolKey(tradeCreationDto.inputToken, outputTokenAddress);
   console.log(poolKey);

@@ -1,13 +1,13 @@
-import { Contract, ethers, Wallet } from "ethers";
+import {  ethers, Wallet } from "ethers";
 import { getHardhatWallet_1 } from "../../../../src/hooks/useSetup";
-import { ChainConfig, ChainType, getChainConfig, getOutputTokenAddress } from "../../../../src/config/chain-config";
+import { ChainConfig, ChainType, getChainConfig } from "../../../../src/config/chain-config";
 import { UniversalRouter } from "../../../../src/models/smartcontracts/universal-router/UniversalRouter";
 import {
   CommandType,
   IPermitSingle,
   IPermitTransferFrom,
 } from "../../../../src/models/smartcontracts/universal-router/universal-router-types";
-import { OutputToken, SellTradeCreationDto } from "../../../../src/models/trading/types/_index";
+import { OutputType, SellTradeCreationDto } from "../../../../src/models/trading/types/_index";
 import { decodeLogs } from "../../../../src/lib/utils";
 import { UniswapV2RouterV2 } from "../../../../src/models/smartcontracts/uniswap-v2/UniswapV2RouterV2";
 import { getLowPoolKey } from "../../../../src/models/smartcontracts/uniswap-v4/uniswap-v4-utils";
@@ -61,7 +61,7 @@ async function testPermit2TransferFrom(wallet: Wallet, chain: ChainType) {
 export async function v4SwapInteraction(wallet: Wallet, tradeCreationDto: SellTradeCreationDto) {
   const chain: ChainType = tradeCreationDto.chain as ChainType;
   const chainConfig: ChainConfig = getChainConfig(chain);
-  const outputTokenAddress = getOutputTokenAddress(chain, tradeCreationDto.outputToken as OutputToken);
+  const outputTokenAddress = tradeCreationDto.outputToken;
 
   const router = new UniversalRouter(chain);
   const v2Router = new UniswapV2RouterV2(chain);
@@ -177,7 +177,8 @@ if (require.main === module) {
     chain: chain,
     inputToken: usdcAddress,
     inputAmount: usdcInputAmount.toString(),
-    outputToken: OutputToken.ETH,
+    outputType: OutputType.ETH,
+    outputToken: ethers.ZeroAddress,
     tradingPointPrice: "0",
     tradeType: "SELL",
   };

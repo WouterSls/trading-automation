@@ -1,5 +1,4 @@
 import { ethers } from "ethers";
-import { OutputToken } from "../models/trading/types/OutputToken";
 
 export enum ChainType {
   ETH = "ETH",
@@ -195,23 +194,4 @@ export function mapNetworkNameToChainType(networkName: string): ChainType | unde
   }
 
   return undefined;
-}
-
-/**
- * Get output token address for a given chain
- * @param chain The chain type
- * @param outputToken the output token Enum value
- * @returns The output token address
- */
-export function getOutputTokenAddress(chain: ChainType, outputToken: OutputToken): string {
-  const chainConfig = getChainConfig(chain);
-  if (outputToken === OutputToken.USDC) {
-    return chainConfig.tokenAddresses.usdc;
-  } else if (outputToken === OutputToken.WETH) {
-    return chainConfig.tokenAddresses.weth;
-  } else if (outputToken === OutputToken.ETH) {
-    return ethers.ZeroAddress;
-  } else {
-    throw new Error(`Unsupported output token: ${outputToken}`);
-  }
 }

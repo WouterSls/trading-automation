@@ -3,8 +3,8 @@ import { getHardhatWallet_1 } from "../../../src/hooks/useSetup";
 import { createMinimalErc20 } from "../../../src/models/smartcontracts/ERC/erc-utils";
 import { TraderFactory } from "../../../src/models/trading/TraderFactory";
 import { GeckoTerminalApi } from "../../../src/services/GeckoTerminalApi";
-import { ChainType, getChainConfig, getOutputTokenAddress } from "../../../src/config/chain-config";
-import { OutputToken, SellTrade, SellTradeCreationDto } from "../../../src/models/trading/types/_index";
+import { ChainType, getChainConfig } from "../../../src/config/chain-config";
+import { OutputType, SellTrade, SellTradeCreationDto } from "../../../src/models/trading/types/_index";
 
 async function sellToken(wallet: Wallet, trade: SellTradeCreationDto) {
   const geckoTerminalApi = new GeckoTerminalApi();
@@ -29,7 +29,7 @@ async function sellToken(wallet: Wallet, trade: SellTradeCreationDto) {
       : await createMinimalErc20(trade.inputToken, wallet.provider!);
 
   let outputTokenSymbol;
-  const outputTokenAddress = getOutputTokenAddress(trade.chain, trade.outputToken);
+  const outputTokenAddress = trade.outputToken;
   if (outputTokenAddress === ethers.ZeroAddress) {
     outputTokenSymbol = "ETH";
   } else {
@@ -82,7 +82,8 @@ if (require.main === module) {
     chain: chain,
     inputToken: UNI_ADDRESS,
     inputAmount: INPUT_AMOUNT.toString(),
-    outputToken: OutputToken.ETH,
+    outputType: OutputType.ETH,
+    outputToken: ethers.ZeroAddress,
     tradingPointPrice: "5.8",
   };
 

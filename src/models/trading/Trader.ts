@@ -1,5 +1,5 @@
 import { ethers, TransactionReceipt, TransactionRequest, Wallet } from "ethers";
-import { ChainType, getOutputTokenAddress, getChainConfig } from "../../config/chain-config";
+import { ChainType, getChainConfig } from "../../config/chain-config";
 import { ITradingStrategy } from "./ITradingStrategy";
 import { BuyTrade, BuyTradeCreationDto, Quote, SellTrade, SellTradeCreationDto } from "./types/_index";
 import { decodeLogs } from "../../lib/utils";
@@ -89,7 +89,7 @@ export class Trader {
     console.log("Transaction confirmed!");
 
     const inputTokenAddress = trade.inputToken;
-    const outputTokenAddress = getOutputTokenAddress(trade.chain, trade.outputToken);
+    const outputTokenAddress = trade.outputToken;
 
     const sellTrade = await this.createSellTrade(
       bestStrategy.getName(),
