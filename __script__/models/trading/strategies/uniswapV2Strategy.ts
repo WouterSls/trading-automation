@@ -51,9 +51,10 @@ async function uniswapV2StrategyInteraction(
   console.log("Input token: ", buyTrade?.inputToken);
   console.log("Input amount: ", buyTrade?.inputAmount);
   const buyQuote = await strat.getBuyTradeQuote(wallet, buyTrade!);
-  /** 
   console.log();
   console.log("Buy Quote:", JSON.stringify(buyQuote, null, 2));
+
+  /** 
   console.log("buying token...");
   const buyTx = await strat.createBuyTransaction(wallet, buyTrade!);
   console.log("Buy Transaction:");
