@@ -10,7 +10,6 @@ export class AerodromeRouter {
   private factoryAddress: string;
 
   constructor(chain: ChainType) {
-    if (chain != ChainType.BASE) throw new Error("Aerodrome Router can only be initiliazed on Base");
     const chainConfig = getChainConfig(chain);
 
     this.routerAddress = chainConfig.aerodrome.routerAddress;
