@@ -107,7 +107,12 @@ export class UniswapV2Strategy implements ITradingStrategy {
     if (isETHInputETHAmount) {
       const amountIn = ethers.parseEther(trade.inputAmount);
 
-      route = await this.routeOptimizer.uniV2GetOptimizedRoute(trade.inputToken, outputToken.getTokenAddress());
+      route = await this.routeOptimizer.getBestUniV2Route(
+        wallet,
+        trade.inputToken,
+        amountIn,
+        outputToken.getTokenAddress(),
+      );
 
       const amountsOut = await this.router.getAmountsOut(wallet, amountIn, route.path);
       const tokensReceived = amountsOut[amountsOut.length - 1];
@@ -121,7 +126,12 @@ export class UniswapV2Strategy implements ITradingStrategy {
       const ethValueFixed = ethValue.toFixed(18);
       const amountIn = ethers.parseEther(ethValueFixed);
 
-      route = await this.routeOptimizer.uniV2GetOptimizedRoute(trade.inputToken, trade.outputToken);
+      route = await this.routeOptimizer.getBestUniV2Route(
+        wallet,
+        trade.inputToken,
+        amountIn,
+        outputToken.getTokenAddress(),
+      );
 
       const amountsOut = await this.router.getAmountsOut(wallet, amountIn, route.path);
       const tokensReceived = amountsOut[amountsOut.length - 1];
@@ -133,8 +143,10 @@ export class UniswapV2Strategy implements ITradingStrategy {
       const tokenIn = await createMinimalErc20(trade.inputToken, wallet.provider!);
       const amountIn = ethers.parseUnits(trade.inputAmount, tokenIn.getDecimals());
 
-      route = await this.routeOptimizer.uniV2GetOptimizedRoute(
+      route = await this.routeOptimizer.getBestUniV2Route(
+        wallet,
         tokenIn.getTokenAddress(),
+        amountIn,
         outputToken.getTokenAddress(),
       );
 
@@ -189,7 +201,7 @@ export class UniswapV2Strategy implements ITradingStrategy {
     if (isTOKENInputETHOutput) {
       const amountIn = ethers.parseUnits(trade.inputAmount, inputToken.getDecimals());
 
-      route = await this.routeOptimizer.uniV2GetOptimizedRoute(trade.inputToken, ethers.ZeroAddress);
+      route = await this.routeOptimizer.getBestUniV2Route(wallet, trade.inputToken, amountIn, ethers.ZeroAddress);
 
       const theoreticalOutput = await this.getTheoreticalEthOutput(wallet, sellAmount, usdSellPrice);
       const quotedOutput = await this.getActualEthOutput(wallet, inputToken, amountIn);
@@ -203,7 +215,7 @@ export class UniswapV2Strategy implements ITradingStrategy {
       const amountIn = ethers.parseUnits(trade.inputAmount, inputToken.getDecimals());
       const outputToken = await createMinimalErc20(trade.outputToken, wallet.provider!);
 
-      route = await this.routeOptimizer.uniV2GetOptimizedRoute(trade.inputToken, trade.outputToken);
+      route = await this.routeOptimizer.getBestUniV2Route(wallet, trade.inputToken, amountIn, trade.outputToken);
 
       const OUTPUT_TOKEN_USD_PRICE = 9999999; // temp value
       const INPUT_TOKEN_USD_PRICE = 100; // temp value
