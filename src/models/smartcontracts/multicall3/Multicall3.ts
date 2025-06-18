@@ -1,7 +1,7 @@
 import { Contract, ethers, Wallet } from "ethers";
 import { ChainType, getChainConfig } from "../../../config/chain-config";
 import { MULTICALL3_INTERFACE } from "../../../lib/smartcontract-abis/multicall3";
-import { Call3, Call3Result } from "./multicall3-types";
+import { Multicall3Request, Multicall3Result } from "./multicall3-types";
 
 export class Multicall3 {
   private multicall3Address: string;
@@ -25,13 +25,13 @@ export class Multicall3 {
    * Function for calling multicall3 aggregate3 method with a static call
    *
    * @param wallet - the wallet / provider to use for the call
-   * @param calls - The calls in Call3 type that should be aggregated by the multicall contract
+   * @param multicall3Request - The multicall request(s) (in Call3 tuple type) that should be aggregated by the multicall contract
    * @returns Result tuple for each call  {bool: call succeeded, bytes: returnData}
    */
-  async aggregate3StaticCall(wallet: Wallet, calls: Call3[]): Promise<Call3Result[]> {
+  async aggregate3StaticCall(wallet: Wallet, multicall3Request: Multicall3Request[]): Promise<Multicall3Result[]> {
     this.multicall3Contract = this.multicall3Contract.connect(wallet) as Contract;
 
-    const rawResults = await this.multicall3Contract.aggregate3.staticCall(calls);
+    const rawResults = await this.multicall3Contract.aggregate3.staticCall(multicall3Request);
 
     return rawResults.map((result: [boolean, string]) => ({
       success: result[0],

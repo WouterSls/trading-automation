@@ -1,15 +1,30 @@
-export interface Call3 {
-  target: string;
-  allowFailure: boolean;
-  callData: string;
-}
+import { FeeAmount } from "../uniswap-v3";
 
 // Ethers.js returns multicall results as tuples (arrays), not objects
 // So we define it as a tuple type that can be accessed by index
 // export type Call3Result = [boolean, string]; // [success, returnData]
 // We map the result type to the object defined below in Multicall3 abstraction
 
-export interface Call3Result {
+export interface Multicall3Result {
   success: boolean;
   returnData: string;
+}
+
+export interface Multicall3Context {
+  request: Multicall3Request;
+  metadata: Mutlicall3Metadata;
+}
+
+export interface Multicall3Request {
+  target: string;
+  allowFailure: boolean;
+  callData: string;
+}
+
+export interface Mutlicall3Metadata {
+  requestIndex: number;
+  type: 'quote' | 'info' | 'transaction';
+  path: string[];
+  fees?: FeeAmount[];
+  description: string; 
 }
