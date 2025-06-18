@@ -23,6 +23,7 @@ export interface ChainConfig {
     uni: string;
     aero: string;
     virtual: string;
+    arb: string;
   };
   uniswap: {
     v2: {
@@ -69,6 +70,7 @@ export const supportedChains: Record<ChainType, ChainConfig> = {
       uni: "0x1f9840a85d5af5bf1d1762f925bdaddc4201f984",
       aero: ethers.ZeroAddress,
       virtual: "0x44ff8620b8ca30902395a7bd3f2407e1a091bf73",
+      arb: "0xb50721bcf8d664c30412cfbc6cf7a15145234ad1",
     },
     uniswap: {
       v2: {
@@ -113,6 +115,7 @@ export const supportedChains: Record<ChainType, ChainConfig> = {
       uni: "0xfa7f8980b0f1e64a2062791cc3b0871572f1f7f0",
       aero: ethers.ZeroAddress,
       virtual: ethers.ZeroAddress,
+      arb: "0x912ce59144191c1204e64559fe8253a0e49e6548",
     },
     uniswap: {
       v2: {
@@ -157,6 +160,7 @@ export const supportedChains: Record<ChainType, ChainConfig> = {
       uni: ethers.ZeroAddress,
       aero: "0x940181a94a35a4569e4529a3cdfb74e38fd98631",
       virtual: "0x0b3e328455c4059eeb9e3f84b5543f74e24e7e1b",
+      arb: ethers.ZeroAddress
     },
     uniswap: {
       v2: {
