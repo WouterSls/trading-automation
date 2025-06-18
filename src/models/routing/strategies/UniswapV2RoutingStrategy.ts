@@ -47,8 +47,9 @@ export class UniswapV2RoutingStrategy extends BaseRoutingStrategy {
       requestIndex,
     );
     multicall3Contexts.push(...multihopRoutesMulticallContexts);
-    requestIndex + multihopRoutesMulticallContexts.length;
+    requestIndex += multihopRoutesMulticallContexts.length;
 
+    //TODO: Implement
     const theGraphQuotesCall3 = this.createTheGraphRoutesMulticall3Contexts();
 
     const multicall3Requests: Multicall3Request[] = multicall3Contexts.map((context) => context.request);
@@ -91,9 +92,11 @@ export class UniswapV2RoutingStrategy extends BaseRoutingStrategy {
     tokenIn: string,
     amountIn: bigint,
     tokenOut: string,
-    requestIndex: number,
+    startingRequestIndex: number,
   ): Multicall3Context[] {
     const multicall3Contexts: Multicall3Context[] = [];
+
+    let currentRequestIndex = startingRequestIndex;
 
     const multihopPaths = this.createMultihopPaths(tokenIn, tokenOut);
 
@@ -107,13 +110,14 @@ export class UniswapV2RoutingStrategy extends BaseRoutingStrategy {
       };
 
       const metadata: Mutlicall3Metadata = {
-        requestIndex: requestIndex++,
+        requestIndex: currentRequestIndex,
         type: "quote",
         path: pathInfo.path,
         description: pathInfo.description,
       };
 
       multicall3Contexts.push({ request, metadata });
+      currentRequestIndex++;
     }
 
     return multicall3Contexts;
@@ -126,85 +130,46 @@ export class UniswapV2RoutingStrategy extends BaseRoutingStrategy {
 
     const allPaths: { path: string[]; description: string }[] = [];
 
-    const prioritizedIntermediaries = this.getPrioritizedIntermediaryTokens(tokenIn, tokenOut);
+    const singleIntermediaryPaths = this.generateSingleIntermediaryPaths(tokenIn, tokenOut);
+    const doubleIntermediaryPaths = this.generateDoubleIntermediaryPaths(tokenIn, tokenOut);
 
-    // 2. Single intermediary paths (2 hops)
-    for (const intermediary of prioritizedIntermediaries) {
-      allPaths.push({
+    allPaths.push(...singleIntermediaryPaths, ...doubleIntermediaryPaths);
+
+    return allPaths;
+  }
+
+  private generateSingleIntermediaryPaths(
+    tokenIn: string,
+    tokenOut: string,
+  ): { path: string[]; description: string }[] {
+    const paths: { path: string[]; description: string }[] = [];
+    for (const intermediary of this.intermediaryTokens) {
+      paths.push({
         path: [tokenIn, intermediary, tokenOut],
         description: `${tokenIn} -> ${this.getTokenSymbol(intermediary)} -> ${tokenOut}`,
       });
     }
-
-    const doubleIntermediaryPaths = this.generateDoubleIntermediaryPaths(tokenIn, tokenOut, prioritizedIntermediaries);
-    allPaths.push(...doubleIntermediaryPaths);
-
-    return allPaths;
+    return paths;
   }
-  private getPrioritizedIntermediaryTokens(tokenIn: string, tokenOut: string): string[] {
-    const allIntermediaries = this.getIntermediaryTokens();
 
-    // Remove input/output tokens from intermediaries
-    const validIntermediaries = allIntermediaries.filter(
-      (token) => token.toLowerCase() !== tokenIn.toLowerCase() && token.toLowerCase() !== tokenOut.toLowerCase(),
-    );
-
-    // Define liquidity priority order
-    const liquidityPriority = [
-      this.chainConfig.tokenAddresses.weth, // WETH - highest liquidity base pair
-      this.chainConfig.tokenAddresses.usdc, // USDC - major stablecoin
-      this.chainConfig.tokenAddresses.usdt, // USDT - major stablecoin
-      this.chainConfig.tokenAddresses.dai, // DAI - decentralized stablecoin
-      this.chainConfig.tokenAddresses.wbtc, // WBTC - major BTC proxy
-      this.chainConfig.tokenAddresses.usds, // USDS - newer stablecoin
-      this.chainConfig.tokenAddresses.wsteth, // wstETH - liquid staking
-      this.chainConfig.tokenAddresses.uni, // UNI - platform token
-      this.chainConfig.tokenAddresses.aero, // AERO - Aerodrome token
-      this.chainConfig.tokenAddresses.virtual, // VIRTUAL
-      this.chainConfig.tokenAddresses.arb, // ARB - Arbitrum token
-    ].filter((addr) => addr && addr !== ethers.ZeroAddress);
-
-    // Sort by priority order
-    const prioritized = validIntermediaries.sort((a, b) => {
-      const indexA = liquidityPriority.indexOf(a);
-      const indexB = liquidityPriority.indexOf(b);
-
-      // If both are in priority list, sort by index
-      if (indexA !== -1 && indexB !== -1) {
-        return indexA - indexB;
-      }
-
-      // Priority tokens come first
-      if (indexA !== -1) return -1;
-      if (indexB !== -1) return 1;
-
-      // Equal priority for non-listed tokens
-      return 0;
-    });
-
-    return prioritized;
-  }
   private generateDoubleIntermediaryPaths(
     tokenIn: string,
     tokenOut: string,
-    intermediaries: string[],
   ): { path: string[]; description: string }[] {
     const paths: { path: string[]; description: string }[] = [];
 
-    // Get top intermediaries for 3-hop routes (limit to prevent explosion)
-    const topIntermediaries = intermediaries.slice(0, 6); // Use top 6 most liquid tokens
-
-    // Strategic 3-hop combinations
     const strategicCombinations = [
       // Major stable -> WETH -> major stable routes
       { first: this.chainConfig.tokenAddresses.usdc, second: this.chainConfig.tokenAddresses.weth, name: "USDC-WETH" },
       { first: this.chainConfig.tokenAddresses.usdt, second: this.chainConfig.tokenAddresses.weth, name: "USDT-WETH" },
       { first: this.chainConfig.tokenAddresses.dai, second: this.chainConfig.tokenAddresses.weth, name: "DAI-WETH" },
+      { first: this.chainConfig.tokenAddresses.usds, second: this.chainConfig.tokenAddresses.weth, name: "USDS-WETH" },
 
       // WETH -> major stable routes
       { first: this.chainConfig.tokenAddresses.weth, second: this.chainConfig.tokenAddresses.usdc, name: "WETH-USDC" },
       { first: this.chainConfig.tokenAddresses.weth, second: this.chainConfig.tokenAddresses.usdt, name: "WETH-USDT" },
       { first: this.chainConfig.tokenAddresses.weth, second: this.chainConfig.tokenAddresses.dai, name: "WETH-DAI" },
+      { first: this.chainConfig.tokenAddresses.weth, second: this.chainConfig.tokenAddresses.usds, name: "WETH-USDS" },
 
       // Cross-stable arbitrage routes
       { first: this.chainConfig.tokenAddresses.usdc, second: this.chainConfig.tokenAddresses.usdt, name: "USDC-USDT" },
@@ -213,50 +178,53 @@ export class UniswapV2RoutingStrategy extends BaseRoutingStrategy {
 
       // BTC bridge routes
       { first: this.chainConfig.tokenAddresses.weth, second: this.chainConfig.tokenAddresses.wbtc, name: "WETH-WBTC" },
+      { first: this.chainConfig.tokenAddresses.wbtc, second: this.chainConfig.tokenAddresses.weth, name: "WBTC-WETH" },
       { first: this.chainConfig.tokenAddresses.usdc, second: this.chainConfig.tokenAddresses.wbtc, name: "USDC-WBTC" },
+      { first: this.chainConfig.tokenAddresses.wbtc, second: this.chainConfig.tokenAddresses.usdc, name: "WBTC-USDC" },
+
+      // Specific bridge routes
+      {
+        first: this.chainConfig.tokenAddresses.virtual,
+        second: this.chainConfig.tokenAddresses.weth,
+        name: "VIRTUAL-WETH",
+      },
+      {
+        first: this.chainConfig.tokenAddresses.virtual,
+        second: this.chainConfig.tokenAddresses.weth,
+        name: "WETH-VIRTUAL",
+      },
+      { first: this.chainConfig.tokenAddresses.aero, second: this.chainConfig.tokenAddresses.weth, name: "AERO-WETH" },
+      { first: this.chainConfig.tokenAddresses.weth, second: this.chainConfig.tokenAddresses.aero, name: "WETH-AERO" },
     ];
 
-    // Filter valid combinations and create paths
     for (const combo of strategicCombinations) {
-      if (!combo.first || !combo.second || combo.first === ethers.ZeroAddress || combo.second === ethers.ZeroAddress) {
+      const isInvalidIntermediary =
+        !combo.first || !combo.second || combo.first === ethers.ZeroAddress || combo.second === ethers.ZeroAddress;
+      if (isInvalidIntermediary) {
         continue;
       }
 
-      // Skip if either intermediary is the input/output token
-      if (
+      const isIntermediaryInputOrOutput =
         combo.first.toLowerCase() === tokenIn.toLowerCase() ||
         combo.first.toLowerCase() === tokenOut.toLowerCase() ||
         combo.second.toLowerCase() === tokenIn.toLowerCase() ||
-        combo.second.toLowerCase() === tokenOut.toLowerCase()
-      ) {
+        combo.second.toLowerCase() === tokenOut.toLowerCase();
+      if (isIntermediaryInputOrOutput) {
         continue;
       }
 
-      // Skip if same intermediary
-      if (combo.first.toLowerCase() === combo.second.toLowerCase()) {
+      const isDuplicateIntermediary = combo.first.toLowerCase() === combo.second.toLowerCase();
+      if (isDuplicateIntermediary) {
         continue;
       }
 
-      // Forward path: tokenIn -> first -> second -> tokenOut
       paths.push({
         path: [tokenIn, combo.first, combo.second, tokenOut],
         description: `${tokenIn} -> ${this.getTokenSymbol(combo.first)} -> ${this.getTokenSymbol(combo.second)} -> ${tokenOut}`,
       });
-
-      // Reverse path: tokenIn -> second -> first -> tokenOut (if different from forward)
-      if (combo.first !== combo.second) {
-        paths.push({
-          path: [tokenIn, combo.second, combo.first, tokenOut],
-          description: `${tokenIn} -> ${this.getTokenSymbol(combo.second)} -> ${this.getTokenSymbol(combo.first)} -> ${tokenOut}`,
-        });
-      }
     }
 
     return paths;
-  }
-
-  createTheGraphRoutesMulticall3Contexts() {
-    // Implementation for TheGraph integration
   }
 
   private findBestRouteFromResults(
@@ -266,25 +234,21 @@ export class UniswapV2RoutingStrategy extends BaseRoutingStrategy {
     let bestRoute: Route | null = null;
     let bestAmountOut = 0n;
 
-    // Process each result with its corresponding metadata
     for (let i = 0; i < multicall3Results.length; i++) {
       const result = multicall3Results[i];
       const context = multicall3Contexts[i];
 
-      // Skip failed calls
       if (!result.success || !result.returnData) {
         console.log(`Route failed: ${context.metadata.description}`);
         continue;
       }
 
       try {
-        // Decode the amounts out from the router call
         const decoded = this.uniswapV2RouterV2.decodeGetAmountsOutResult(result.returnData);
-        const amountOut = decoded[decoded.length - 1]; // Last element is the final output amount
+        const amountOut = decoded[decoded.length - 1];
 
         console.log(`Route: ${context.metadata.description} | AmountOut: ${amountOut.toString()}`);
 
-        // Check if this is the best route so far
         if (amountOut > bestAmountOut) {
           bestAmountOut = amountOut;
           bestRoute = {
@@ -299,20 +263,23 @@ export class UniswapV2RoutingStrategy extends BaseRoutingStrategy {
       }
     }
 
-    // Return best route or default route if none found
     if (!bestRoute) {
       console.warn("No valid routes found, returning default route");
       return {
         path: [],
-        fees: [FeeAmount.MEDIUM],
+        fees: [],
         encodedPath: null,
         poolKey: null,
       };
     }
 
+    console.log();
     console.log(`Best route selected: ${bestRoute.path.join(" -> ")} with output: ${bestAmountOut.toString()}`);
     return bestRoute;
   }
+
+  // TODO: Implement
+  createTheGraphRoutesMulticall3Contexts() {}
 
   /**
    * Estimates gas cost for a route
@@ -325,19 +292,5 @@ export class UniswapV2RoutingStrategy extends BaseRoutingStrategy {
     const hopGas = 60000n * BigInt(route.path.length - 2);
 
     return baseGas + hopGas;
-  }
-
-  private isValidPath(path: string[]): boolean {
-    const uniqueTokens = new Set(path);
-    if (uniqueTokens.size !== path.length) {
-      return false;
-    }
-
-    const hasZeroAddress = path.some((token) => token === ethers.ZeroAddress);
-    if (hasZeroAddress) {
-      return false;
-    }
-
-    return true;
   }
 }
