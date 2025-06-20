@@ -43,7 +43,6 @@ async function uniswapV3StrategyInteraction(
   console.log("Strat:", strat.getName());
   console.log("ETH/USDC price:", ethUsdcPrice);
   console.log();
-  /**
   console.log("quoting trade...");
   console.log("Input type: ", buyTrade?.inputType);
   console.log("Input token: ", buyTrade?.inputToken);
@@ -51,6 +50,8 @@ async function uniswapV3StrategyInteraction(
   const buyQuote = await strat.getBuyTradeQuote(wallet, buyTrade!);
   console.log();
   console.log("Buy Quote:", JSON.stringify(buyQuote, null, 2));
+
+  /**
   console.log("buying token...");
   const buyTx = await strat.createBuyTransaction(wallet, buyTrade!);
   console.log("Buy Transaction:");

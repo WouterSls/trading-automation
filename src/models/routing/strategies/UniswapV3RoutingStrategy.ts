@@ -6,6 +6,7 @@ import { FeeAmount, UniswapV3QuoterV2 } from "../../smartcontracts/uniswap-v3";
 import {
   Multicall3Context,
   Multicall3Request,
+  Multicall3Result,
   Mutlicall3Metadata,
 } from "../../smartcontracts/multicall3/multicall3-types";
 
@@ -35,9 +36,15 @@ export class UniswapV3RoutingStrategy extends BaseRoutingStrategy {
       tokenOut,
       requestIndex,
     );
+    multicall3Contexts.push(...directRoutesMulticallContexts);
     requestIndex += directRoutesMulticallContexts.length;
 
-    throw new Error("Not implemented");
+    const multicall3Request: Multicall3Request[] = multicall3Contexts.map((context) => context.request);
+    const multicall3Results: Multicall3Result[] = await this.multicall3.aggregate3StaticCall(wallet, multicall3Request);
+
+    const bestRoute = this.findBestRouteFromResults(multicall3Results, multicall3Contexts);
+
+    return bestRoute;
   }
 
   createDirectRouteMulticall3Contexts(
@@ -76,7 +83,8 @@ export class UniswapV3RoutingStrategy extends BaseRoutingStrategy {
         requestIndex: currentRequestIndex,
         type: "quote",
         path: [tokenIn, tokenOut],
-        description: `${tokenIn} -> ${tokenOut}`,
+        fees: [fee],
+        description: `${tokenIn} -> ${tokenOut} | ${fee}`,
       };
 
       multicall3Contexts.push({ request, metadata });
@@ -87,4 +95,65 @@ export class UniswapV3RoutingStrategy extends BaseRoutingStrategy {
   }
 
   createMultihopRouteMulticall3Contexts() {}
+
+  private findBestRouteFromResults(
+    multicall3Results: Multicall3Result[],
+    multicall3Contexts: Multicall3Context[],
+  ): Route {
+    let bestRoute: Route | null = null;
+    let bestAmountOut = 0n;
+
+    for (let i = 0; i < multicall3Results.length; i++) {
+      const result = multicall3Results[i];
+      const context = multicall3Contexts[i];
+
+      if (!result.success || !result.returnData) {
+        console.log(`Route failed: ${context.metadata.description}`);
+        continue;
+      }
+
+      try {
+        const isMultihop = context.metadata.path.length > 2;
+        let amountOut;
+
+        if (isMultihop) {
+          const { amountOut: decoded } = this.uniswapV3QuoterV2.decodeQuoteExactInputResult(result.returnData);
+          amountOut = decoded;
+        } else {
+          const { amountOut: decoded } = this.uniswapV3QuoterV2.decodeQuoteExactInputSingleResult(result.returnData);
+          amountOut = decoded;
+        }
+
+        console.log(`Route: ${context.metadata.description} | AmountOut: ${amountOut.toString()}`);
+
+        if (amountOut > bestAmountOut) {
+          bestAmountOut = amountOut;
+          bestRoute = {
+            path: context.metadata.path,
+            fees: context.metadata.fees!, // Default fee if not specified
+            encodedPath: null,
+            poolKey: null,
+          };
+        }
+      } catch (error) {
+        console.error(`Failed to decode route result for: ${context.metadata.description}`, error);
+      }
+    }
+
+    if (!bestRoute) {
+      console.warn("No valid routes found, returning default route");
+      return {
+        path: [],
+        fees: [],
+        encodedPath: null,
+        poolKey: null,
+      };
+    }
+
+    console.log();
+    console.log(
+      `Best route selected: ${bestRoute.path.join(" -> ")} with fees: ${bestRoute.fees.join(" -> ")} | output: ${bestAmountOut.toString()}`,
+    );
+    return bestRoute;
+  }
 }

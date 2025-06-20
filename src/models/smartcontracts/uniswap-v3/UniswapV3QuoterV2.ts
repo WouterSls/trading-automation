@@ -5,6 +5,7 @@ import { ChainType, getChainConfig } from "../../../config/chain-config";
 import { UNISWAP_V3_QUOTER_INTERFACE } from "../../../lib/smartcontract-abis/uniswap-v3";
 import { validateNetwork } from "../../../lib/utils";
 import { FeeAmount } from "./uniswap-v3-types";
+import { bigint } from "hardhat/internal/core/params/argumentTypes";
 
 export class UniswapV3QuoterV2 {
   private quoterContract: Contract;
@@ -192,6 +193,25 @@ export class UniswapV3QuoterV2 {
     const encodedData = this.quoterContract.interface.encodeFunctionData("quoteExactInput", [path, amountIn]);
 
     return encodedData;
+  }
+
+  /**
+   * Function for encoding quoteExactInputSingle call data
+   * Can be used in multicall transaction crafting
+   *
+   * @param data - the resulting hex byte data from the  call request
+   * @returns amountOut, sqrtPriceX96After, initiliazedTicksCrossed, gasEstimate
+   */
+  decodeQuoteExactInputResult(data: ethers.BytesLike): {
+    amountOut: bigint;
+    sqrtPriceX96After: bigint;
+    initializedTicksCrossed: bigint;
+    gasEstimate: bigint;
+  } {
+    const { amountOut, sqrtPriceX96After, initializedTicksCrossed, gasEstimate } =
+      UNISWAP_V3_QUOTER_INTERFACE.decodeFunctionResult("quoteExactInput", data);
+
+    return { amountOut, sqrtPriceX96After, initializedTicksCrossed, gasEstimate };
   }
 
   /**

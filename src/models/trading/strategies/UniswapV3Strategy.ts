@@ -136,7 +136,12 @@ export class UniswapV3Strategy implements ITradingStrategy {
       const amountOutMin = 0n;
       const sqrtPriceLimitX96 = 0n;
 
-      route = await this.routeOptimizer.uniV3GetOptimizedRoute(trade.inputToken, outputToken.getTokenAddress());
+      route = await this.routeOptimizer.getBestUniV3Route(
+        wallet,
+        trade.inputToken,
+        amountIn,
+        outputToken.getTokenAddress(),
+      );
 
       const isSingleHop = route.path.length === 2 && route.encodedPath;
       const isMultiHop = route.path.length > 2 && route.encodedPath;
@@ -209,7 +214,12 @@ export class UniswapV3Strategy implements ITradingStrategy {
       let amountOutMin = 0n;
       const sqrtPriceLimitX96 = 0n;
 
-      const route = await this.routeOptimizer.uniV3GetOptimizedRoute(this.WETH_ADDRESS, outputToken.getTokenAddress());
+      const route = await this.routeOptimizer.getBestUniV3Route(
+        wallet,
+        this.WETH_ADDRESS,
+        amountIn,
+        outputToken.getTokenAddress(),
+      );
 
       const isSingleHop = route.path.length === 2 && route.encodedPath;
       const isMultiHop = route.path.length > 2 && route.encodedPath;
