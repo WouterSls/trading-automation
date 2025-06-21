@@ -23,8 +23,9 @@ export interface Multicall3Request {
 
 export interface Mutlicall3Metadata {
   requestIndex: number;
-  type: 'quote' | 'info' | 'transaction';
+  type: "quote" | "info" | "transaction";
   path: string[];
+  description: string;
   fees?: FeeAmount[];
-  description: string; 
+  encodedPath?: string;
 }
