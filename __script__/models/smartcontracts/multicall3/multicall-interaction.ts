@@ -2,18 +2,18 @@ import { ethers, TransactionRequest, Wallet } from "ethers";
 import { ChainType } from "../../../../src/config/chain-config";
 
 import { getChainConfig } from "../../../../src/config/chain-config";
-import { getHardhatWallet_1 } from "../../../../src/hooks/useSetup";
+import { getEthWallet_1, getHardhatWallet_1 } from "../../../../src/hooks/useSetup";
 import { decodeLogs, validateNetwork } from "../../../../src/lib/utils";
 import { FeeAmount, UniswapV3QuoterV2, UniswapV3SwapRouterV2 } from "../../../../src/models/smartcontracts/uniswap-v3";
 import { TRADING_CONFIG } from "../../../../src/config/trading-config";
 import { createMinimalErc20 } from "../../../../src/models/smartcontracts/ERC/erc-utils";
 import { WETH_INTERFACE, UNISWAP_V3_QUOTER_INTERFACE } from "../../../../src/lib/smartcontract-abis/_index";
 import { Multicall3 } from "../../../../src/models/smartcontracts/multicall3/Multicall3";
-import { Call3, Call3Result } from "../../../../src/models/smartcontracts/multicall3/multicall3-types";
+import { Multicall3Request, Multicall3Result } from "../../../../src/models/smartcontracts/multicall3/multicall3-types";
 
 export async function multicallInteraction() {
   const chain: ChainType = ChainType.ETH;
-  const wallet = getHardhatWallet_1();
+  const wallet = getEthWallet_1();
   const chainConfig = getChainConfig(chain);
 
   const blockNumber = await wallet.provider!.getBlockNumber();
@@ -42,59 +42,94 @@ export async function multicallInteraction() {
   const uniswapV3Quoter = new UniswapV3QuoterV2(chain);
 
   const PEPE_ADDRESS = "0x6982508145454ce325ddbe47a25d4ec3d2311933";
-  const inputToken = await createMinimalErc20(PEPE_ADDRESS, wallet.provider!)
+  const inputToken = await createMinimalErc20(PEPE_ADDRESS, wallet.provider!);
 
   const tokenIn = inputToken.getTokenAddress();
-  const amountIn = ethers.parseUnits('1',inputToken.getDecimals())
+  const amountIn = ethers.parseUnits("1", inputToken.getDecimals());
   const tokenOut = chainConfig.tokenAddresses.weth;
   const recipient = wallet.address;
-  const amountOutMin = 0n
-  const sqrtPriceLimitX96 = 0n
+  const amountOutMin = 0n;
+  const sqrtPriceLimitX96 = 0n;
 
-  const encodedFeeData1 = uniswapV3Quoter.encodeQuoteExactInputSingle(tokenIn,tokenOut,FeeAmount.LOWEST,recipient,amountIn,amountOutMin,sqrtPriceLimitX96);
-  const encodedFeeData2 = uniswapV3Quoter.encodeQuoteExactInputSingle(tokenIn,tokenOut,FeeAmount.LOW,recipient,amountIn,amountOutMin,sqrtPriceLimitX96);
-  const encodedFeeData3 = uniswapV3Quoter.encodeQuoteExactInputSingle(tokenIn,tokenOut,FeeAmount.MEDIUM,recipient,amountIn,amountOutMin,sqrtPriceLimitX96);
-  const encodedFeeData4 = uniswapV3Quoter.encodeQuoteExactInputSingle(tokenIn,tokenOut,FeeAmount.HIGH,recipient,amountIn,amountOutMin,sqrtPriceLimitX96);
+  const encodedFeeData1 = uniswapV3Quoter.encodeQuoteExactInputSingle(
+    tokenIn,
+    tokenOut,
+    FeeAmount.LOWEST,
+    recipient,
+    amountIn,
+    amountOutMin,
+    sqrtPriceLimitX96,
+  );
+  const encodedFeeData2 = uniswapV3Quoter.encodeQuoteExactInputSingle(
+    tokenIn,
+    tokenOut,
+    FeeAmount.LOW,
+    recipient,
+    amountIn,
+    amountOutMin,
+    sqrtPriceLimitX96,
+  );
+  const encodedFeeData3 = uniswapV3Quoter.encodeQuoteExactInputSingle(
+    tokenIn,
+    tokenOut,
+    FeeAmount.MEDIUM,
+    recipient,
+    amountIn,
+    amountOutMin,
+    sqrtPriceLimitX96,
+  );
+  const encodedFeeData4 = uniswapV3Quoter.encodeQuoteExactInputSingle(
+    tokenIn,
+    tokenOut,
+    FeeAmount.HIGH,
+    recipient,
+    amountIn,
+    amountOutMin,
+    sqrtPriceLimitX96,
+  );
+  console.log(encodedFeeData4);
 
-  const fee1Call: Call3 = {
+  const fee1Call: Multicall3Request = {
     target: uniswapV3Quoter.getQuoterAddress(),
     allowFailure: true,
-    callData:encodedFeeData1
-  }
-  const fee2Call: Call3 = {
+    callData: encodedFeeData1,
+  };
+  const fee2Call: Multicall3Request = {
     target: uniswapV3Quoter.getQuoterAddress(),
     allowFailure: true,
-    callData:encodedFeeData2 
-  }
+    callData: encodedFeeData2,
+  };
 
-  const fee3Call: Call3 = {
+  const fee3Call: Multicall3Request = {
     target: uniswapV3Quoter.getQuoterAddress(),
     allowFailure: true,
-    callData:encodedFeeData3 
-  }
+    callData: encodedFeeData3,
+  };
 
-  const multicallTuple = [
-    fee1Call,
-    fee2Call,
-    fee3Call
-  ]
+  const fee4Call: Multicall3Request = {
+    target: uniswapV3Quoter.getQuoterAddress(),
+    allowFailure: true,
+    callData: encodedFeeData4,
+  };
 
-  const results: Call3Result[] = await multiCall3.aggregate3StaticCall(wallet,multicallTuple);
+  const multicallTuple = [fee1Call, fee2Call, fee3Call, fee4Call];
+
+  const results: Multicall3Result[] = await multiCall3.aggregate3StaticCall(wallet, multicallTuple);
   console.log(results);
-  
+
   for (const [index, result] of results.entries()) {
-    console.log(`Call ${index} succeeded?`)
+    console.log(`Call ${index} succeeded?`);
     console.log(result.success);
 
     if (result.success) {
-        const {amountOut} = uniswapV3Quoter.decodeQuoteExactInputSingleResult(result.returnData);
-        console.log("raw amount out:")
-        console.log(amountOut);
-        const formattedAmountOut = ethers.formatEther(amountOut)
-        console.log("amount received:")
-        console.log(formattedAmountOut)
+      const { amountOut } = uniswapV3Quoter.decodeQuoteExactInputSingleResult(result.returnData);
+      console.log("raw amount out:");
+      console.log(amountOut);
+      const formattedAmountOut = ethers.formatEther(amountOut);
+      console.log("amount received:");
+      console.log(formattedAmountOut);
     }
-    console.log()
+    console.log();
   }
 }
 
