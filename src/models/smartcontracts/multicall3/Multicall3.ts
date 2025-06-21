@@ -31,11 +31,31 @@ export class Multicall3 {
   async aggregate3StaticCall(wallet: Wallet, multicall3Request: Multicall3Request[]): Promise<Multicall3Result[]> {
     this.multicall3Contract = this.multicall3Contract.connect(wallet) as Contract;
 
-    const rawResults = await this.multicall3Contract.aggregate3.staticCall(multicall3Request);
+    const multicall3Results: Multicall3Result[] = [];
 
-    return rawResults.map((result: [boolean, string]) => ({
-      success: result[0],
-      returnData: result[1],
-    }));
+    const REQUEST_LIMIT = 2;
+
+    for (let i = 0; i < multicall3Request.length; i += REQUEST_LIMIT) {
+      const batch = multicall3Request.slice(i, i + REQUEST_LIMIT);
+
+      try {
+        const rawResults = await this.multicall3Contract.aggregate3.staticCall(batch);
+
+        const parsedResults: Multicall3Result[] = rawResults.map((result: [boolean, string]) => ({
+          success: result[0],
+          returnData: result[1],
+        }));
+
+        multicall3Results.push(...parsedResults);
+      } catch (error) {
+        const failedResults: Multicall3Result[] = batch.map(() => ({
+          success: false,
+          returnData: "0x",
+        }));
+        multicall3Results.push(...failedResults);
+      }
+    }
+
+    return multicall3Results;
   }
 }
