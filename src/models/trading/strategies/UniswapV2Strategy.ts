@@ -94,6 +94,7 @@ export class UniswapV2Strategy implements ITradingStrategy {
     let outputAmount = "0";
     let priceImpact = 0;
     let route: Route = {
+      amountOut: 0n,
       path: [],
       fees: [],
       encodedPath: null,
@@ -114,10 +115,7 @@ export class UniswapV2Strategy implements ITradingStrategy {
         outputToken.getTokenAddress(),
       );
 
-      const amountsOut = await this.router.getAmountsOut(wallet, amountIn, route.path);
-      const tokensReceived = amountsOut[amountsOut.length - 1];
-
-      outputAmount = ethers.formatUnits(tokensReceived, outputToken.getDecimals());
+      outputAmount = ethers.formatUnits(route.amountOut, outputToken.getDecimals());
     }
 
     if (isETHInputUSDAmount) {
@@ -133,10 +131,7 @@ export class UniswapV2Strategy implements ITradingStrategy {
         outputToken.getTokenAddress(),
       );
 
-      const amountsOut = await this.router.getAmountsOut(wallet, amountIn, route.path);
-      const tokensReceived = amountsOut[amountsOut.length - 1];
-
-      outputAmount = ethers.formatUnits(tokensReceived, outputToken.getDecimals());
+      outputAmount = ethers.formatUnits(route.amountOut, outputToken.getDecimals());
     }
 
     if (isTOKENInputTOKENAmount) {
@@ -150,12 +145,9 @@ export class UniswapV2Strategy implements ITradingStrategy {
         outputToken.getTokenAddress(),
       );
 
-      const amountsOut = await this.router.getAmountsOut(wallet, amountIn, route.path);
-      const tokensReceived = amountsOut[amountsOut.length - 1];
+      outputAmount = ethers.formatUnits(route.amountOut, outputToken.getDecimals());
 
-      outputAmount = ethers.formatUnits(tokensReceived, outputToken.getDecimals());
-
-      priceImpact = await this.estimateBuyPriceImpact(wallet, tokenIn, amountIn, tokensReceived, outputToken);
+      priceImpact = await this.estimateBuyPriceImpact(wallet, tokenIn, amountIn, route.amountOut, outputToken);
     }
 
     return {
@@ -179,6 +171,7 @@ export class UniswapV2Strategy implements ITradingStrategy {
     let outputAmount = "0";
     let priceImpact = 0;
     let route: Route = {
+      amountOut: 0n,
       path: [],
       fees: [],
       encodedPath: null,

@@ -10,6 +10,7 @@ export interface Quote {
 }
 
 export interface Route {
+  amountOut: bigint;
   path: string[];
   fees: FeeAmount[];
   encodedPath: string | null;

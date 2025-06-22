@@ -120,6 +120,7 @@ export class UniswapV3Strategy implements ITradingStrategy {
     let outputAmount = "0";
     let priceImpact = 0;
     let route: Route = {
+      amountOut: 0n,
       path: [],
       fees: [],
       encodedPath: null,
