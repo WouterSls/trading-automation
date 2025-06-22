@@ -5,14 +5,14 @@ import { Multicall3 } from "../../smartcontracts/multicall3/Multicall3";
 import { UniswapV4Quoter } from "../../smartcontracts/uniswap-v4/UniswapV4Quoter";
 
 export class UniswapV4RoutingStrategy extends BaseRoutingStrategy {
-  private intermediaryTokens: string[] = [];
+  private intermediaryTokenList: string[] = [];
 
   private uniswapV4Quoter: UniswapV4Quoter;
   private multicall3: Multicall3;
 
   constructor(chain: any) {
     super(chain);
-    this.intermediaryTokens = this.getIntermediaryTokens();
+    this.intermediaryTokenList = this.getIntermediaryTokenList();
 
     this.uniswapV4Quoter = new UniswapV4Quoter(chain);
     this.multicall3 = new Multicall3(chain);
@@ -22,4 +22,3 @@ export class UniswapV4RoutingStrategy extends BaseRoutingStrategy {
     throw new Error("Not implemented");
   }
 }
-
