@@ -1,34 +1,16 @@
 import { ethers, Wallet } from "ethers";
-import { ChainType, getChainConfig } from "../../config/chain-config";
+import { ChainConfig, ChainType, getChainConfig } from "../../config/chain-config";
 import { Route } from "../trading/types/quoting-types";
+import { FeeAmount } from "../smartcontracts/uniswap-v3";
 
 export abstract class BaseRoutingStrategy {
-  protected chainConfig: any;
+  protected chainConfig: ChainConfig;
 
   constructor(protected chain: ChainType) {
     this.chainConfig = getChainConfig(chain);
   }
 
   abstract getBestRoute(wallet: Wallet, tokenIn: string, amountIn: bigint, tokenOut: string): Promise<Route>;
-
-  /**
-   * Gets common intermediary tokens for routing
-   */
-  protected getIntermediaryTokens(): string[] {
-    return [
-      this.chainConfig.tokenAddresses.usdt,
-      this.chainConfig.tokenAddresses.usdc,
-      this.chainConfig.tokenAddresses.usds,
-      this.chainConfig.tokenAddresses.dai,
-      this.chainConfig.tokenAddresses.wbtc,
-      this.chainConfig.tokenAddresses.weth,
-      this.chainConfig.tokenAddresses.wsteth,
-      this.chainConfig.tokenAddresses.uni,
-      this.chainConfig.tokenAddresses.aero,
-      this.chainConfig.tokenAddresses.virtual,
-      this.chainConfig.tokenAddresses.arb,
-    ].filter((addr) => addr !== ethers.ZeroAddress);
-  }
 
   protected getTokenSymbol(address: string): string {
     const symbols: { [key: string]: string } = {
@@ -46,6 +28,146 @@ export abstract class BaseRoutingStrategy {
     };
 
     return symbols[address] || address.slice(0, 6) + "...";
+  }
+
+  protected getIntermediaryTokenList(): string[] {
+    return [
+      this.chainConfig.tokenAddresses.usdt,
+      this.chainConfig.tokenAddresses.usdc,
+      this.chainConfig.tokenAddresses.usds,
+      this.chainConfig.tokenAddresses.dai,
+      this.chainConfig.tokenAddresses.wbtc,
+      this.chainConfig.tokenAddresses.weth,
+      this.chainConfig.tokenAddresses.wsteth,
+      this.chainConfig.tokenAddresses.uni,
+      this.chainConfig.tokenAddresses.aero,
+      this.chainConfig.tokenAddresses.virtual,
+      this.chainConfig.tokenAddresses.arb,
+    ].filter((addr) => addr !== ethers.ZeroAddress);
+  }
+
+  protected getIntermediaryTokenCombinations() {
+    const intermediaryCombinations = [
+      {
+        firstToken: this.chainConfig.tokenAddresses.usdc,
+        secondToken: this.chainConfig.tokenAddresses.weth,
+        name: "USDC-WETH",
+      },
+      {
+        firstToken: this.chainConfig.tokenAddresses.usdt,
+        secondToken: this.chainConfig.tokenAddresses.weth,
+        name: "USDT-WETH",
+      },
+      {
+        firstToken: this.chainConfig.tokenAddresses.dai,
+        secondToken: this.chainConfig.tokenAddresses.weth,
+        name: "DAI-WETH",
+      },
+      {
+        firstToken: this.chainConfig.tokenAddresses.usds,
+        secondToken: this.chainConfig.tokenAddresses.weth,
+        name: "USDS-WETH",
+      },
+
+      {
+        firstToken: this.chainConfig.tokenAddresses.weth,
+        secondToken: this.chainConfig.tokenAddresses.usdc,
+        name: "WETH-USDC",
+      },
+      {
+        firstToken: this.chainConfig.tokenAddresses.weth,
+        secondToken: this.chainConfig.tokenAddresses.usdt,
+        name: "WETH-USDT",
+      },
+      {
+        firstToken: this.chainConfig.tokenAddresses.weth,
+        secondToken: this.chainConfig.tokenAddresses.dai,
+        name: "WETH-DAI",
+      },
+      {
+        firstToken: this.chainConfig.tokenAddresses.weth,
+        secondToken: this.chainConfig.tokenAddresses.usds,
+        name: "WETH-USDS",
+      },
+
+      {
+        firstToken: this.chainConfig.tokenAddresses.usdc,
+        secondToken: this.chainConfig.tokenAddresses.usdt,
+        name: "USDC-USDT",
+      },
+      {
+        firstToken: this.chainConfig.tokenAddresses.usdc,
+        secondToken: this.chainConfig.tokenAddresses.dai,
+        name: "USDC-DAI",
+      },
+      {
+        firstToken: this.chainConfig.tokenAddresses.usdt,
+        secondToken: this.chainConfig.tokenAddresses.dai,
+        name: "USDT-DAI",
+      },
+
+      {
+        firstToken: this.chainConfig.tokenAddresses.weth,
+        secondToken: this.chainConfig.tokenAddresses.wbtc,
+        name: "WETH-WBTC",
+      },
+      {
+        firstToken: this.chainConfig.tokenAddresses.wbtc,
+        secondToken: this.chainConfig.tokenAddresses.weth,
+        name: "WBTC-WETH",
+      },
+      {
+        firstToken: this.chainConfig.tokenAddresses.usdc,
+        secondToken: this.chainConfig.tokenAddresses.wbtc,
+        name: "USDC-WBTC",
+      },
+      {
+        firstToken: this.chainConfig.tokenAddresses.wbtc,
+        secondToken: this.chainConfig.tokenAddresses.usdc,
+        name: "WBTC-USDC",
+      },
+
+      {
+        firstToken: this.chainConfig.tokenAddresses.virtual,
+        secondToken: this.chainConfig.tokenAddresses.weth,
+        name: "VIRTUAL-WETH",
+      },
+      {
+        firstToken: this.chainConfig.tokenAddresses.virtual,
+        secondToken: this.chainConfig.tokenAddresses.weth,
+        name: "WETH-VIRTUAL",
+      },
+      {
+        firstToken: this.chainConfig.tokenAddresses.aero,
+        secondToken: this.chainConfig.tokenAddresses.weth,
+        name: "AERO-WETH",
+      },
+      {
+        firstToken: this.chainConfig.tokenAddresses.weth,
+        secondToken: this.chainConfig.tokenAddresses.aero,
+        name: "WETH-AERO",
+      },
+    ];
+    return intermediaryCombinations;
+  }
+
+  protected getFeeCombinations() {
+    const feeCombinations = [
+      {
+        fees: [FeeAmount.LOWEST, FeeAmount.LOWEST],
+        name: "LOWEST - LOWEST",
+      },
+      {
+        fees: [FeeAmount.LOWEST, FeeAmount.LOW],
+        name: "LOWEST - LOW",
+      },
+      {
+        fees: [FeeAmount.LOW, FeeAmount.LOWEST],
+        name: "LOW - LOWEST",
+      },
+    ];
+
+    return feeCombinations;
   }
 
   /**
