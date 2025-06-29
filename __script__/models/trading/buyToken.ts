@@ -5,8 +5,9 @@ import { TraderFactory } from "../../../src/models/trading/TraderFactory";
 import { GeckoTerminalApi } from "../../../src/services/GeckoTerminalApi";
 import { ChainType, getChainConfig } from "../../../src/config/chain-config";
 import { BuyTrade, BuyTradeCreationDto, InputType } from "../../../src/models/trading/types/_index";
+import { TradeCreationDto } from "../../../src/models/trading/types/dto/TradeCreationDto";
 
-async function buyToken(wallet: Wallet, trade: BuyTradeCreationDto) {
+async function buyToken(wallet: Wallet, trade: TradeCreationDto) {
   const trader = await TraderFactory.createTrader(wallet);
   const chainConfig = getChainConfig(trade.chain);
   const USDC_ADDRESS = chainConfig.tokenAddresses.usdc;
@@ -54,8 +55,7 @@ if (require.main === module) {
   const UNI_ADDRESS = "0x1f9840a85d5af5bf1d1762f925bdaddc4201f984";
   const INPUT_AMOUNT = 1;
 
-  const trade: BuyTradeCreationDto = {
-    tradeType: "BUY",
+  const trade: TradeCreationDto = {
     chain: chain,
     inputType: InputType.ETH,
     inputToken: ethers.ZeroAddress,

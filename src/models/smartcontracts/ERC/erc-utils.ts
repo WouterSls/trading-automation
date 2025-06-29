@@ -1,7 +1,7 @@
 import { ethers, Provider } from "ethers";
 import { ERC20 } from "./ERC20";
 import { ERC20_INTERFACE } from "../../../lib/smartcontract-abis/erc20";
-export async function createMinimalErc20(address: string, provider: Provider): Promise<ERC20> {
+export async function createMinimalErc20(address: string, provider: Provider): Promise<ERC20 | null> {
   const contract = new ethers.Contract(address, ERC20_INTERFACE, provider);
 
   const [name, symbol, decimals, totalSupply] = await Promise.all([
@@ -12,7 +12,7 @@ export async function createMinimalErc20(address: string, provider: Provider): P
   ]);
 
   if (name === "Not a token" || symbol === "Unknown" || totalSupply === "0") {
-    throw new Error("Not an ERC20");
+    return null;
   }
   const numberDecimals = Number(decimals);
 

@@ -12,6 +12,7 @@ import { BuyTradeCreationDto, SellTradeCreationDto, InputType, Quote, OutputType
 import { ERC20_INTERFACE } from "../../../lib/smartcontract-abis/_index";
 import { ensureInfiniteApproval, ensureStandardApproval, validateNetwork } from "../../../lib/_index";
 import { RouteOptimizer } from "../../routing/RouteOptimizer";
+import { TradeCreationDto } from "../types/dto/TradeCreationDto";
 
 export class UniswapV2Strategy implements ITradingStrategy {
   private router: UniswapV2RouterV2;
@@ -363,6 +364,195 @@ export class UniswapV2Strategy implements ITradingStrategy {
     if (isTOKENInputTOKENOutput) {
       const amountIn = ethers.parseUnits(trade.inputAmount, inputToken.getDecimals());
       const outputToken = await createMinimalErc20(trade.outputToken, wallet.provider!);
+
+      path = [inputToken.getTokenAddress(), outputToken.getTokenAddress()];
+
+      theoreticalOutput = await this.getTheoreticalTokenOutput(sellAmount, usdSellPrice); // Returns USD Value
+      quotedOutput = await this.getActualTokenOutput(wallet, inputToken, amountIn);
+      priceImpact = this.calculatePriceImpact(theoreticalOutput, quotedOutput);
+
+      if (priceImpact > TRADING_CONFIG.MAX_PRICE_IMPACT_PERCENTAGE) {
+        throw new Error(
+          `Price impact too high: ${priceImpact}%, max allowed: ${TRADING_CONFIG.MAX_PRICE_IMPACT_PERCENTAGE}%`,
+        );
+      }
+
+      const quotedOutputFixed = quotedOutput.toFixed(18);
+      rawTokensReceived = ethers.parseEther(quotedOutputFixed);
+      const slippageAmount = (rawTokensReceived * BigInt(TRADING_CONFIG.SLIPPAGE_TOLERANCE * 100)) / 100n;
+      const amountOutMin = rawTokensReceived - slippageAmount;
+
+      tx = this.router.createSwapExactTokensForTokensTransaction(amountIn, amountOutMin, path, to, deadline);
+    }
+
+    return tx;
+  }
+
+  /**
+   * Gets a comprehensive quote for a buy trade by mirroring the exact transaction creation logic
+   * @param wallet Connected wallet to query the price
+   * @param trade Buy trade creation parameters
+   * @returns TradeQuote with all execution details
+   */
+  async getTradeQuote(wallet: Wallet, trade: BuyTradeCreationDto): Promise<Quote> {
+    await validateNetwork(wallet, this.chain);
+
+    const outputToken = await createMinimalErc20(trade.outputToken, wallet.provider!);
+
+    let outputAmount = "0";
+    let priceImpact = 0;
+    let route: Route = {
+      amountOut: 0n,
+      path: [],
+      fees: [],
+      encodedPath: null,
+      poolKey: null,
+    };
+
+    const isETHInputETHAmount = trade.inputType === InputType.ETH && trade.inputToken === ethers.ZeroAddress;
+    const isETHInputUSDAmount = trade.inputType === InputType.USD && trade.inputToken === ethers.ZeroAddress;
+    const isTOKENInputTOKENAmount = trade.inputType === InputType.TOKEN && trade.inputToken !== ethers.ZeroAddress;
+
+    if (isETHInputETHAmount && outputToken) {
+      const amountIn = ethers.parseEther(trade.inputAmount);
+
+      route = await this.routeOptimizer.getBestUniV2Route(
+        wallet,
+        trade.inputToken,
+        amountIn,
+        outputToken.getTokenAddress(),
+      );
+
+      outputAmount = ethers.formatUnits(route.amountOut, outputToken.getDecimals());
+    }
+
+    if (isETHInputUSDAmount && outputToken) {
+      const ethUsdcPrice = await this.getEthUsdcPrice(wallet);
+      const ethValue = parseFloat(trade.inputAmount) / parseFloat(ethUsdcPrice);
+      const ethValueFixed = ethValue.toFixed(18);
+      const amountIn = ethers.parseEther(ethValueFixed);
+
+      route = await this.routeOptimizer.getBestUniV2Route(
+        wallet,
+        trade.inputToken,
+        amountIn,
+        outputToken.getTokenAddress(),
+      );
+
+      outputAmount = ethers.formatUnits(route.amountOut, outputToken.getDecimals());
+    }
+
+    if (isTOKENInputTOKENAmount && outputToken) {
+      const tokenIn = await createMinimalErc20(trade.inputToken, wallet.provider!);
+      const amountIn = ethers.parseUnits(trade.inputAmount, tokenIn!.getDecimals());
+
+      route = await this.routeOptimizer.getBestUniV2Route(
+        wallet,
+        tokenIn!.getTokenAddress(),
+        amountIn,
+        outputToken.getTokenAddress(),
+      );
+
+      outputAmount = ethers.formatUnits(route.amountOut, outputToken.getDecimals());
+
+      priceImpact = await this.estimateBuyPriceImpact(wallet, tokenIn!, amountIn, route.amountOut, outputToken);
+    }
+
+    return {
+      outputAmount,
+      priceImpact,
+      route,
+    };
+  }
+
+  /**
+   * Creates a transaction based on the provided trade parameters
+   * Includes price impact validation and slippage protection
+   * @param wallet Connected wallet to create transaction for
+   * @param trade Sell trade creation parameters
+   * @returns Transaction request object ready to be sent
+   * @throws Error if price impact exceeds maximum allowed percentage
+   */
+  async createTransaction(wallet: Wallet, trade: TradeCreationDto): Promise<TransactionRequest> {
+    await validateNetwork(wallet, this.chain);
+
+    const to = wallet.address;
+    const deadline = TRADING_CONFIG.DEADLINE;
+
+    let tx: TransactionRequest = {};
+
+    let theoreticalOutput;
+    let quotedOutput;
+    let priceImpact;
+    let path;
+    let rawTokensReceived;
+
+    const sellAmount = parseFloat(trade.inputAmount);
+    const usdSellPrice = 1;
+    //parseFloat(trade.tradingPointPrice);
+
+    const inputToken: ERC20 | null = await createMinimalErc20(trade.inputToken, wallet.provider!);
+    const outputToken: ERC20 | null = await createMinimalErc20(trade.outputToken, wallet.provider!);
+
+    const isTOKENInputETHOutput =
+      trade.inputType === InputType.TOKEN &&
+      trade.inputToken !== ethers.ZeroAddress &&
+      trade.outputToken === ethers.ZeroAddress &&
+      inputToken &&
+      !outputToken;
+
+    const isTOKENInputTOKENOutput =
+      trade.inputType === InputType.TOKEN &&
+      trade.inputToken !== ethers.ZeroAddress &&
+      trade.outputToken !== ethers.ZeroAddress &&
+      inputToken &&
+      outputToken;
+
+    const isETHInputTOKENOutput =
+      trade.inputType === InputType.ETH &&
+      trade.inputToken === ethers.ZeroAddress &&
+      trade.outputToken !== ethers.ZeroAddress;
+
+    const isETHInputETHOutput =
+      trade.inputType === InputType.ETH &&
+      trade.inputToken === ethers.ZeroAddress &&
+      trade.outputToken === ethers.ZeroAddress;
+
+    const isUSDInputTOKENOutput =
+      trade.inputType === InputType.USD &&
+      trade.inputToken === ethers.ZeroAddress &&
+      trade.outputToken !== ethers.ZeroAddress;
+
+    const isUSDInputETHOutput =
+      trade.inputType === InputType.USD &&
+      trade.inputToken === ethers.ZeroAddress &&
+      trade.outputToken === ethers.ZeroAddress;
+
+    if (isTOKENInputETHOutput && inputToken) {
+      const amountIn = ethers.parseUnits(trade.inputAmount, inputToken.getDecimals());
+
+      path = [inputToken.getTokenAddress(), this.WETH_ADDRESS];
+
+      theoreticalOutput = await this.getTheoreticalEthOutput(wallet, sellAmount, usdSellPrice);
+      quotedOutput = await this.getActualEthOutput(wallet, inputToken, amountIn);
+      priceImpact = this.calculatePriceImpact(theoreticalOutput, quotedOutput);
+
+      if (priceImpact > TRADING_CONFIG.MAX_PRICE_IMPACT_PERCENTAGE) {
+        throw new Error(
+          `Price impact too high: ${priceImpact}%, max allowed: ${TRADING_CONFIG.MAX_PRICE_IMPACT_PERCENTAGE}%`,
+        );
+      }
+
+      rawTokensReceived = ethers.parseEther(quotedOutput.toString());
+      const slippageAmount = (rawTokensReceived * BigInt(TRADING_CONFIG.SLIPPAGE_TOLERANCE * 100)) / 100n;
+      const amountOutMin = rawTokensReceived - slippageAmount;
+
+      tx = this.router.createSwapExactTokensForETHTransaction(amountIn, amountOutMin, path, to, deadline);
+    }
+
+    if (isTOKENInputTOKENOutput && inputToken && outputToken) {
+      const amountIn = ethers.parseUnits(trade.inputAmount, inputToken.getDecimals());
+      //const outputToken = await createMinimalErc20(trade.outputToken, wallet.provider!);
 
       path = [inputToken.getTokenAddress(), outputToken.getTokenAddress()];
 
