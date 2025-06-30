@@ -6,14 +6,16 @@ export interface ITradingStrategy {
   getName(): string;
   getEthUsdcPrice(wallet: Wallet): Promise<string>;
 
+  /**
   getBuyTradeQuote(wallet: Wallet, trade: BuyTradeCreationDto): Promise<Quote>;
   getSellTradeQuote(wallet: Wallet, trade: SellTradeCreationDto): Promise<Quote>;
 
   createBuyTransaction(wallet: Wallet, trade: BuyTradeCreationDto): Promise<TransactionRequest>;
   createSellTransaction(wallet: Wallet, trade: SellTradeCreationDto): Promise<TransactionRequest>;
+  */
 
-  getTradeQuote(wallet: Wallet, trade: TradeCreationDto): Promise<Quote>;
-  createTransaction(wallet: Wallet, trade: TradeCreationDto): Promise<TransactionRequest>;
+  getQuote(trade: TradeCreationDto, wallet: Wallet): Promise<Quote>;
+  createTransaction(trade: TradeCreationDto, wallet: Wallet): Promise<TransactionRequest>;
 
   ensureTokenApproval(wallet: Wallet, tokenAddress: string, amount: string): Promise<string | null>;
 }

@@ -9,6 +9,12 @@ export enum OutputType {
   TOKEN = "TOKEN",
 }
 
+export enum TradeType {
+  ETHInputTOKENOutput = "1",
+  TOKENInputTOKENOutput = "2",
+  TOKENInputETHOutput = "3",
+}
+
 abstract class BaseTrade {
   constructor(
     private strategy: string,
