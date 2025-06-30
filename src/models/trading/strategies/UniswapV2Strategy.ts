@@ -124,7 +124,7 @@ export class UniswapV2Strategy implements ITradingStrategy {
    * Creates a transaction based on the provided trade parameters
    * Includes price impact validation and slippage protection
    * @param wallet Connected wallet to create transaction for
-   * @param trade Sell trade creation parameters
+   * @param trade trade creation parameters
    * @returns Transaction request object ready to be sent
    * @throws Error if price impact exceeds maximum allowed percentage
    */
@@ -270,6 +270,7 @@ export class UniswapV2Strategy implements ITradingStrategy {
   ) {
     let tx: TransactionRequest = {};
     if (!outputToken) throw Error("Stop");
+
     if (trade.inputType === InputType.USD) {
       const ethUsdcPrice = await this.getEthUsdcPrice(wallet);
       const ethValue = parseFloat(trade.inputAmount) / parseFloat(ethUsdcPrice);
