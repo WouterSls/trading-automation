@@ -122,186 +122,72 @@ export class Trader {
     const approvalGastCostRaw = ethers.parseEther(approvalGasCost || "0");
     const gasCost = ethers.formatEther(gasCostRaw + approvalGastCostRaw);
 
-    const ethSpentRaw = tx.value || 0n;
-    const ethSpent = ethers.formatEther(ethSpentRaw);
+    let ethSpent = "0";
+    let ethSpentFormatted = "0";
 
-    // LOG EXTRACTION
-    let rawTokensReceived = "0";
-    let formattedTokensReceived = "0";
-    let rawTokensSpent = "0";
-    let formattedTokensSpent = "0";
     let ethReceived = "0";
-    let outputDecimals;
-    let inputDecimals;
+    let ethReceivedFormatted = "0";
 
-    const decodedLogs = decodeLogs(txReceipt.logs);
+    let tokensReceived = "0";
+    let tokensReceivedFormatted = "0";
+
+    let tokensSpent = "0";
+    let tokensSpentFormatted = "0";
 
     const tradeType: TradeType = determineTradeType(trade);
 
-    if (tradeType === TradeType.ETHInputTOKENOutput) {
-      // INPUT DECIMALS
-      inputDecimals = 18n;
-
-      // OUTPUT DECIMALS
-      const encodedOutputTokenData = ERC20_INTERFACE.encodeFunctionData("decimals", []);
-      const outputTokenDecimalsTx: TransactionRequest = {
-        to: trade.outputToken,
-        data: encodedOutputTokenData,
-      };
-      const rawOutputTokenTxResult = await this.wallet.call(outputTokenDecimalsTx);
-      [outputDecimals] = ERC20_INTERFACE.decodeFunctionResult("decimals", rawOutputTokenTxResult);
-    } else if (tradeType === TradeType.TOKENInputETHOutput) {
-      // INPUT DECIMALS
-      const encodedInputTokenData = ERC20_INTERFACE.encodeFunctionData("decimals", []);
-      const inputTokenDecimalsTx: TransactionRequest = {
-        to: trade.inputToken,
-        data: encodedInputTokenData,
-      };
-      const rawInputTokenTxResult = await this.wallet.call(inputTokenDecimalsTx);
-      [inputDecimals] = ERC20_INTERFACE.decodeFunctionResult("decimals", rawInputTokenTxResult);
-
-      // OUTPUT DECIMALS
-      outputDecimals = 18n;
-    } else if (tradeType === TradeType.TOKENInputTOKENOutput) {
-      // INPUT DECIMALS
-      const encodedInputTokenData = ERC20_INTERFACE.encodeFunctionData("decimals", []);
-      const inputTokenDecimalsTx: TransactionRequest = {
-        to: trade.inputToken,
-        data: encodedInputTokenData,
-      };
-      const rawInputTokenTxResult = await this.wallet.call(inputTokenDecimalsTx);
-      [inputDecimals] = ERC20_INTERFACE.decodeFunctionResult("decimals", rawInputTokenTxResult);
-
-      // OUTPUT DECIMALS
-      const encodedOutputTokenData = ERC20_INTERFACE.encodeFunctionData("decimals", []);
-      const outputTokenDecimalsTx: TransactionRequest = {
-        to: trade.outputToken,
-        data: encodedOutputTokenData,
-      };
-      const rawOutputTokenTxResult = await this.wallet.call(outputTokenDecimalsTx);
-      [outputDecimals] = ERC20_INTERFACE.decodeFunctionResult("decimals", rawOutputTokenTxResult);
-
-      /**
-      const firstTransfer = spendingTokenTransfers[0];
-      rawTokensSpent = firstTransfer.amount.toString();
-      formattedTokensSpent = ethers.formatUnits(firstTransfer.amount, inputDecimals);
-      */
+    switch (tradeType) {
+      case TradeType.ETHInputTOKENOutput:
+        const ethInputResult = await this.extractEthToTokenTradeResult(trade, tx, txReceipt);
+        ethSpent = ethInputResult.ethSpent;
+        ethReceived = ethInputResult.ethReceived;
+        tokensSpent = ethInputResult.tokensSpent;
+        tokensReceived = ethInputResult.tokensReceived;
+        ethSpentFormatted = ethInputResult.ethSpentFormatted;
+        ethReceivedFormatted = ethInputResult.ethReceivedFormatted;
+        tokensSpentFormatted = ethInputResult.tokensSpentFormatted;
+        tokensReceivedFormatted = ethInputResult.tokensReceivedFormatted;
+        break;
+      case TradeType.TOKENInputETHOutput:
+        const ethOutputResult = await this.extractTokenToEthTradeResult(trade, tx, txReceipt);
+        ethSpent = ethOutputResult.ethSpent;
+        ethReceived = ethOutputResult.ethReceived;
+        tokensSpent = ethOutputResult.tokensSpent;
+        tokensReceived = ethOutputResult.tokensReceived;
+        ethSpentFormatted = ethOutputResult.ethSpentFormatted;
+        ethReceivedFormatted = ethOutputResult.ethReceivedFormatted;
+        tokensSpentFormatted = ethOutputResult.tokensSpentFormatted;
+        tokensReceivedFormatted = ethOutputResult.tokensReceivedFormatted;
+        break;
+      case TradeType.TOKENInputTOKENOutput:
+        const result = await this.extractTokenToTokenTradeResult(trade, tx, txReceipt);
+        ethSpent = result.ethSpent;
+        ethReceived = result.ethReceived;
+        tokensSpent = result.tokensSpent;
+        tokensReceived = result.tokensReceived;
+        ethSpentFormatted = result.ethSpentFormatted;
+        ethReceivedFormatted = result.ethReceivedFormatted;
+        tokensSpentFormatted = result.tokensSpentFormatted;
+        tokensReceivedFormatted = result.tokensReceivedFormatted;
+        break;
     }
 
-    if (trade.outputToken === ethers.ZeroAddress) {
-      // calculate tokens spent & eth received
-      outputDecimals = 18n;
-
-      // For ETH output, look for WETH transfers to wallet (which will be unwrapped)
-      const chainConfig = getChainConfig(this.chain);
-      const wethAddress = chainConfig.tokenAddresses.weth;
-
-      const wethToWalletTransfers = decodedLogs.filter(
-        (log: any) =>
-          log.type === "ERC20 Transfer" &&
-          log.contract.toLowerCase() === wethAddress.toLowerCase() &&
-          log.to.toLowerCase() === this.wallet.address.toLowerCase(),
-      );
-
-      if (wethToWalletTransfers.length > 0) {
-        const finalTransfer = wethToWalletTransfers[wethToWalletTransfers.length - 1];
-        rawTokensReceived = finalTransfer.amount.toString();
-        formattedTokensReceived = ethers.formatUnits(finalTransfer.amount, outputDecimals);
-      }
-
-      // Look for WETH withdrawal events by the router (not wallet) to calculate actual ETH received
-      const routerAddress = "0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D"; // Uniswap V2 Router
-      const wethWithdrawals = decodedLogs.filter(
-        (log: any) =>
-          log.type === "WETH Withdrawal" &&
-          log.contract.toLowerCase() === wethAddress.toLowerCase() &&
-          log.src.toLowerCase() === routerAddress.toLowerCase(),
-      );
-
-      if (wethWithdrawals.length > 0) {
-        // Sum all WETH withdrawals by the router
-        const totalWithdrawn = wethWithdrawals.reduce((total: bigint, withdrawal: any) => {
-          return total + withdrawal.wad;
-        }, 0n);
-        ethReceived = ethers.formatEther(totalWithdrawn);
-        formattedTokensReceived = ethReceived; // For ETH output, received amount = ETH received
-        rawTokensReceived = totalWithdrawn.toString();
-      } else {
-        // Fallback: Look for Uniswap V2 Swap events to calculate ETH output
-        const v2Swaps = decodedLogs.filter((log: any) => log.type === "Uniswap V2 Swap");
-
-        for (const swap of v2Swaps) {
-          // In a UNI->ETH swap, we need to find which amount represents ETH
-          // Check if this pair involves WETH by looking at token0/token1
-          // For now, use the larger output amount as ETH (common pattern)
-          const amount0Out = swap.amount0Out;
-          const amount1Out = swap.amount1Out;
-
-          if (amount0Out > 0n) {
-            ethReceived = ethers.formatEther(amount0Out);
-            formattedTokensReceived = ethReceived;
-            rawTokensReceived = amount0Out.toString();
-            break;
-          } else if (amount1Out > 0n) {
-            ethReceived = ethers.formatEther(amount1Out);
-            formattedTokensReceived = ethReceived;
-            rawTokensReceived = amount1Out.toString();
-            break;
-          }
-        }
-      }
-    } else {
-      const encodedOutputTokenData = ERC20_INTERFACE.encodeFunctionData("decimals", []);
-      const outputTokenDecimalsTx: TransactionRequest = {
-        to: trade.outputToken,
-        data: encodedOutputTokenData,
-      };
-      const rawOutputTokenTxResult = await this.wallet.call(outputTokenDecimalsTx);
-      [outputDecimals] = ERC20_INTERFACE.decodeFunctionResult("decimals", rawOutputTokenTxResult);
-    }
-
-    if (trade.outputToken !== ethers.ZeroAddress && trade.inputToken !== ethers.ZeroAddress) {
-      const encodedInputTokenData = ERC20_INTERFACE.encodeFunctionData("decimals", []);
-      const inputTokenDecimalsTx: TransactionRequest = {
-        to: trade.inputToken,
-        data: encodedInputTokenData,
-      };
-      const rawInputTokenTxResult = await this.wallet.call(inputTokenDecimalsTx);
-      const [inputDecimals] = ERC20_INTERFACE.decodeFunctionResult("decimals", rawInputTokenTxResult);
-    }
-
-    const tokenTransfers = decodedLogs.filter(
-      (log: any) =>
-        log.type === "ERC20 Transfer" &&
-        log.contract.toLowerCase() === trade.outputToken.toLowerCase() &&
-        log.to.toLowerCase() === this.wallet.address.toLowerCase(),
-    );
-
-    if (tokenTransfers.length > 0) {
-      const finalTransfer = tokenTransfers[tokenTransfers.length - 1];
-      rawTokensReceived = finalTransfer.amount.toString();
-      formattedTokensReceived = ethers.formatUnits(finalTransfer.amount, outputDecimals);
-    } else {
-      console.log("⚠️  No token transfers found to wallet address");
-    }
-
-    // PRICE CALCULATION
     let tokenPriceUsd = "0";
-    if (parseFloat(formattedTokensSpent) > 0 && parseFloat(formattedTokensReceived) > 0) {
+    if (parseFloat(tokensSpentFormatted) > 0 && parseFloat(tokensReceivedFormatted) > 0) {
       // For sell trades: Token Price = USD received / Tokens spent
       // Assuming USDC ≈ 1 USD, or if receiving ETH, convert ETH to USD
-      let usdReceived = parseFloat(formattedTokensReceived);
+      let usdReceived = parseFloat(tokensReceivedFormatted);
 
       // If output token is ETH, convert to USD using ETH price
       if (trade.outputToken === ethers.ZeroAddress && parseFloat(ethUsdPrice) > 0) {
-        usdReceived = parseFloat(formattedTokensReceived) * parseFloat(ethUsdPrice);
+        usdReceived = parseFloat(tokensReceivedFormatted) * parseFloat(ethUsdPrice);
       }
 
-      tokenPriceUsd = (usdReceived / parseFloat(formattedTokensSpent)).toString();
+      tokenPriceUsd = (usdReceived / parseFloat(tokensSpentFormatted)).toString();
     } else {
       console.log("⚠️  Cannot calculate token price - missing token amounts");
-      console.log(`  - Tokens spent: ${formattedTokensSpent}`);
-      console.log(`  - Tokens received: ${formattedTokensReceived}`);
+      console.log(`  - Tokens spent: ${tokensSpentFormatted}`);
+      console.log(`  - Tokens received: ${tokensReceivedFormatted}`);
     }
 
     const tradeConfirmation: TradeConfirmation = {
@@ -313,12 +199,261 @@ export class Trader {
       ethPriceUsd: ethUsdPrice,
       ethSpent,
       ethReceived,
-      rawTokensSpent,
-      rawTokensReceived,
-      formattedTokensSpent,
-      formattedTokensReceived,
+      tokensSpent,
+      tokensReceived,
+      ethSpentFormatted,
+      ethReceivedFormatted,
+      tokensSpentFormatted,
+      tokensReceivedFormatted,
     };
 
     return tradeConfirmation;
+  }
+
+  private async extractEthToTokenTradeResult(
+    trade: TradeCreationDto,
+    tx: TransactionRequest,
+    txReceipt: TransactionReceipt,
+  ): Promise<{
+    ethSpent: string;
+    ethReceived: string;
+    tokensSpent: string;
+    tokensReceived: string;
+    ethSpentFormatted: string;
+    ethReceivedFormatted: string;
+    tokensSpentFormatted: string;
+    tokensReceivedFormatted: string;
+  }> {
+    const tokensSpent = "0";
+    const tokensSpentFormatted = "0";
+    const ethReceived = "0";
+    const ethReceivedFormatted = "0";
+
+    if (!tx.value) throw new Error("No tx value for ETH input transaction");
+
+    const ethSpent = tx.value.toString();
+    const ethSpentFormatted = ethers.formatEther(ethSpent);
+    let tokensReceived = "0";
+    let tokensReceivedFormatted = "0";
+
+    const decodedLogs = decodeLogs(txReceipt.logs);
+
+    // OUTPUT TOKEN CALCULATIONS
+    const encodedOutputTokenData = ERC20_INTERFACE.encodeFunctionData("decimals", []);
+    const outputTokenDecimalsTx: TransactionRequest = {
+      to: trade.outputToken,
+      data: encodedOutputTokenData,
+    };
+    const rawOutputTokenTxResult = await this.wallet.call(outputTokenDecimalsTx);
+    const [outputDecimals] = ERC20_INTERFACE.decodeFunctionResult("decimals", rawOutputTokenTxResult);
+
+    const outputTokenTransfers = decodedLogs.filter(
+      (log: any) =>
+        log.type === "ERC20 Transfer" &&
+        log.contract.toLowerCase() === trade.outputToken.toLowerCase() &&
+        log.to.toLowerCase() === this.wallet.address.toLowerCase(),
+    );
+
+    if (outputTokenTransfers.length > 0) {
+      const finalTransfer = outputTokenTransfers[outputTokenTransfers.length - 1];
+      tokensReceived = finalTransfer.amount.toString();
+      tokensReceivedFormatted = ethers.formatUnits(finalTransfer.amount, outputDecimals);
+    } else {
+      console.log("⚠️  No token transfers found to wallet address");
+    }
+
+    return {
+      ethSpent,
+      ethReceived,
+      tokensSpent,
+      tokensReceived,
+      ethSpentFormatted,
+      ethReceivedFormatted,
+      tokensSpentFormatted,
+      tokensReceivedFormatted,
+    };
+  }
+
+  private async extractTokenToEthTradeResult(
+    trade: TradeCreationDto,
+    tx: TransactionRequest,
+    txReceipt: TransactionReceipt,
+  ): Promise<{
+    ethSpent: string;
+    ethReceived: string;
+    tokensSpent: string;
+    tokensReceived: string;
+    ethSpentFormatted: string;
+    ethReceivedFormatted: string;
+    tokensSpentFormatted: string;
+    tokensReceivedFormatted: string;
+  }> {
+    let tokensSpent = "0";
+    let tokensSpentFormatted = "0";
+    let ethReceived = "0";
+    let ethReceivedFormatted = "0";
+
+    const ethSpent = "0";
+    const ethSpentFormatted = ethers.formatEther(ethSpent);
+    let tokensReceived = "0"; // TEMP
+    let tokensReceivedFormatted = "0"; // TEMP
+
+    const decodedLogs = decodeLogs(txReceipt.logs);
+    // INPUT DECIMALS
+    const encodedInputTokenData = ERC20_INTERFACE.encodeFunctionData("decimals", []);
+    const inputTokenDecimalsTx: TransactionRequest = {
+      to: trade.inputToken,
+      data: encodedInputTokenData,
+    };
+    const rawInputTokenTxResult = await this.wallet.call(inputTokenDecimalsTx);
+    const [inputDecimals] = ERC20_INTERFACE.decodeFunctionResult("decimals", rawInputTokenTxResult);
+
+    // OUTPUT DECIMALS
+    const outputDecimals = 18n;
+
+    const chainConfig = getChainConfig(this.chain);
+    const wethAddress = chainConfig.tokenAddresses.weth;
+
+    const wethToWalletTransfers = decodedLogs.filter(
+      (log: any) =>
+        log.type === "ERC20 Transfer" &&
+        log.contract.toLowerCase() === wethAddress.toLowerCase() &&
+        log.to.toLowerCase() === this.wallet.address.toLowerCase(),
+    );
+
+    if (wethToWalletTransfers.length > 0) {
+      const finalTransfer = wethToWalletTransfers[wethToWalletTransfers.length - 1];
+      tokensReceived = finalTransfer.amount.toString();
+      tokensReceivedFormatted = ethers.formatUnits(finalTransfer.amount, outputDecimals);
+    }
+
+    // Look for WETH withdrawal events by the router (not wallet) to calculate actual ETH received
+    const routerAddress = "0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D"; // Uniswap V2 Router
+    const wethWithdrawals = decodedLogs.filter(
+      (log: any) =>
+        log.type === "WETH Withdrawal" &&
+        log.contract.toLowerCase() === wethAddress.toLowerCase() &&
+        log.src.toLowerCase() === routerAddress.toLowerCase(),
+    );
+
+    if (wethWithdrawals.length > 0) {
+      // Sum all WETH withdrawals by the router
+      const totalWithdrawn = wethWithdrawals.reduce((total: bigint, withdrawal: any) => {
+        return total + withdrawal.wad;
+      }, 0n);
+      ethReceived = ethers.formatEther(totalWithdrawn);
+      tokensReceivedFormatted = ethReceived; // For ETH output, received amount = ETH received
+      tokensReceived = totalWithdrawn.toString();
+    } else {
+      // Fallback: Look for Uniswap V2 Swap events to calculate ETH output
+      const v2Swaps = decodedLogs.filter((log: any) => log.type === "Uniswap V2 Swap");
+
+      for (const swap of v2Swaps) {
+        // In a UNI->ETH swap, we need to find which amount represents ETH
+        // Check if this pair involves WETH by looking at token0/token1
+        // For now, use the larger output amount as ETH (common pattern)
+        const amount0Out = swap.amount0Out;
+        const amount1Out = swap.amount1Out;
+
+        if (amount0Out > 0n) {
+          ethReceived = ethers.formatEther(amount0Out);
+          tokensReceivedFormatted = ethReceived;
+          tokensReceived = amount0Out.toString();
+          break;
+        } else if (amount1Out > 0n) {
+          ethReceived = ethers.formatEther(amount1Out);
+          tokensReceivedFormatted = ethReceived;
+          tokensReceived = amount1Out.toString();
+          break;
+        }
+      }
+    }
+
+    return {
+      ethSpent,
+      ethReceived,
+      tokensSpent,
+      tokensReceived,
+      ethSpentFormatted,
+      ethReceivedFormatted,
+      tokensSpentFormatted,
+      tokensReceivedFormatted,
+    };
+  }
+
+  private async extractTokenToTokenTradeResult(
+    trade: TradeCreationDto,
+    tx: TransactionRequest,
+    txReceipt: TransactionReceipt,
+  ): Promise<{
+    ethSpent: string;
+    ethReceived: string;
+    tokensSpent: string;
+    tokensReceived: string;
+    ethSpentFormatted: string;
+    ethReceivedFormatted: string;
+    tokensSpentFormatted: string;
+    tokensReceivedFormatted: string;
+  }> {
+    let tokensSpent = "0";
+    let tokensSpentFormatted = "0";
+    let ethReceived = "0";
+    let ethReceivedFormatted = "0";
+
+    const ethSpent = "0";
+    const ethSpentFormatted = ethers.formatEther(ethSpent);
+    let tokensReceived = "0"; // TEMP
+    let tokensReceivedFormatted = "0"; // TEMP
+
+    const decodedLogs = decodeLogs(txReceipt.logs);
+
+    // INPUT DECIMALS
+    const encodedInputTokenData = ERC20_INTERFACE.encodeFunctionData("decimals", []);
+    const inputTokenDecimalsTx: TransactionRequest = {
+      to: trade.inputToken,
+      data: encodedInputTokenData,
+    };
+    const rawInputTokenTxResult = await this.wallet.call(inputTokenDecimalsTx);
+    const [inputDecimals] = ERC20_INTERFACE.decodeFunctionResult("decimals", rawInputTokenTxResult);
+
+    // OUTPUT DECIMALS
+    const encodedOutputTokenData = ERC20_INTERFACE.encodeFunctionData("decimals", []);
+    const outputTokenDecimalsTx: TransactionRequest = {
+      to: trade.outputToken,
+      data: encodedOutputTokenData,
+    };
+    const rawOutputTokenTxResult = await this.wallet.call(outputTokenDecimalsTx);
+    const [outputDecimals] = ERC20_INTERFACE.decodeFunctionResult("decimals", rawOutputTokenTxResult);
+
+    /**
+      const firstTransfer = spendingTokenTransfers[0];
+      rawTokensSpent = firstTransfer.amount.toString();
+      formattedTokensSpent = ethers.formatUnits(firstTransfer.amount, inputDecimals);
+      */
+    const tokenTransfers = decodedLogs.filter(
+      (log: any) =>
+        log.type === "ERC20 Transfer" &&
+        log.contract.toLowerCase() === trade.outputToken.toLowerCase() &&
+        log.to.toLowerCase() === this.wallet.address.toLowerCase(),
+    );
+
+    if (tokenTransfers.length > 0) {
+      const finalTransfer = tokenTransfers[tokenTransfers.length - 1];
+      tokensReceived = finalTransfer.amount.toString();
+      tokensReceivedFormatted = ethers.formatUnits(finalTransfer.amount, outputDecimals);
+    } else {
+      console.log("⚠️  No token transfers found to wallet address");
+    }
+
+    return {
+      ethSpent,
+      ethReceived,
+      tokensSpent,
+      tokensReceived,
+      ethSpentFormatted,
+      ethReceivedFormatted,
+      tokensSpentFormatted,
+      tokensReceivedFormatted,
+    };
   }
 }
