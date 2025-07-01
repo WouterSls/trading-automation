@@ -10,7 +10,7 @@ export abstract class BaseRoutingStrategy {
     this.chainConfig = getChainConfig(chain);
   }
 
-  abstract getBestRoute(wallet: Wallet, tokenIn: string, amountIn: bigint, tokenOut: string): Promise<Route>;
+  abstract getBestRoute(tokenIn: string, amountIn: bigint, tokenOut: string, wallet: Wallet): Promise<Route>;
 
   protected getTokenSymbol(address: string): string {
     const symbols: { [key: string]: string } = {
