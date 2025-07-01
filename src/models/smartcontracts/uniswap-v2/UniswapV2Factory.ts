@@ -32,7 +32,7 @@ export class UniswapV2Factory {
    * so getPair(tokenA, tokenB) and getPair(tokenB, tokenA) will return the same pair address.
    * Internally, the token with the lower address becomes token0 and the higher address becomes token1.
    */
-  async getPairAddress(wallet: Wallet, tokenA: string, tokenB: string): Promise<string> {
+  async getPairAddress(tokenA: string, tokenB: string, wallet: Wallet): Promise<string> {
     this.factoryContract = this.factoryContract.connect(wallet) as Contract;
 
     await this._networkAndFactoryCheck(wallet);
@@ -53,8 +53,8 @@ export class UniswapV2Factory {
    * so getPair(tokenA, tokenB) and getPair(tokenB, tokenA) will return the same pair address.
    * Internally, the token with the lower address becomes token0 and the higher address becomes token1.
    */
-  async getPair(wallet: Wallet, tokenA: string, tokenB: string): Promise<UniswapV2Pair | null> {
-    const pairAddress = await this.getPairAddress(wallet, tokenA, tokenB);
+  async getPair(tokenA: string, tokenB: string, wallet: Wallet): Promise<UniswapV2Pair | null> {
+    const pairAddress = await this.getPairAddress(tokenA, tokenB, wallet);
     if (pairAddress === ethers.ZeroAddress) {
       return null;
     }
