@@ -1,3 +1,5 @@
+import NodeCache from "node-cache";
+
 import { Wallet } from "ethers";
 import {
   getHighPoolKey,
@@ -13,6 +15,8 @@ import { UniswapV4RoutingStrategy } from "./strategies/UniswapV4RoutingStrategy"
 import { AerodromeRoutingStrategy } from "./strategies/AerodromeRoutingStrategy";
 
 export class RouteOptimizer {
+  private routeCache: NodeCache = new NodeCache({ stdTTL: 600 });
+
   private uniswapV2RoutingStrategy: UniswapV2RoutingStrategy;
   private uniswapV3RoutingStrategy: UniswapV3RoutingStrategy;
   private uniswapV4RoutingStrategy: UniswapV4RoutingStrategy;
@@ -25,12 +29,26 @@ export class RouteOptimizer {
     this.aerodromeRoutingStrategy = new AerodromeRoutingStrategy(chain);
   }
 
-  async getBestUniV2Route(wallet: Wallet, tokenIn: string, amountIn: bigint, tokenOut: string): Promise<Route> {
-    return this.uniswapV2RoutingStrategy.getBestRoute(wallet, tokenIn, amountIn, tokenOut);
+  async getBestUniV2Route(tokenIn: string, amountIn: bigint, tokenOut: string, wallet: Wallet): Promise<Route> {
+    const cacheKey = `${tokenIn}_${amountIn.toString()}_${tokenOut}`;
+    const cachedRoute = this.routeCache.get<Route>(cacheKey);
+    if (cachedRoute) {
+      return cachedRoute;
+    }
+    const route = await this.uniswapV2RoutingStrategy.getBestRoute(tokenIn, amountIn, tokenOut, wallet);
+    this.routeCache.set(cacheKey, route);
+    return route;
   }
 
-  async getBestUniV3Route(wallet: Wallet, tokenIn: string, amountIn: bigint, tokenOut: string): Promise<Route> {
-    return this.uniswapV3RoutingStrategy.getBestRoute(wallet, tokenIn, amountIn, tokenOut);
+  async getBestUniV3Route(tokenIn: string, amountIn: bigint, tokenOut: string, wallet: Wallet): Promise<Route> {
+    const cacheKey = `${tokenIn}_${amountIn.toString()}_${tokenOut}`;
+    const cachedRoute = this.routeCache.get<Route>(cacheKey);
+    if (cachedRoute) {
+      return cachedRoute;
+    }
+    const route = this.uniswapV3RoutingStrategy.getBestRoute(tokenIn, amountIn, tokenOut, wallet);
+    this.routeCache.set(cacheKey, route);
+    return route;
   }
 
   async getBestUniV4Route(wallet: Wallet, tokenIn: string, amountIn: bigint, tokenOut: string): Promise<Route> {
