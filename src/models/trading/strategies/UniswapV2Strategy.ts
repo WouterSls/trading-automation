@@ -8,12 +8,8 @@ import { UniswapV2RouterV2, UniswapV2Factory } from "../../smartcontracts/uniswa
 
 import { ITradingStrategy } from "../ITradingStrategy";
 import {
-  BuyTradeCreationDto,
-  SellTradeCreationDto,
   InputType,
   Quote,
-  OutputType,
-  Route,
   TradeType,
 } from "../types/_index";
 
@@ -78,7 +74,7 @@ export class UniswapV2Strategy implements ITradingStrategy {
   }
 
   /**
-   * Gets the current ETH price in USDC
+   * Gets the current ETH price in USDC through hardcoded path
    * @param wallet Connected wallet to query the price
    * @returns ETH price in USDC as a string
    */
@@ -358,6 +354,8 @@ export class UniswapV2Strategy implements ITradingStrategy {
     return tx;
   }
 
+
+  // DOUBLE CHECK IF NEEDED
   /**
    * Gets WETH liquidity for a token pair (used for confidence calculation)
    * @param wallet Connected wallet to query liquidity

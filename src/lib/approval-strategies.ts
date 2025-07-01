@@ -15,6 +15,7 @@ export async function ensureStandardApproval(
 ): Promise<string | null> {
   try {
     const token = await createMinimalErc20(tokenAddress, wallet.provider!);
+    if (!token) return null;
     const rawAmount = ethers.parseUnits(amount, token.getDecimals());
     const routerAllowance = await token.getRawAllowance(wallet.address, spenderAddress);
 
@@ -52,6 +53,7 @@ export async function ensureInfiniteApproval(
 ): Promise<string | null> {
   try {
     const token = await createMinimalErc20(tokenAddress, wallet.provider!);
+    if (!token) return null;
     const rawAmount = ethers.parseUnits(amount, token.getDecimals());
     const routerAllowance = await token.getRawAllowance(wallet.address, spenderAddress);
 
@@ -118,8 +120,8 @@ export async function ensurePermit2Approval(
       console.log("Approving token to Permit2 contract...");
       // Usually approve max amount to Permit2 once
       const token = await createMinimalErc20(tokenAddress, wallet.provider!);
-      const gasCost = await approveTokenSpending(wallet, token, permit2Address, ethers.MaxUint256);
-      console.log(`Permit2 approval successful! Gas cost: ${gasCost} ETH`);
+      //const gasCost = await approveTokenSpending(wallet, token, permit2Address, ethers.MaxUint256);
+      //console.log(`Permit2 approval successful! Gas cost: ${gasCost} ETH`);
     }
 
     // Step 2: Handle Permit2 signature/allowance for the specific router
