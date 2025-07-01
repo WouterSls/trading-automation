@@ -77,19 +77,19 @@ async function uniswapV4StrategyInteraction(chain: ChainType, wallet: Wallet) {
   const uniV3 = strategies.filter((strat) => strat.getName().includes("UniswapV3"))[0];
   const uniV4 = strategies.filter((strat) => strat.getName().includes("UniswapV4"))[0];
 
-  await uniV2Test(usdToTokenTrade, uniV2, wallet);
+  //await uniV2Test(usdToTokenTrade, uniV2, wallet);
   //await uniV3Test(wallet, buyTrade, uniV3);
   //await uniV4Test(wallet, buyTrade, uniV4);
 
-  return;
   const tradeConfirmation: TradeConfirmation = await trader.trade(usdToTokenTrade);
   console.log("--------------------------------");
   console.log("Trade Execution");
   console.log("--------------------------------");
   console.log("\tStrategy", tradeConfirmation.strategy);
-  console.log("\tETH Spent:", tradeConfirmation.ethSpent);
+  console.log("\tETH Spent:", tradeConfirmation.ethSpentFormatted);
   console.log("\tGas Spent:", tradeConfirmation.gasCost);
-  console.log("\tTokens Received: ", tradeConfirmation.formattedTokensReceived);
+  console.log("\tTokens Spent:", tradeConfirmation.tokensSpentFormatted);
+  console.log("\tTokens Received:", tradeConfirmation.tokensReceivedFormatted);
   console.log("\tTransaction Hash:", tradeConfirmation.transactionHash);
   console.log();
 }
