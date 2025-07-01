@@ -1,10 +1,11 @@
 import { ethers, TransactionReceipt, TransactionRequest, Wallet } from "ethers";
 import { ChainType, getChainConfig } from "../../config/chain-config";
 import { ITradingStrategy } from "./ITradingStrategy";
-import { BuyTrade, BuyTradeCreationDto, Quote, SellTrade, SellTradeCreationDto } from "./types/_index";
-import { decodeLogs } from "../../lib/utils";
+import { Quote, TradeConfirmation, TradeType } from "./types/_index";
+import { decodeLogs, determineTradeType } from "../../lib/utils";
 import { ERC20_INTERFACE } from "../../lib/smartcontract-abis/erc20";
 import { TRADING_CONFIG } from "../../config/trading-config";
+import { TradeCreationDto } from "./types/dto/TradeCreationDto";
 
 export class Trader {
   constructor(
@@ -16,61 +17,21 @@ export class Trader {
   getChain = (): ChainType => this.chain;
   getStrategies = (): ITradingStrategy[] => this.strategies;
 
-  async buy(trade: BuyTradeCreationDto): Promise<BuyTrade> {
-    const bestStrategy: ITradingStrategy = await this.getBestBuyStrategy(trade);
-
-    const ethUsdcPrice = await bestStrategy.getEthUsdcPrice(this.wallet);
-
-    console.log("Creating buy transaction...");
-    const tx = await bestStrategy.createBuyTransaction(this.wallet, trade);
-    console.log("Transaction created!");
-
-    try {
-      console.log("Verifying transaction...");
-      await this.wallet.call(tx);
-      console.log("Transaction passed!");
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : "An Unknown Error Occurred";
-      console.log(errorMessage);
-    }
-
-    console.log("Sending transaction...");
-    const txResponse = await this.wallet.sendTransaction(tx);
-    const txReceipt = await txResponse.wait();
-    if (!txReceipt) throw new Error("Transaction failed");
-    console.log("Transaction confirmed!");
-
-    const buyTrade: BuyTrade = await this.createBuyTrade(
-      bestStrategy.getName(),
-      trade.outputToken,
-      ethUsdcPrice,
-      tx,
-      txReceipt,
-    );
-    return buyTrade;
-  }
-
-  async sell(trade: SellTradeCreationDto): Promise<SellTrade> {
-    const bestStrategy = await this.getBestSellStrategy(trade);
-
-    const ethUsdcPrice = await bestStrategy.getEthUsdcPrice(this.wallet);
+  async trade(tradeRequest: TradeCreationDto): Promise<TradeConfirmation> {
+    const bestStrategy: ITradingStrategy = await this.getBestStrategy(tradeRequest);
 
     console.log("Checking approval...");
-    const approvalGasCost: string | null = await bestStrategy.ensureTokenApproval(
+    const approvalGasCost = await bestStrategy.ensureTokenApproval(
       this.wallet,
-      trade.inputToken,
-      trade.inputAmount,
+      tradeRequest.inputToken,
+      tradeRequest.inputAmount,
     );
+    console.log("Approval checked!");
 
-    if (approvalGasCost) {
-      console.log("Approved new allowance!");
-      console.log("Gas cost:", approvalGasCost);
-    } else {
-      console.log("No new approval needed!");
-    }
+    const ethUsdPriceSnapshot = await bestStrategy.getEthUsdcPrice(this.wallet);
 
-    console.log("Creating sell transaction...");
-    const tx = await bestStrategy.createSellTransaction(this.wallet, trade);
+    console.log("Creating buy transaction...");
+    const tx = await bestStrategy.createTransaction(tradeRequest, this.wallet);
     console.log("Transaction created!");
 
     try {
@@ -88,27 +49,25 @@ export class Trader {
     if (!txReceipt) throw new Error("Transaction failed");
     console.log("Transaction confirmed!");
 
-    const inputTokenAddress = trade.inputToken;
-    const outputTokenAddress = trade.outputToken;
-
-    const sellTrade = await this.createSellTrade(
+    const tradeConfirmation: TradeConfirmation = await this.createTradeConfirmation(
+      tradeRequest,
       bestStrategy.getName(),
-      inputTokenAddress,
-      outputTokenAddress,
-      ethUsdcPrice,
+      ethUsdPriceSnapshot,
+      approvalGasCost,
       tx,
       txReceipt,
     );
 
-    return sellTrade;
+    return tradeConfirmation;
   }
 
   /**
-   * Finds the optimal strategy for a buy trade by comparing actual trade quotes
+   * Finds the optimal strategy for a trade by comparing quotes
+   *
    * @param trade The buy trade to optimize for
    * @returns The best strategy for this specific trade
    */
-  private async getBestBuyStrategy(trade: BuyTradeCreationDto): Promise<ITradingStrategy> {
+  private async getBestStrategy(trade: TradeCreationDto): Promise<ITradingStrategy> {
     let bestStrategy: ITradingStrategy | null = null;
     let bestQuote: Quote | null = null;
 
@@ -117,7 +76,7 @@ export class Trader {
     for (const strategy of this.strategies) {
       try {
         console.log(`Getting quote from ${strategy.getName()}...`);
-        const quote = await strategy.getBuyTradeQuote(this.wallet, trade);
+        const quote = await strategy.getQuote(trade, this.wallet);
 
         console.log(`${strategy.getName()}:`);
         console.log(`  Output: ${quote.outputAmount}`);
@@ -135,7 +94,7 @@ export class Trader {
     }
 
     if (!bestStrategy || !bestQuote) {
-      throw new Error(`No strategy could provide a valid quote for buy trade`);
+      throw new Error(`No strategy could provide a valid quote for trade`);
     }
 
     if (bestQuote.priceImpact > TRADING_CONFIG.MAX_PRICE_IMPACT_PERCENTAGE) {
@@ -148,131 +107,14 @@ export class Trader {
     return bestStrategy;
   }
 
-  /**
-   * Finds the optimal strategy for a sell trade by comparing actual trade quotes
-   * @param trade The sell trade to optimize for
-   * @returns The best strategy for this specific trade
-   */
-  private async getBestSellStrategy(trade: SellTradeCreationDto): Promise<ITradingStrategy> {
-    let bestStrategy: ITradingStrategy | null = null;
-    let bestQuote: Quote | null = null;
-
-    console.log("Comparing sell trade quotes across strategies...");
-
-    for (const strategy of this.strategies) {
-      try {
-        console.log(`Getting quote from ${strategy.getName()}...`);
-        const quote = await strategy.getSellTradeQuote(this.wallet, trade);
-
-        console.log(`${strategy.getName()}:`);
-        console.log(`  Output: ${quote.outputAmount}`);
-        console.log(`  Price Impact: ${quote.priceImpact}%`);
-        console.log(`  Route: ${quote.route.path.join(" → ")}`);
-
-        if (!bestQuote || bestQuote.outputAmount < quote.outputAmount) {
-          bestQuote = quote;
-          bestStrategy = strategy;
-        }
-      } catch (error) {
-        console.warn(`${strategy.getName()} failed to provide quote:`, error);
-        continue;
-      }
-    }
-
-    if (!bestStrategy || !bestQuote) {
-      throw new Error(`No strategy could provide a valid quote for sell trade`);
-    }
-
-    if (bestQuote.priceImpact > TRADING_CONFIG.MAX_PRICE_IMPACT_PERCENTAGE) {
-      throw new Error(
-        `Price impact too high: ${bestQuote.priceImpact.toFixed(2)}%, max allowed: ${TRADING_CONFIG.MAX_PRICE_IMPACT_PERCENTAGE}%`,
-      );
-    }
-
-    console.log(`Best strategy: ${bestStrategy.getName()}`);
-    return bestStrategy;
-  }
-
-  private async createBuyTrade(
-    strategyName: string,
-    outputTokenAddress: string,
-    ethPriceUsd: string,
+  private async createTradeConfirmation(
+    trade: TradeCreationDto,
+    strategy: string,
+    ethUsdPrice: string,
+    approvalGasCost: string | null,
     tx: TransactionRequest,
     txReceipt: TransactionReceipt,
-  ) {
-    const txHash = txReceipt.hash;
-    const confirmedBlock = txReceipt.blockNumber;
-
-    const gasCostRaw = txReceipt.gasUsed * (txReceipt.gasPrice || 0n);
-    const gasCost = ethers.formatEther(gasCostRaw);
-
-    const ethSpentRaw = tx.value || 0n;
-    const ethSpent = ethers.formatEther(ethSpentRaw);
-
-    // LOG EXTRACTION
-    const encodedData = ERC20_INTERFACE.encodeFunctionData("decimals", []);
-    const decimalsTx: TransactionRequest = {
-      to: outputTokenAddress,
-      data: encodedData,
-    };
-    const rawResult = await this.wallet.call(decimalsTx);
-    const [decimals] = ERC20_INTERFACE.decodeFunctionResult("decimals", rawResult);
-
-    let rawTokensReceived = "0";
-    let formattedTokensReceived = "0";
-
-    const decodedLogs = decodeLogs(txReceipt.logs);
-    const tokenTransfers = decodedLogs.filter(
-      (log: any) =>
-        log.type === "ERC20 Transfer" &&
-        log.contract.toLowerCase() === outputTokenAddress.toLowerCase() &&
-        log.to.toLowerCase() === this.wallet.address.toLowerCase(),
-    );
-
-    if (tokenTransfers.length > 0) {
-      const finalTransfer = tokenTransfers[tokenTransfers.length - 1];
-      rawTokensReceived = finalTransfer.amount.toString();
-      formattedTokensReceived = ethers.formatUnits(finalTransfer.amount, decimals);
-    } else {
-      console.log("⚠️  No token transfers found to wallet address");
-    }
-
-    // PRICE CALCULATION
-    let tokenPriceUsd = "0";
-    if (parseFloat(formattedTokensReceived) > 0 && parseFloat(ethSpent) > 0 && parseFloat(ethPriceUsd) > 0) {
-      const usdSpent = parseFloat(ethSpent) * parseFloat(ethPriceUsd);
-      tokenPriceUsd = (usdSpent / parseFloat(formattedTokensReceived)).toString();
-    } else {
-      console.log("⚠️  Cannot calculate token price - missing token amount, ETH spent, or ETH price");
-      console.log(`  - Tokens received: ${formattedTokensReceived}`);
-      console.log(`  - ETH spent: ${ethSpent}`);
-      console.log(`  - ETH price: ${ethPriceUsd}`);
-    }
-
-    const buyTrade: BuyTrade = new BuyTrade(
-      strategyName,
-      txHash,
-      confirmedBlock,
-      gasCost,
-      tokenPriceUsd,
-      ethPriceUsd,
-      rawTokensReceived,
-      formattedTokensReceived,
-      ethSpent,
-    );
-
-    return buyTrade;
-  }
-
-  private async createSellTrade(
-    strategyName: string,
-    inputTokenAddress: string,
-    outputTokenAddress: string,
-    ethPriceUsd: string,
-    tx: TransactionRequest,
-    txReceipt: TransactionReceipt,
-    approvalGasCost?: string,
-  ) {
+  ): Promise<TradeConfirmation> {
     const txHash = txReceipt.hash;
     const confirmedBlock = txReceipt.blockNumber;
 
@@ -290,31 +132,66 @@ export class Trader {
     let formattedTokensSpent = "0";
     let ethReceived = "0";
     let outputDecimals;
+    let inputDecimals;
 
-    if (outputTokenAddress === ethers.ZeroAddress) {
-      outputDecimals = 18n;
-    } else {
+    const decodedLogs = decodeLogs(txReceipt.logs);
+
+    const tradeType: TradeType = determineTradeType(trade);
+
+    if (tradeType === TradeType.ETHInputTOKENOutput) {
+      // INPUT DECIMALS
+      inputDecimals = 18n;
+
+      // OUTPUT DECIMALS
       const encodedOutputTokenData = ERC20_INTERFACE.encodeFunctionData("decimals", []);
       const outputTokenDecimalsTx: TransactionRequest = {
-        to: outputTokenAddress,
+        to: trade.outputToken,
         data: encodedOutputTokenData,
       };
       const rawOutputTokenTxResult = await this.wallet.call(outputTokenDecimalsTx);
       [outputDecimals] = ERC20_INTERFACE.decodeFunctionResult("decimals", rawOutputTokenTxResult);
+    } else if (tradeType === TradeType.TOKENInputETHOutput) {
+      // INPUT DECIMALS
+      const encodedInputTokenData = ERC20_INTERFACE.encodeFunctionData("decimals", []);
+      const inputTokenDecimalsTx: TransactionRequest = {
+        to: trade.inputToken,
+        data: encodedInputTokenData,
+      };
+      const rawInputTokenTxResult = await this.wallet.call(inputTokenDecimalsTx);
+      [inputDecimals] = ERC20_INTERFACE.decodeFunctionResult("decimals", rawInputTokenTxResult);
+
+      // OUTPUT DECIMALS
+      outputDecimals = 18n;
+    } else if (tradeType === TradeType.TOKENInputTOKENOutput) {
+      // INPUT DECIMALS
+      const encodedInputTokenData = ERC20_INTERFACE.encodeFunctionData("decimals", []);
+      const inputTokenDecimalsTx: TransactionRequest = {
+        to: trade.inputToken,
+        data: encodedInputTokenData,
+      };
+      const rawInputTokenTxResult = await this.wallet.call(inputTokenDecimalsTx);
+      [inputDecimals] = ERC20_INTERFACE.decodeFunctionResult("decimals", rawInputTokenTxResult);
+
+      // OUTPUT DECIMALS
+      const encodedOutputTokenData = ERC20_INTERFACE.encodeFunctionData("decimals", []);
+      const outputTokenDecimalsTx: TransactionRequest = {
+        to: trade.outputToken,
+        data: encodedOutputTokenData,
+      };
+      const rawOutputTokenTxResult = await this.wallet.call(outputTokenDecimalsTx);
+      [outputDecimals] = ERC20_INTERFACE.decodeFunctionResult("decimals", rawOutputTokenTxResult);
+
+      /**
+      const firstTransfer = spendingTokenTransfers[0];
+      rawTokensSpent = firstTransfer.amount.toString();
+      formattedTokensSpent = ethers.formatUnits(firstTransfer.amount, inputDecimals);
+      */
     }
 
-    const encodedInputTokenData = ERC20_INTERFACE.encodeFunctionData("decimals", []);
-    const inputTokenDecimalsTx: TransactionRequest = {
-      to: inputTokenAddress,
-      data: encodedInputTokenData,
-    };
-    const rawInputTokenTxResult = await this.wallet.call(inputTokenDecimalsTx);
-    const [inputDecimals] = ERC20_INTERFACE.decodeFunctionResult("decimals", rawInputTokenTxResult);
+    if (trade.outputToken === ethers.ZeroAddress) {
+      // calculate tokens spent & eth received
+      outputDecimals = 18n;
 
-    const decodedLogs = decodeLogs(txReceipt.logs);
-
-    // Handle receiving tokens/ETH based on output type
-    if (outputTokenAddress === ethers.ZeroAddress) {
       // For ETH output, look for WETH transfers to wallet (which will be unwrapped)
       const chainConfig = getChainConfig(this.chain);
       const wethAddress = chainConfig.tokenAddresses.weth;
@@ -374,35 +251,38 @@ export class Trader {
         }
       }
     } else {
-      // For token output, look for ERC20 transfers to wallet
-      const receivingTokenTransfers = decodedLogs.filter(
-        (log: any) =>
-          log.type === "ERC20 Transfer" &&
-          log.contract.toLowerCase() === outputTokenAddress.toLowerCase() &&
-          log.to.toLowerCase() === this.wallet.address.toLowerCase(),
-      );
-
-      if (receivingTokenTransfers.length > 0) {
-        const finalTransfer = receivingTokenTransfers[receivingTokenTransfers.length - 1];
-        rawTokensReceived = finalTransfer.amount.toString();
-        formattedTokensReceived = ethers.formatUnits(finalTransfer.amount, outputDecimals);
-      } else {
-        console.log("⚠️  No token transfers found to wallet address");
-      }
+      const encodedOutputTokenData = ERC20_INTERFACE.encodeFunctionData("decimals", []);
+      const outputTokenDecimalsTx: TransactionRequest = {
+        to: trade.outputToken,
+        data: encodedOutputTokenData,
+      };
+      const rawOutputTokenTxResult = await this.wallet.call(outputTokenDecimalsTx);
+      [outputDecimals] = ERC20_INTERFACE.decodeFunctionResult("decimals", rawOutputTokenTxResult);
     }
 
-    const spendingTokenTransfers = decodedLogs.filter(
+    if (trade.outputToken !== ethers.ZeroAddress && trade.inputToken !== ethers.ZeroAddress) {
+      const encodedInputTokenData = ERC20_INTERFACE.encodeFunctionData("decimals", []);
+      const inputTokenDecimalsTx: TransactionRequest = {
+        to: trade.inputToken,
+        data: encodedInputTokenData,
+      };
+      const rawInputTokenTxResult = await this.wallet.call(inputTokenDecimalsTx);
+      const [inputDecimals] = ERC20_INTERFACE.decodeFunctionResult("decimals", rawInputTokenTxResult);
+    }
+
+    const tokenTransfers = decodedLogs.filter(
       (log: any) =>
         log.type === "ERC20 Transfer" &&
-        log.contract.toLowerCase() === inputTokenAddress.toLowerCase() &&
-        log.from.toLowerCase() === this.wallet.address.toLowerCase(),
+        log.contract.toLowerCase() === trade.outputToken.toLowerCase() &&
+        log.to.toLowerCase() === this.wallet.address.toLowerCase(),
     );
-    if (spendingTokenTransfers.length > 0) {
-      const firstTransfer = spendingTokenTransfers[0];
-      rawTokensSpent = firstTransfer.amount.toString();
-      formattedTokensSpent = ethers.formatUnits(firstTransfer.amount, inputDecimals);
+
+    if (tokenTransfers.length > 0) {
+      const finalTransfer = tokenTransfers[tokenTransfers.length - 1];
+      rawTokensReceived = finalTransfer.amount.toString();
+      formattedTokensReceived = ethers.formatUnits(finalTransfer.amount, outputDecimals);
     } else {
-      console.log("⚠️  No token spending transfers found from wallet address");
+      console.log("⚠️  No token transfers found to wallet address");
     }
 
     // PRICE CALCULATION
@@ -413,8 +293,8 @@ export class Trader {
       let usdReceived = parseFloat(formattedTokensReceived);
 
       // If output token is ETH, convert to USD using ETH price
-      if (outputTokenAddress === ethers.ZeroAddress && parseFloat(ethPriceUsd) > 0) {
-        usdReceived = parseFloat(formattedTokensReceived) * parseFloat(ethPriceUsd);
+      if (trade.outputToken === ethers.ZeroAddress && parseFloat(ethUsdPrice) > 0) {
+        usdReceived = parseFloat(formattedTokensReceived) * parseFloat(ethUsdPrice);
       }
 
       tokenPriceUsd = (usdReceived / parseFloat(formattedTokensSpent)).toString();
@@ -424,21 +304,21 @@ export class Trader {
       console.log(`  - Tokens received: ${formattedTokensReceived}`);
     }
 
-    const sellTrade: SellTrade = new SellTrade(
-      strategyName,
-      txHash,
+    const tradeConfirmation: TradeConfirmation = {
+      strategy,
+      transactionHash: txHash,
       confirmedBlock,
       gasCost,
       tokenPriceUsd,
-      ethPriceUsd,
+      ethPriceUsd: ethUsdPrice,
       ethSpent,
-      rawTokensSpent,
-      formattedTokensSpent,
-      rawTokensReceived,
-      formattedTokensReceived,
       ethReceived,
-    );
+      rawTokensSpent,
+      rawTokensReceived,
+      formattedTokensSpent,
+      formattedTokensReceived,
+    };
 
-    return sellTrade;
+    return tradeConfirmation;
   }
 }
