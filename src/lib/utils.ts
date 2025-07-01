@@ -8,6 +8,7 @@ import { calculatePriceFromSqrtPriceX96 } from "../models/smartcontracts/uniswap
 import { UNIVERSAL_ROUTER_INTERFACE } from "./smartcontract-abis/universal-router";
 import { TradeCreationDto } from "../models/trading/types/dto/TradeCreationDto";
 import { InputType, TradeType } from "../models/trading/types/trading-types";
+import { TRADING_CONFIG } from "../config/trading-config";
 
 export async function validateNetwork(wallet: Wallet, chainType: ChainType) {
   try {
@@ -251,4 +252,12 @@ export function determineTradeType(trade: TradeCreationDto): TradeType {
   }
 
   throw new Error("Unknown trade type for given TradeCreationDto");
+}
+
+export function calculatePriceImpact(expectedOutput: bigint, actualOutput: bigint) {
+  return ((expectedOutput - actualOutput) / expectedOutput) * 100n;
+}
+
+export function calculateSlippageAmount(actualOutput: bigint) {
+  return (actualOutput * BigInt(TRADING_CONFIG.SLIPPAGE_TOLERANCE * 100)) / 100n;
 }
