@@ -6,4 +6,5 @@ export const TRADING_CONFIG = {
   MAX_RETRIES: 3,
   DEADLINE: Math.floor(Date.now() / 1000) + 1200, // 20 minutes from now
   INFINITE_APPROVAL: true,
+  PRICE_IMPACT_AMOUNT_IN: "0.000001", // Used for price impact calculation
 };
