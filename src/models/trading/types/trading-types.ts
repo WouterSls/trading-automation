@@ -11,16 +11,18 @@ export enum TradeType {
 }
 
 export interface TradeConfirmation {
-    strategy: string,
-    transactionHash: string,
-    confirmedBlock: number,
-    gasCost: string,
-    tokenPriceUsd: string,
-    ethPriceUsd: string,
-    ethSpent: string,
-    ethReceived: string,
-    rawTokensSpent: string,
-    rawTokensReceived: string,
-    formattedTokensSpent: string,
-    formattedTokensReceived: string,
+  strategy: string;
+  transactionHash: string;
+  confirmedBlock: number;
+  gasCost: string;
+  tokenPriceUsd: string;
+  ethPriceUsd: string;
+  ethSpent: string;
+  ethReceived: string;
+  tokensSpent: string;
+  tokensReceived: string;
+  ethSpentFormatted: string;
+  ethReceivedFormatted: string;
+  tokensSpentFormatted: string;
+  tokensReceivedFormatted: string;
 }
