@@ -1,6 +1,6 @@
 import { ethers, TransactionRequest, Wallet } from "ethers";
-import { createMinimalErc20 } from "../models/smartcontracts/ERC/erc-utils";
-import { ERC20 } from "../models/smartcontracts/ERC/ERC20";
+import { createMinimalErc20 } from "../smartcontracts/ERC/erc-utils";
+import { ERC20 } from "../smartcontracts/ERC/ERC20";
 import { ERC20_INTERFACE } from "./smartcontract-abis/erc20";
 
 /**
