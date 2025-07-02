@@ -7,14 +7,10 @@ import { UniswapV3SwapRouterV2 } from "../../smartcontracts/uniswap-v3/UniswapV3
 
 import { ITradingStrategy } from "../ITradingStrategy";
 import { FeeAmount } from "../../smartcontracts/uniswap-v3/uniswap-v3-types";
-import {  InputType, Quote, Route,  TradeCreationDto } from "../types/_index";
+import { InputType, Quote, Route, TradeCreationDto } from "../types/_index";
 import { validateNetwork } from "../../lib/utils";
 import { TRADING_CONFIG } from "../../config/trading-config";
-import {
-  ensureInfiniteApproval,
-  ensurePermit2Approval,
-  ensureStandardApproval,
-} from "../../lib/approval-strategies";
+import { ensureInfiniteApproval, ensurePermit2Approval, ensureStandardApproval } from "../../lib/approval-strategies";
 import { createMinimalErc20 } from "../../smartcontracts/ERC/erc-utils";
 import { RouteOptimizer } from "../../routing/RouteOptimizer";
 import { Permit2 } from "../../smartcontracts/permit2/Permit2";
@@ -125,10 +121,9 @@ export class UniswapV3Strategy implements ITradingStrategy {
 
     const outputToken = await createMinimalErc20(trade.outputToken, wallet.provider!);
 
-    if  (!outputToken) throw new Error("Error in output token creation");
+    if (!outputToken) throw new Error("Error in output token creation");
 
     let outputAmount = "0";
-    let priceImpact = 0;
     let route: Route = {
       amountOut: 0n,
       path: [],
@@ -185,11 +180,9 @@ export class UniswapV3Strategy implements ITradingStrategy {
 
     return {
       outputAmount,
-      priceImpact,
       route,
     };
   }
-
 
   /**
    * Creates a buy transaction based on the provided trade parameters
@@ -270,5 +263,4 @@ export class UniswapV3Strategy implements ITradingStrategy {
 
     return tx;
   }
-
 }

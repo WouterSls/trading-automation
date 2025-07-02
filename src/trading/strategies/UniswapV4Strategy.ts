@@ -130,7 +130,6 @@ export class UniswapV4Strategy implements ITradingStrategy {
     if (!outputToken) throw new Error("Error in output token creation");
 
     let outputAmount = "0";
-    let priceImpact = 0;
     let route: Route = {
       amountOut: 0n,
       path: [],
@@ -152,7 +151,6 @@ export class UniswapV4Strategy implements ITradingStrategy {
       if (!route.poolKey) {
         return {
           outputAmount,
-          priceImpact,
           route,
         };
       }
@@ -178,7 +176,6 @@ export class UniswapV4Strategy implements ITradingStrategy {
 
     return {
       outputAmount,
-      priceImpact,
       route,
     };
   }
