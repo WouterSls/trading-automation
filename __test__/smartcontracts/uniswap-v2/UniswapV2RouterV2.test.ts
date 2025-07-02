@@ -1,8 +1,8 @@
 import { ethers, Wallet } from "ethers";
-import { NetworkForkManager } from "../../../helpers/network-fork";
-import { getArbitrumWallet_1, getHardhatWallet_1, getOfflineSigner_1 } from "../../../../src/hooks/useSetup";
-import { UniswapV2RouterV2 } from "../../../../src/models/blockchain/uniswap-v2/index";
-import { ChainConfig, ChainType, getChainConfig } from "../../../../src/config/chain-config";
+import { NetworkForkManager } from "../../helpers/network-fork";
+import { getArbitrumWallet_1, getHardhatWallet_1, getOfflineSigner_1 } from "../../../src/hooks/useSetup";
+import { UniswapV2RouterV2 } from "../../../src/smartcontracts/uniswap-v2/index";
+import { ChainConfig, ChainType, getChainConfig } from "../../../src/config/chain-config";
 
 const MISSING_PROVIDER_ERROR_MESSAGE = "Network Validation Failed";
 const INVALID_NETWORK_ERROR_MESSAGE = "Wallet on different chain";

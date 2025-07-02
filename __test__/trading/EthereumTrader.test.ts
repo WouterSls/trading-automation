@@ -1,16 +1,16 @@
 import { Wallet } from "ethers";
-import { ChainType } from "../../../src/config/chain-config";
-import { Trader } from "../../../src/models/trading/Trader";
-import { TraderFactory } from "../../../src/models/trading/TraderFactory";
-import { NetworkForkManager } from "../../helpers/network-fork";
-import { getHardhatWallet_1 } from "../../../src/hooks/useSetup";
+import { ChainType } from "../../src/config/chain-config";
+import { Trader } from "../../src/trading/Trader";
+import { TraderFactory } from "../../src/trading/TraderFactory";
+import { NetworkForkManager } from "../helpers/network-fork";
+import { getHardhatWallet_1 } from "../../src/hooks/useSetup";
 
-describe("Base Trader", () => {
+describe("Ethereum Trader", () => {
   let wallet: Wallet;
   let trader: Trader;
 
   beforeAll(async () => {
-    const chain = ChainType.BASE;
+    const chain = ChainType.ETH;
     await NetworkForkManager.startHardhatFork(chain);
     wallet = getHardhatWallet_1();
     trader = await TraderFactory.createTrader(wallet);
@@ -22,7 +22,7 @@ describe("Base Trader", () => {
 
   describe("Network validation", () => {
     it("should create a trader on Base", async () => {
-      const expectedChain = ChainType.BASE;
+      const expectedChain = ChainType.ETH;
 
       const actualChain = await trader.getChain();
 

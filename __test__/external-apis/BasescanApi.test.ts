@@ -1,4 +1,4 @@
-import { BasescanApi } from "../../src/services/BasescanApi";
+import { BasescanApi } from "../../src/external-apis/BasescanApi";
 
 // Mock global fetch
 global.fetch = jest.fn();

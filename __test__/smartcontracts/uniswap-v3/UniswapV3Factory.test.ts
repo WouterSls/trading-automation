@@ -1,8 +1,8 @@
-import { getArbitrumWallet_1, getHardhatWallet_1, getOfflineSigner_1 } from "../../../../src/hooks/useSetup";
-import { FeeAmount, UniswapV3Factory, UniswapV3Pool } from "../../../../src/models/blockchain/uniswap-v3";
-import { ChainConfig, ChainType, getChainConfig } from "../../../../src/config/chain-config";
+import { getArbitrumWallet_1, getHardhatWallet_1, getOfflineSigner_1 } from "../../../src/hooks/useSetup";
+import { FeeAmount, UniswapV3Factory, UniswapV3Pool } from "../../../src/smartcontracts/uniswap-v3";
+import { ChainConfig, ChainType, getChainConfig } from "../../../src/config/chain-config";
 import { Wallet } from "ethers";
-import { NetworkForkManager } from "../../../helpers/network-fork";
+import { NetworkForkManager } from "../../helpers/network-fork";
 
 const MISSING_PROVIDER_ERROR_MESSAGE = "Wallet has missing provider";
 const INVALID_NETWORK_ERROR_MESSAGE = "Wallet and factory are on different networks";

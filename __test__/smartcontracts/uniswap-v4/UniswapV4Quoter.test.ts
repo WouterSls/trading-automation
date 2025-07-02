@@ -1,9 +1,9 @@
 import { ethers, Wallet } from "ethers";
-import { NetworkForkManager } from "../../../helpers/network-fork";
-import { getArbitrumWallet_1, getHardhatWallet_1, getOfflineSigner_1 } from "../../../../src/hooks/useSetup";
-import { ChainConfig, ChainType, getChainConfig } from "../../../../src/config/chain-config";
-import { UniswapV4Quoter } from "../../../../src/models/blockchain/uniswap-v4/UniswapV4Quoter";
-import { PoolKey, PathSegment } from "../../../../src/models/blockchain/uniswap-v4/uniswap-v4-types";
+import { NetworkForkManager } from "../../helpers/network-fork";
+import { getArbitrumWallet_1, getHardhatWallet_1, getOfflineSigner_1 } from "../../../src/hooks/useSetup";
+import { ChainConfig, ChainType, getChainConfig } from "../../../src/config/chain-config";
+import { UniswapV4Quoter } from "../../../src/smartcontracts/uniswap-v4/UniswapV4Quoter";
+import { PoolKey, PathSegment } from "../../../src/smartcontracts/uniswap-v4/uniswap-v4-types";
 
 const NETWORK_VALIDATION_FAILED_MESSAGE = "Network Validation Failed";
 const INVALID_NETWORK_ERROR_MESSAGE = "Wallet on different chain";

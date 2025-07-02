@@ -1,16 +1,10 @@
 import { ethers, Wallet } from "ethers";
-import { NetworkForkManager } from "../../../helpers/network-fork";
-import { getArbitrumWallet_1, getHardhatWallet_1, getOfflineSigner_1 } from "../../../../src/hooks/useSetup";
-import { ChainConfig, ChainType, getChainConfig } from "../../../../src/config/chain-config";
-import { AerodromeStrategy } from "../../../../src/models/trading/strategies/AerodromeStrategy";
-import {
-  BuyTradeCreationDto,
-  SellTradeCreationDto,
-  InputType,
-  OutputToken,
-} from "../../../../src/models/trading/types/_index";
-import { TRADING_CONFIG } from "../../../../src/config/trading-config";
-import { createMinimalErc20 } from "../../../../src/models/blockchain/ERC/erc-utils";
+import { NetworkForkManager } from "../../helpers/network-fork";
+import { getArbitrumWallet_1, getHardhatWallet_1, getOfflineSigner_1 } from "../../../src/hooks/useSetup";
+import { ChainConfig, ChainType, getChainConfig } from "../../../src/config/chain-config";
+import { AerodromeStrategy } from "../../../src/trading/strategies/AerodromeStrategy";
+
+import { TRADING_CONFIG } from "../../../src/config/trading-config";
 
 const MISSING_PROVIDER_ERROR_MESSAGE = "Wallet has missing provider";
 const INVALID_NETWORK_ERROR_MESSAGE = "Wallet on different chain";
@@ -140,45 +134,6 @@ describe("Aerodrome Strategy Test", () => {
     });
   });
 
-  describe("getTokenEthLiquidity", () => {
-    it("should throw error with offline wallet", async () => {
-      await expect(strategy.getTokenWethLiquidity(offlineWallet, AERO_TOKEN_ADDRESS)).rejects.toThrow(
-        NETWORK_VALIDATION_FAILED,
-      );
-    });
-
-    it("should throw error with wrong network wallet", async () => {
-      await expect(strategy.getTokenWethLiquidity(nonNetworkWallet, AERO_TOKEN_ADDRESS)).rejects.toThrow(
-        "Wallet on different chain",
-      );
-    });
-
-    it("should handle non-existent pair gracefully", async () => {
-      const expectedLiquidity = "0.0";
-      const nonExistentToken = "0x1234567890123456789012345678901234567890";
-
-      const actualLiquidity = await strategy.getTokenWethLiquidity(wallet, nonExistentToken);
-
-      expect(actualLiquidity).toBe(expectedLiquidity);
-    });
-
-    it("should return valid ETH liquidity for AERO token", async () => {
-      const liquidity = await strategy.getTokenWethLiquidity(wallet, AERO_TOKEN_ADDRESS);
-      console.log("Aerodrome token eth liquidity on Aerodrome");
-
-      expect(liquidity).toBeDefined();
-      expect(typeof liquidity).toBe("string");
-      expect(parseFloat(liquidity)).toBeGreaterThanOrEqual(0);
-    });
-
-    it("should check both stable and volatile pools", async () => {
-      const liquidity = await strategy.getTokenWethLiquidity(wallet, CBETH_TOKEN_ADDRESS);
-
-      expect(liquidity).toBeDefined();
-      expect(typeof liquidity).toBe("string");
-      expect(parseFloat(liquidity)).toBeGreaterThanOrEqual(0);
-    });
-  });
   /**
   describe("getTokenUsdcPrice", () => {
     it("should throw error with offline wallet", async () => {

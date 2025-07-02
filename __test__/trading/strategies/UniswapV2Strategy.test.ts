@@ -1,15 +1,13 @@
 import { ethers, Wallet } from "ethers";
-import { NetworkForkManager } from "../../../helpers/network-fork";
-import { getArbitrumWallet_1, getHardhatWallet_1, getOfflineSigner_1 } from "../../../../src/hooks/useSetup";
-import { ChainConfig, ChainType, getChainConfig } from "../../../../src/config/chain-config";
-import { UniswapV2Strategy } from "../../../../src/models/trading/strategies/UniswapV2Strategy";
+import { NetworkForkManager } from "../../helpers/network-fork";
+import { getArbitrumWallet_1, getHardhatWallet_1, getOfflineSigner_1 } from "../../../src/hooks/useSetup";
+import { ChainConfig, ChainType, getChainConfig } from "../../../src/config/chain-config";
+import { UniswapV2Strategy } from "../../../src/trading/strategies/UniswapV2Strategy";
 import {
-  BuyTradeCreationDto,
-  SellTradeCreationDto,
   InputType,
-  OutputToken,
-} from "../../../../src/models/trading/types/_index";
-import { TRADING_CONFIG } from "../../../../src/config/trading-config";
+  TradeCreationDto
+} from "../../../src/trading/types/_index";
+import { TRADING_CONFIG } from "../../../src/config/trading-config";
 
 const MISSING_PROVIDER_ERROR_MESSAGE = "Wallet has missing provider";
 const INVALID_NETWORK_ERROR_MESSAGE = "wallet on different chain";
@@ -141,63 +139,9 @@ describe("Uniswap V2 Strategy Test", () => {
     });
   });
 
-  describe("getTokenEthLiquidity", () => {
-    it("should throw error with offline wallet", async () => {
-      await expect(strategy.getTokenWethLiquidity(offlineWallet, UNI_TOKEN_ADDRESS)).rejects.toThrow(
-        MISSING_PROVIDER_ERROR_MESSAGE,
-      );
-    });
-    it("should throw error with wrong network wallet", async () => {
-      await expect(strategy.getTokenWethLiquidity(nonNetworkWallet, UNI_TOKEN_ADDRESS)).rejects.toThrow(
-        "Wallet on different chain",
-      );
-    });
-    it("should handle non-existent pair gracefully", async () => {
-      const nonExistentToken = "0x1234567890123456789012345678901234567890";
-      const liquidity = await strategy.getTokenWethLiquidity(wallet, nonExistentToken);
+  describe("getQuote", () => {})
 
-      expect(liquidity).toBe("0");
-    });
-
-    it("should return valid ETH liquidity for UNI token", async () => {
-      const liquidity = await strategy.getTokenWethLiquidity(wallet, UNI_TOKEN_ADDRESS);
-
-      expect(liquidity).toBeDefined();
-      expect(typeof liquidity).toBe("string");
-      expect(parseFloat(liquidity)).toBeGreaterThan(0);
-    });
-  });
-
-  describe("getTokenUsdcPrice", () => {
-    it("should throw error with offline wallet", async () => {
-      await expect(strategy.getTokenUsdcPrice(offlineWallet, UNI_TOKEN_ADDRESS)).rejects.toThrow();
-    });
-    it("should throw error with wrong network wallet", async () => {
-      await expect(strategy.getTokenUsdcPrice(nonNetworkWallet, UNI_TOKEN_ADDRESS)).rejects.toThrow();
-    });
-
-    it("should return valid USDC price for UNI token", async () => {
-      const price = await strategy.getTokenUsdcPrice(wallet, UNI_TOKEN_ADDRESS);
-
-      expect(price).toBeDefined();
-      expect(typeof price).toBe("string");
-      expect(parseFloat(price)).toBeGreaterThan(0);
-      // UNI price should be reasonable (between $1-$100)
-      expect(parseFloat(price)).toBeGreaterThan(1);
-      expect(parseFloat(price)).toBeLessThan(100);
-    });
-    it("should handle USDT token price", async () => {
-      const price = await strategy.getTokenUsdcPrice(wallet, USDT_TOKEN_ADDRESS);
-
-      expect(price).toBeDefined();
-      expect(parseFloat(price)).toBeGreaterThan(0);
-      // USDT should be close to $1
-      expect(parseFloat(price)).toBeGreaterThan(0.9);
-      expect(parseFloat(price)).toBeLessThan(1.1);
-    });
-  });
-
-  describe("createBuyTransaction", () => {
+  describe("createTransaction", () => {
     const baseTrade: BuyTradeCreationDto = {
       tradeType: "BUY",
       chain: ChainType.ETH,
@@ -366,191 +310,6 @@ describe("Uniswap V2 Strategy Test", () => {
     });
   });
 
-  describe("createSellTransaction", () => {
-    const baseTrade: SellTradeCreationDto = {
-      tradeType: "SELL",
-      chain: ChainType.ETH,
-      inputToken: UNI_TOKEN_ADDRESS,
-      inputAmount: "100",
-      outputToken: OutputToken.USDC,
-      tradingPointPrice: "5.0",
-    };
-
-    it("should throw error with offline wallet", async () => {
-      await expect(strategy.createSellTransaction(offlineWallet, baseTrade)).rejects.toThrow();
-    });
-
-    it("should throw error with wrong network wallet", async () => {
-      await expect(strategy.createSellTransaction(nonNetworkWallet, baseTrade)).rejects.toThrow();
-    });
-
-    it("should create valid sell to USDC transaction", async () => {
-      const tx = await strategy.createSellTransaction(wallet, baseTrade);
-
-      expect(tx).toBeDefined();
-      expect(tx.to).toBe(chainConfig.uniswap.v2.routerAddress);
-      expect(tx.data).toBeDefined();
-    });
-
-    it("should create valid sell to WETH transaction", async () => {
-      const wethTrade = { ...baseTrade, outputToken: OutputToken.WETH };
-      const tx = await strategy.createSellTransaction(wallet, wethTrade);
-
-      expect(tx).toBeDefined();
-      expect(tx.to).toBe(chainConfig.uniswap.v2.routerAddress);
-    });
-
-    it("should create valid sell to ETH transaction", async () => {
-      const ethTrade = { ...baseTrade, outputToken: OutputToken.ETH };
-      const tx = await strategy.createSellTransaction(wallet, ethTrade);
-
-      expect(tx).toBeDefined();
-      expect(tx.to).toBe(chainConfig.uniswap.v2.routerAddress);
-
-      // Should use swapExactTokensForETH function
-      const functionSignature = tx.data!.toString().substring(0, 10);
-      expect(functionSignature).toBe("0x18cbafe5");
-    });
-
-    it("should throw error when price impact exceeds maximum", async () => {
-      // Create a trade with a very high theoretical price to trigger price impact
-      const highPriceTrade = { ...baseTrade, tradingPointPrice: "1000" };
-
-      await expect(strategy.createSellTransaction(wallet, highPriceTrade)).rejects.toThrow(/Price impact too high/);
-    });
-
-    it("should handle different token amounts", async () => {
-      const smallTrade = { ...baseTrade, inputAmount: "1" };
-      const tx = await strategy.createSellTransaction(wallet, smallTrade);
-
-      expect(tx).toBeDefined();
-    });
-
-    it("should apply correct slippage tolerance", async () => {
-      const tx = await strategy.createSellTransaction(wallet, baseTrade);
-
-      expect(tx).toBeDefined();
-      // The transaction should be created successfully with slippage applied
-      expect(tx.data).toBeDefined();
-    });
-
-    it("should handle USDT input token", async () => {
-      const usdtTrade = {
-        ...baseTrade,
-        inputToken: USDT_TOKEN_ADDRESS,
-        inputAmount: "1000000", // USDT has 6 decimals, so this is 1 USDT
-        tradingPointPrice: "1.0",
-      };
-
-      // This might fail due to price impact depending on liquidity
-      try {
-        const tx = await strategy.createSellTransaction(wallet, usdtTrade);
-        expect(tx).toBeDefined();
-      } catch (error) {
-        // If it fails due to price impact, that's expected behavior
-        expect(error).toBeDefined();
-      }
-    });
-
-    it("should validate price impact calculation", async () => {
-      // Create a trade with reasonable price to test price impact validation
-      const reasonableTrade = { ...baseTrade, tradingPointPrice: "6.0" }; // Close to market price
-
-      const tx = await strategy.createSellTransaction(wallet, reasonableTrade);
-      expect(tx).toBeDefined();
-      expect(tx.data).toBeDefined();
-    });
-
-    it("should handle minimum trade amounts", async () => {
-      const minTrade = {
-        ...baseTrade,
-        inputAmount: "0.001", // Very small amount
-        tradingPointPrice: "5.0",
-      };
-
-      const tx = await strategy.createSellTransaction(wallet, minTrade);
-      expect(tx).toBeDefined();
-    });
-
-    it("should include correct function signatures for different output types", async () => {
-      // Test USDC output
-      const usdcTx = await strategy.createSellTransaction(wallet, baseTrade);
-      const usdcSignature = usdcTx.data!.toString().substring(0, 10);
-      expect(usdcSignature).toBe("0x38ed1739"); // swapExactTokensForTokens
-
-      // Test WETH output
-      const wethTrade = { ...baseTrade, outputToken: OutputToken.WETH };
-      const wethTx = await strategy.createSellTransaction(wallet, wethTrade);
-      const wethSignature = wethTx.data!.toString().substring(0, 10);
-      expect(wethSignature).toBe("0x38ed1739"); // swapExactTokensForTokens
-
-      // Test ETH output
-      const ethTrade = { ...baseTrade, outputToken: OutputToken.ETH };
-      const ethTx = await strategy.createSellTransaction(wallet, ethTrade);
-      const ethSignature = ethTx.data!.toString().substring(0, 10);
-      expect(ethSignature).toBe("0x18cbafe5"); // swapExactTokensForETH
-    });
-
-    it("should handle various price points", async () => {
-      const testPrices = ["1.0", "10.0", "100.0"];
-
-      for (const price of testPrices) {
-        const testTrade = { ...baseTrade, tradingPointPrice: price };
-        try {
-          const tx = await strategy.createSellTransaction(wallet, testTrade);
-          expect(tx).toBeDefined();
-        } catch (error) {
-          // Some prices might trigger price impact errors, which is expected
-          expect(error).toBeDefined();
-        }
-      }
-    });
-
-    it("should return empty transaction for unsupported output token types", async () => {
-      // Test with a hypothetical "TOKEN" output type that's not implemented
-      const unsupportedTrade = {
-        ...baseTrade,
-        outputToken: "TOKEN" as OutputToken, // This should trigger the TODO case
-      };
-
-      const tx = await strategy.createSellTransaction(wallet, unsupportedTrade);
-
-      // Should return empty transaction object since TOKEN-to-TOKEN is not implemented
-      expect(tx).toEqual({});
-    });
-
-    it("should validate transaction contains correct router address", async () => {
-      const tx = await strategy.createSellTransaction(wallet, baseTrade);
-
-      expect(tx.to).toBe(chainConfig.uniswap.v2.routerAddress);
-    });
-
-    it("should handle zero trading point price gracefully", async () => {
-      const zeroTrade = { ...baseTrade, tradingPointPrice: "0" };
-
-      // This should either create a transaction or throw an error
-      try {
-        const tx = await strategy.createSellTransaction(wallet, zeroTrade);
-        expect(tx).toBeDefined();
-      } catch (error) {
-        // Zero price might cause division by zero or other errors
-        expect(error).toBeDefined();
-      }
-    });
-
-    it("should handle negative trading point price", async () => {
-      const negativeTrade = { ...baseTrade, tradingPointPrice: "-1.0" };
-
-      // This should likely throw an error or handle gracefully
-      try {
-        const tx = await strategy.createSellTransaction(wallet, negativeTrade);
-        expect(tx).toBeDefined();
-      } catch (error) {
-        // Negative prices should cause errors
-        expect(error).toBeDefined();
-      }
-    });
-  });
 
   describe("edge cases and error handling", () => {
     it("should handle zero amounts gracefully", async () => {

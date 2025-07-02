@@ -1,7 +1,7 @@
 import { Wallet } from "ethers";
-import { UniversalRouter } from "../../../../src/models/blockchain/universal-router/UniversalRouter";
-import { ChainType } from "../../../../src/config/chain-config";
-import { getArbitrumWallet_1, getBaseWallet_1, getEthWallet_1, getOfflineSigner_1 } from "../../../../src/hooks/useSetup";
+import { UniversalRouter } from "../../../src/smartcontracts/universal-router/UniversalRouter";
+import { ChainType } from "../../../src/config/chain-config";
+import { getArbitrumWallet_1, getBaseWallet_1, getEthWallet_1, getOfflineSigner_1 } from "../../../src/hooks/useSetup";
 
 const MISSING_PROVIDER_ERROR_MESSAGE = "Network Validation Failed";
 const INVALID_NETWORK_ERROR_MESSAGE = "Wallet on different chain";

@@ -1,9 +1,9 @@
 import { Wallet } from "ethers";
-import { ChainType } from "../../../src/config/chain-config";
-import { Trader } from "../../../src/models/trading/Trader";
-import { TraderFactory } from "../../../src/models/trading/TraderFactory";
-import { NetworkForkManager } from "../../helpers/network-fork";
-import { getHardhatWallet_1 } from "../../../src/hooks/useSetup";
+import { ChainType } from "../../src/config/chain-config";
+import { Trader } from "../../src/trading/Trader";
+import { TraderFactory } from "../../src/trading/TraderFactory";
+import { NetworkForkManager } from "../helpers/network-fork";
+import { getHardhatWallet_1 } from "../../src/hooks/useSetup";
 
 describe("Ethereum Trader", () => {
   let wallet: Wallet;

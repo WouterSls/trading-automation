@@ -1,5 +1,5 @@
-import { getEthWallet_1, getOfflineSigner_1 } from "../../../../src/hooks/useSetup";
-import { UniswapV3Pool } from "../../../../src/models/blockchain/uniswap-v3";
+import { getEthWallet_1, getOfflineSigner_1 } from "../../../src/hooks/useSetup";
+import { UniswapV3Pool } from "../../../src/smartcontracts/uniswap-v3";
 import { Wallet } from "ethers";
 
 global.fetch = jest.fn();
