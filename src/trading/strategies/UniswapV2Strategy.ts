@@ -4,12 +4,11 @@ import { ChainType, getChainConfig } from "../../config/chain-config";
 import { TRADING_CONFIG } from "../../config/trading-config";
 
 import { ERC20, createMinimalErc20 } from "../../smartcontracts/ERC/_index";
-import { UniswapV2RouterV2, UniswapV2Factory } from "../../smartcontracts/uniswap-v2/index";
+import { UniswapV2RouterV2 } from "../../smartcontracts/uniswap-v2/index";
 
 import { ITradingStrategy } from "../ITradingStrategy";
 import { InputType, Quote, TradeType } from "../types/_index";
 
-import { ERC20_INTERFACE } from "../../lib/smartcontract-abis/_index";
 import {
   calculatePriceImpact,
   calculateSlippageAmount,
@@ -18,13 +17,11 @@ import {
   ensureStandardApproval,
   validateNetwork,
 } from "../../lib/_index";
-import { RouteOptimizer } from "../../_routing/RouteOptimizer";
+import { RouteOptimizer } from "../../routing/RouteOptimizer";
 import { TradeCreationDto } from "../types/dto/TradeCreationDto";
-import { TraderFactory } from "../TraderFactory";
 
 export class UniswapV2Strategy implements ITradingStrategy {
   private router: UniswapV2RouterV2;
-  private factory: UniswapV2Factory;
 
   private routeOptimizer: RouteOptimizer;
 
@@ -44,7 +41,6 @@ export class UniswapV2Strategy implements ITradingStrategy {
     this.USDC_ADDRESS = chainConfig.tokenAddresses.usdc;
 
     this.router = new UniswapV2RouterV2(chain);
-    this.factory = new UniswapV2Factory(chain);
 
     this.routeOptimizer = new RouteOptimizer(chain);
   }
@@ -64,7 +60,11 @@ export class UniswapV2Strategy implements ITradingStrategy {
    */
   async ensureTokenApproval(wallet: Wallet, tokenAddress: string, amount: string): Promise<string | null> {
     await validateNetwork(wallet, this.chain);
+
+    if (tokenAddress === ethers.ZeroAddress) return null;
+
     const spender = this.router.getRouterAddress();
+
     if (TRADING_CONFIG.INFINITE_APPROVAL) {
       return await ensureInfiniteApproval(wallet, tokenAddress, amount, spender);
     } else {
@@ -90,9 +90,10 @@ export class UniswapV2Strategy implements ITradingStrategy {
   }
 
   /**
-   * Gets a comprehensive quote for a buy trade by mirroring the exact transaction creation logic
+   * Gets a comprehensive quote for a trade by calling on chain quoting functions
+   *
+   * @param trade trade creation parameters
    * @param wallet Connected wallet to query the price
-   * @param trade Buy trade creation parameters
    * @returns TradeQuote with all execution details
    */
   async getQuote(trade: TradeCreationDto, wallet: Wallet): Promise<Quote> {
@@ -101,25 +102,66 @@ export class UniswapV2Strategy implements ITradingStrategy {
     const inputToken: ERC20 | null = await createMinimalErc20(trade.inputToken, wallet.provider!);
     const outputToken: ERC20 | null = await createMinimalErc20(trade.outputToken, wallet.provider!);
 
+    let quote: Quote = {
+      outputAmount: "0",
+      route: {
+        amountOut: 0n,
+        path: [],
+        fees: [],
+        encodedPath: null,
+        poolKey: null,
+      },
+    };
+
     const tradeType: TradeType = determineTradeType(trade);
 
+    let amountIn;
     switch (tradeType) {
       case TradeType.ETHInputTOKENOutput:
-        return this.quoteEthToTokenTrade(trade, outputToken, wallet);
-      case TradeType.TOKENInputTOKENOutput:
-        return this.quoteTokenToTokenTrade(trade, inputToken, outputToken, wallet);
+        if (trade.inputType === InputType.USD) {
+          const ethUsdcPrice = await this.getEthUsdcPrice(wallet);
+          const ethValue = parseFloat(trade.inputAmount) / parseFloat(ethUsdcPrice);
+          const ethValueFixed = ethValue.toFixed(18);
+          amountIn = ethers.parseEther(ethValueFixed);
+        } else {
+          amountIn = ethers.parseEther(trade.inputAmount);
+        }
+        break;
       case TradeType.TOKENInputETHOutput:
-        return this.quoteTokenToEthTrade(trade, inputToken, wallet);
+      case TradeType.TOKENInputTOKENOutput:
+        if (!inputToken) throw new Error("Invalid input token for trade with token input");
+        amountIn = ethers.parseUnits(trade.inputAmount, inputToken.getDecimals());
+        break;
       default:
         throw new Error("Unknown trade type");
     }
+
+    let outputDecimals;
+    switch (tradeType) {
+      case TradeType.TOKENInputETHOutput:
+        outputDecimals = 18;
+        break;
+      case TradeType.ETHInputTOKENOutput:
+      case TradeType.TOKENInputTOKENOutput:
+        if (!outputToken) throw new Error("Invalid output token for trade with token output");
+        outputDecimals = outputToken.getDecimals();
+        break;
+      default:
+        throw new Error("Unknown trade type");
+    }
+
+    quote.route = await this.routeOptimizer.getBestUniV2Route(trade.inputToken, amountIn, trade.outputToken, wallet);
+
+    quote.outputAmount = ethers.formatUnits(quote.route.amountOut, outputDecimals);
+
+    return quote;
   }
 
   /**
    * Creates a transaction based on the provided trade parameters
    * Includes price impact validation and slippage protection
-   * @param wallet Connected wallet to create transaction for
    * @param trade trade creation parameters
+   * @param wallet Connected wallet to create transaction for
    * @returns Transaction request object ready to be sent
    * @throws Error if price impact exceeds maximum allowed percentage
    */
@@ -169,10 +211,21 @@ export class UniswapV2Strategy implements ITradingStrategy {
 
     const route = await this.routeOptimizer.getBestUniV2Route(trade.inputToken, amountIn, trade.outputToken, wallet);
 
+    console.log("Amount in for spot rate:");
+    console.log(amountInForSpotRate);
+    console.log("");
 
     const amountsOut = await this.router.getAmountsOut(wallet, amountInForSpotRate, route.path);
+    console.log("amounts out");
+    console.log(amountsOut);
     const expectedOutput = amountsOut[amountsOut.length - 1];
     const actualOutput = route.amountOut;
+
+    console.log("Expected output:");
+    console.log(expectedOutput);
+    console.log();
+    console.log("Actual output:");
+    console.log(actualOutput);
 
     const priceImpact = calculatePriceImpact(expectedOutput, actualOutput);
     if (priceImpact > TRADING_CONFIG.MAX_PRICE_IMPACT_PERCENTAGE) {
@@ -200,115 +253,5 @@ export class UniswapV2Strategy implements ITradingStrategy {
     }
 
     return tx;
-  }
-
-  private async quoteEthToTokenTrade(
-    trade: TradeCreationDto,
-    outputToken: ERC20 | null,
-    wallet: Wallet,
-  ): Promise<Quote> {
-    let quote: Quote = {
-      outputAmount: "0",
-      priceImpact: 0,
-      route: {
-        amountOut: 0n,
-        path: [],
-        fees: [],
-        encodedPath: null,
-        poolKey: null,
-      },
-    };
-
-    if (!outputToken) {
-      return quote;
-    }
-
-    let amountIn = 0n;
-    if (trade.inputType === InputType.USD) {
-      const ethUsdcPrice = await this.getEthUsdcPrice(wallet);
-      const ethValue = parseFloat(trade.inputAmount) / parseFloat(ethUsdcPrice);
-      const ethValueFixed = ethValue.toFixed(18);
-      amountIn = ethers.parseEther(ethValueFixed);
-    } else {
-      amountIn = ethers.parseEther(trade.inputAmount);
-    }
-
-    quote.route = await this.routeOptimizer.getBestUniV2Route(
-      trade.inputToken,
-      amountIn,
-      outputToken.getTokenAddress(),
-      wallet,
-    );
-
-    quote.outputAmount = ethers.formatUnits(quote.route.amountOut, outputToken.getDecimals());
-
-    return quote;
-  }
-
-  private async quoteTokenToEthTrade(trade: TradeCreationDto, inputToken: ERC20 | null, wallet: Wallet) {
-    let quote: Quote = {
-      outputAmount: "0",
-      priceImpact: 0,
-      route: {
-        amountOut: 0n,
-        path: [],
-        fees: [],
-        encodedPath: null,
-        poolKey: null,
-      },
-    };
-
-    if (!inputToken) {
-      return quote;
-    }
-
-    const amountIn = ethers.parseUnits(trade.inputAmount, inputToken.getDecimals());
-
-    quote.route = await this.routeOptimizer.getBestUniV2Route(
-      inputToken.getTokenAddress(),
-      amountIn,
-      trade.outputToken,
-      wallet,
-    );
-
-    quote.outputAmount = ethers.formatEther(quote.route.amountOut);
-
-    return quote;
-  }
-
-  private async quoteTokenToTokenTrade(
-    trade: TradeCreationDto,
-    inputToken: ERC20 | null,
-    outputToken: ERC20 | null,
-    wallet: Wallet,
-  ) {
-    let quote: Quote = {
-      outputAmount: "0",
-      priceImpact: 0,
-      route: {
-        amountOut: 0n,
-        path: [],
-        fees: [],
-        encodedPath: null,
-        poolKey: null,
-      },
-    };
-
-    if (!inputToken || !outputToken) {
-      return quote;
-    }
-
-    const amountIn = ethers.parseUnits(trade.inputAmount, inputToken.getDecimals());
-
-    quote.route = await this.routeOptimizer.getBestUniV2Route(
-      inputToken.getTokenAddress(),
-      amountIn,
-      trade.outputToken,
-      wallet,
-    );
-
-    quote.outputAmount = ethers.formatUnits(quote.route.amountOut, outputToken.getDecimals());
-
-    return quote;
   }
 }
