@@ -4,10 +4,10 @@ import {
   InputType,
   OutputType,
   SellTradeCreationDto,
-} from "../../../../src/models/trading/types/_index";
+} from "../../../../src/trading/types/_index";
 import { getHardhatWallet_1 } from "../../../../src/hooks/useSetup";
 import { ChainType, getChainConfig } from "../../../../src/config/chain-config";
-import { UniswapV2Strategy } from "../../../../src/models/trading/strategies/UniswapV2Strategy";
+import { UniswapV2Strategy } from "../../../../src/trading/strategies/UniswapV2Strategy";
 import { createMinimalErc20 } from "../../../../src/models/smartcontracts/ERC/erc-utils";
 
 async function uniswapV2StrategyInteraction(

@@ -4,11 +4,11 @@ import {
   InputType,
   OutputType,
   SellTradeCreationDto,
-} from "../../../../src/models/trading/types/_index";
+} from "../../../../src/trading/types/_index";
 import { getBaseWallet_1, getHardhatWallet_1 } from "../../../../src/hooks/useSetup";
 import { ChainType, getChainConfig } from "../../../../src/config/chain-config";
 import { createMinimalErc20 } from "../../../../src/models/smartcontracts/ERC/erc-utils";
-import { AerodromeStrategy } from "../../../../src/models/trading/strategies/AerodromeStrategy";
+import { AerodromeStrategy } from "../../../../src/trading/strategies/AerodromeStrategy";
 
 async function aerodromeStrategyInteraction(
   chain: ChainType,

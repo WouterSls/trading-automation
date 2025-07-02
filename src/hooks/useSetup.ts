@@ -11,9 +11,9 @@ dotenv.config({ path: envPath });
 import { ethers, JsonRpcProvider, Wallet } from "ethers";
 import { ChainConfig, getChainConfig, ChainType } from "../config/chain-config";
 
-import { AlchemyApi } from "../services/AlchemyApi";
-import { GeckoTerminalApi } from "../services/GeckoTerminalApi";
-import { TheGraphApi } from "../services/TheGraphApi";
+import { AlchemyApi } from "../external-apis/AlchemyApi";
+import { GeckoTerminalApi } from "../external-apis/GeckoTerminalApi";
+import { TheGraphApi } from "../external-apis/TheGraphApi";
 
 //BASE
 export const getBaseProvider = async (): Promise<JsonRpcProvider> => {

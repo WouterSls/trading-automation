@@ -1,6 +1,6 @@
 import { ethers } from "ethers";
 import { getAlchemyApi, getBaseWallet_1 } from "../../src/hooks/useSetup";
-import { PriceData } from "../../src/services/types/alchemy-api.types";
+import { PriceData } from "../../src/external-apis/types/alchemy-api.types";
 
 async function getWalletInfo() {
   const wallet = await getBaseWallet_1();

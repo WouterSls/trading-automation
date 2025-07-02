@@ -7,7 +7,7 @@ import {
   IPermitSingle,
   IPermitTransferFrom,
 } from "../../../../src/models/smartcontracts/universal-router/universal-router-types";
-import { OutputType, SellTradeCreationDto } from "../../../../src/models/trading/types/_index";
+import { OutputType, SellTradeCreationDto } from "../../../../src/trading/types/_index";
 import { decodeLogs } from "../../../../src/lib/utils";
 import { UniswapV2RouterV2 } from "../../../../src/models/smartcontracts/uniswap-v2/UniswapV2RouterV2";
 import { getLowPoolKey } from "../../../../src/models/smartcontracts/uniswap-v4/uniswap-v4-utils";

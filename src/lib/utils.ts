@@ -6,8 +6,8 @@ import { UNISWAP_V3_POOL_INTERFACE } from "./smartcontract-abis/uniswap-v3";
 import { UNISWAP_V2_PAIR_INTERFACE } from "./smartcontract-abis/uniswap-v2";
 import { calculatePriceFromSqrtPriceX96 } from "../models/smartcontracts/uniswap-v3/uniswap-v3-utils";
 import { UNIVERSAL_ROUTER_INTERFACE } from "./smartcontract-abis/universal-router";
-import { TradeCreationDto } from "../models/trading/types/dto/TradeCreationDto";
-import { InputType, TradeType } from "../models/trading/types/trading-types";
+import { TradeCreationDto } from "../trading/types/dto/TradeCreationDto";
+import { InputType, TradeType } from "../trading/types/trading-types";
 import { TRADING_CONFIG } from "../config/trading-config";
 
 export async function validateNetwork(wallet: Wallet, chainType: ChainType) {
