@@ -1,6 +1,6 @@
-import { getEthWallet_1 } from "../../../../src/hooks/useSetup";
-import { UniswapV3Factory, UniswapV3Pool, TickInfo, FeeAmount } from "../../../../src/models/smartcontracts/uniswap-v3";
-import { ChainType } from "../../../../src/config/chain-config";
+import { getEthWallet_1 } from "../../../src/hooks/useSetup";
+import { UniswapV3Factory, UniswapV3Pool, TickInfo, FeeAmount } from "../../../src/smartcontracts/uniswap-v3";
+import { ChainType } from "../../../src/config/chain-config";
 import { ethers } from "ethers";
 
 export async function poolInteraction() {

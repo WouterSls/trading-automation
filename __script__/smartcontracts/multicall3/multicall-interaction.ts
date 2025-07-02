@@ -1,15 +1,15 @@
 import { ethers, TransactionRequest, Wallet } from "ethers";
-import { ChainType } from "../../../../src/config/chain-config";
+import { ChainType } from "../../../src/config/chain-config";
 
-import { getChainConfig } from "../../../../src/config/chain-config";
-import { getEthWallet_1, getHardhatWallet_1 } from "../../../../src/hooks/useSetup";
-import { decodeLogs, validateNetwork } from "../../../../src/lib/utils";
-import { FeeAmount, UniswapV3QuoterV2, UniswapV3SwapRouterV2 } from "../../../../src/models/smartcontracts/uniswap-v3";
-import { TRADING_CONFIG } from "../../../../src/config/trading-config";
-import { createMinimalErc20 } from "../../../../src/models/smartcontracts/ERC/erc-utils";
-import { WETH_INTERFACE, UNISWAP_V3_QUOTER_INTERFACE } from "../../../../src/lib/smartcontract-abis/_index";
-import { Multicall3 } from "../../../../src/models/smartcontracts/multicall3/Multicall3";
-import { Multicall3Request, Multicall3Result } from "../../../../src/models/smartcontracts/multicall3/multicall3-types";
+import { getChainConfig } from "../../../src/config/chain-config";
+import { getEthWallet_1, getHardhatWallet_1 } from "../../../src/hooks/useSetup";
+import { decodeLogs, validateNetwork } from "../../../src/lib/utils";
+import { FeeAmount, UniswapV3QuoterV2, UniswapV3SwapRouterV2 } from "../../../src/smartcontracts/uniswap-v3";
+import { TRADING_CONFIG } from "../../../src/config/trading-config";
+import { createMinimalErc20 } from "../../../src/smartcontracts/ERC/erc-utils";
+import { WETH_INTERFACE, UNISWAP_V3_QUOTER_INTERFACE } from "../../../src/lib/smartcontract-abis/_index";
+import { Multicall3 } from "../../../src/smartcontracts/multicall3/Multicall3";
+import { Multicall3Request, Multicall3Result } from "../../../src/smartcontracts/multicall3/multicall3-types";
 
 export async function multicallInteraction() {
   const chain: ChainType = ChainType.ETH;
@@ -22,6 +22,8 @@ export async function multicallInteraction() {
   const wethAddress = chainConfig.tokenAddresses.weth;
   const usdc = await createMinimalErc20(usdcAddress, wallet.provider!);
   const weth = await createMinimalErc20(wethAddress, wallet.provider!);
+
+  if (!usdc || !weth) throw new Error("Error during ERC20 token creation");
 
   const usdcBalance = await usdc.getFormattedTokenBalance(wallet.address);
   const wethBalance = await weth.getFormattedTokenBalance(wallet.address);
@@ -43,6 +45,8 @@ export async function multicallInteraction() {
 
   const PEPE_ADDRESS = "0x6982508145454ce325ddbe47a25d4ec3d2311933";
   const inputToken = await createMinimalErc20(PEPE_ADDRESS, wallet.provider!);
+
+  if (!inputToken) throw new Error("Error during input token creation");
 
   const tokenIn = inputToken.getTokenAddress();
   const amountIn = ethers.parseUnits("1", inputToken.getDecimals());

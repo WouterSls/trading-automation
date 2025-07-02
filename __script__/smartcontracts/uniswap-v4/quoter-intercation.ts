@@ -1,11 +1,10 @@
 import { ethers, Wallet } from "ethers";
-import { ChainType } from "../../../../src/config/chain-config";
+import { ChainType } from "../../../src/config/chain-config";
 
-import { getChainConfig } from "../../../../src/config/chain-config";
-import { getBaseWallet_1, getEthWallet_1 } from "../../../../src/hooks/useSetup";
-import { validateNetwork } from "../../../../src/lib/utils";
-import { UniswapV4Quoter } from "../../../../src/models/smartcontracts/uniswap-v4/UniswapV4Quoter";
-import { FeeAmount } from "../../../../src/models/smartcontracts/uniswap-v4/uniswap-v4-types";
+import { getChainConfig } from "../../../src/config/chain-config";
+import { getBaseWallet_1, getEthWallet_1 } from "../../../src/hooks/useSetup";
+import { validateNetwork } from "../../../src/lib/utils";
+import { UniswapV4Quoter } from "../../../src/smartcontracts/uniswap-v4/UniswapV4Quoter";
 
 export async function quoterInteraction(chain: ChainType, wallet: Wallet) {
   await validateNetwork(wallet, chain);

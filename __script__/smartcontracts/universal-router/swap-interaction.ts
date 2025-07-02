@@ -1,14 +1,14 @@
 import { ethers, Wallet } from "ethers";
-import { getHardhatWallet_1 } from "../../../../src/hooks/useSetup";
-import { ChainType, getChainConfig } from "../../../../src/config/chain-config";
-import { UniversalRouter } from "../../../../src/models/smartcontracts/universal-router/UniversalRouter";
-import { CommandType } from "../../../../src/models/smartcontracts/universal-router/universal-router-types";
-import { OutputType, SellTradeCreationDto } from "../../../../src/trading/types/_index";
-import { decodeLogs } from "../../../../src/lib/utils";
-import { getLowPoolKey } from "../../../../src/models/smartcontracts/uniswap-v4/uniswap-v4-utils";
-import { createMinimalErc20 } from "../../../../src/models/smartcontracts/ERC/erc-utils";
+import { getHardhatWallet_1 } from "../../../src/hooks/useSetup";
+import { ChainType, getChainConfig } from "../../../src/config/chain-config";
+import { UniversalRouter } from "../../../src/smartcontracts/universal-router/UniversalRouter";
+import { CommandType } from "../../../src/smartcontracts/universal-router/universal-router-types";
+import {  TradeCreationDto, InputType } from "../../../src/trading/types/_index";
+import { decodeLogs } from "../../../src/lib/utils";
+import { getLowPoolKey } from "../../../src/smartcontracts/uniswap-v4/uniswap-v4-utils";
+import { createMinimalErc20 } from "../../../src/smartcontracts/ERC/erc-utils";
 
-export async function v4SwapInteraction(wallet: Wallet, tradeCreationDto: SellTradeCreationDto) {
+export async function v4SwapInteraction(wallet: Wallet, tradeCreationDto: TradeCreationDto) {
   const chain: ChainType = tradeCreationDto.chain as ChainType;
   const chainConfig = getChainConfig(chain);
 
@@ -17,6 +17,8 @@ export async function v4SwapInteraction(wallet: Wallet, tradeCreationDto: SellTr
   const wethAddress = chainConfig.tokenAddresses.weth;
   const usdc = await createMinimalErc20(usdcAddress, wallet.provider!);
   const weth = await createMinimalErc20(wethAddress, wallet.provider!);
+
+  if (!usdc || !weth) throw new Error("Error during ERC20 token creation");
 
   const usdcBalance = await usdc.getFormattedTokenBalance(wallet.address);
   const wethBalance = await weth.getFormattedTokenBalance(wallet.address);
@@ -97,14 +99,12 @@ if (require.main === module) {
 
   const ethInputAmount = ethers.parseEther("1");
 
-  const tradeCreationDto: SellTradeCreationDto = {
+  const tradeCreationDto: TradeCreationDto = {
     chain: chain,
+    inputType: InputType.ETH,
     inputToken: ethers.ZeroAddress,
     inputAmount: ethInputAmount.toString(),
-    outputType: OutputType.TOKEN,
     outputToken: chainConfig.tokenAddresses.usdc,
-    tradingPointPrice: "0",
-    tradeType: "SELL",
   };
   v4SwapInteraction(wallet, tradeCreationDto).catch(console.error);
 }

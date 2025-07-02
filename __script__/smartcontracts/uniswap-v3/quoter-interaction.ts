@@ -1,12 +1,12 @@
 import { ethers, Wallet } from "ethers";
-import { ChainType } from "../../../../src/config/chain-config";
+import { ChainType } from "../../../src/config/chain-config";
 
-import { getChainConfig } from "../../../../src/config/chain-config";
-import { getBaseWallet_1, getEthWallet_1 } from "../../../../src/hooks/useSetup";
-import { validateNetwork } from "../../../../src/lib/utils";
-import { UniswapV3QuoterV2 } from "../../../../src/models/smartcontracts/uniswap-v3";
-import { FeeAmount } from "../../../../src/models/smartcontracts/uniswap-v3/uniswap-v3-types";
-import { encodePath } from "../../../../src/models/smartcontracts/uniswap-v3/uniswap-v3-utils";
+import { getChainConfig } from "../../../src/config/chain-config";
+import { getBaseWallet_1, getEthWallet_1 } from "../../../src/hooks/useSetup";
+import { validateNetwork } from "../../../src/lib/utils";
+import { UniswapV3QuoterV2 } from "../../../src/smartcontracts/uniswap-v3";
+import { FeeAmount } from "../../../src/smartcontracts/uniswap-v3/uniswap-v3-types";
+import { encodePath } from "../../../src/smartcontracts/uniswap-v3/uniswap-v3-utils";
 
 export async function quoterInteraction(chain: ChainType, wallet: Wallet) {
   await validateNetwork(wallet, chain);

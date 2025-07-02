@@ -1,12 +1,12 @@
 import { ethers, Wallet } from "ethers";
-import { InputType, TradeConfirmation } from "../../../src/trading/types/_index";
-import { getEthWallet_1, getHardhatWallet_1 } from "../../../src/hooks/useSetup";
-import { ChainType, getChainConfig } from "../../../src/config/chain-config";
-import { createMinimalErc20 } from "../../../src/models/smartcontracts/ERC/erc-utils";
-import { TraderFactory } from "../../../src/trading/TraderFactory";
-import { decodeError } from "../../../src/lib/utils";
-import { ITradingStrategy } from "../../../src/trading/ITradingStrategy";
-import { TradeCreationDto } from "../../../src/trading/types/dto/TradeCreationDto";
+import { InputType, TradeConfirmation } from "../../src/trading/types/_index";
+import { getEthWallet_1, getHardhatWallet_1 } from "../../src/hooks/useSetup";
+import { ChainType, getChainConfig } from "../../src/config/chain-config";
+import { createMinimalErc20 } from "../../src/smartcontracts/ERC/erc-utils";
+import { TraderFactory } from "../../src/trading/TraderFactory";
+import { decodeError } from "../../src/lib/utils";
+import { ITradingStrategy } from "../../src/trading/ITradingStrategy";
+import { TradeCreationDto } from "../../src/trading/types/dto/TradeCreationDto";
 
 async function uniswapV4StrategyInteraction(chain: ChainType, wallet: Wallet) {
   const chainConfig = getChainConfig(chain);

@@ -1,6 +1,6 @@
-import { ChainType, getChainConfig } from "../../../../src/config/chain-config";
-import { getHardhatWallet_1 } from "../../../../src/hooks/useSetup";
-import { UniswapV2Factory } from "../../../../src/models/smartcontracts/uniswap-v2";
+import { ChainType, getChainConfig } from "../../../src/config/chain-config";
+import { getHardhatWallet_1 } from "../../../src/hooks/useSetup";
+import { UniswapV2Factory } from "../../../src/smartcontracts/uniswap-v2";
 
 export async function factoryInteraction() {
   const chain = ChainType.ARB;
@@ -12,7 +12,7 @@ export async function factoryInteraction() {
 
   const factory = new UniswapV2Factory(chain);
 
-  const pairAddress = await factory.getPairAddress(wallet, tokenA, tokenB);
+  const pairAddress = await factory.getPairAddress(tokenA, tokenB, wallet);
   console.log(pairAddress);
 }
 

@@ -1,8 +1,8 @@
 import { ethers } from "ethers";
 import { ChainType, getChainConfig } from "../../src/config/chain-config";
 import { getHardhatWallet_1 } from "../../src/hooks/useSetup";
-import { Permit2 } from "../../src/models/smartcontracts/permit2/Permit2";
-import { createMinimalErc20 } from "../../src/models/smartcontracts/ERC/erc-utils";
+import { Permit2 } from "../../src/smartcontracts/permit2/Permit2";
+import { createMinimalErc20 } from "../../src/smartcontracts/ERC/erc-utils";
 
 async function permit2Check() {
   const chain: ChainType = ChainType.ETH;
@@ -14,6 +14,8 @@ async function permit2Check() {
   const wethAddress = chainConfig.tokenAddresses.weth;
   const usdc = await createMinimalErc20(usdcAddress, wallet.provider!);
   const weth = await createMinimalErc20(wethAddress, wallet.provider!);
+
+  if (!usdc || !weth) throw new Error("Error during ERC20 token creation");
 
   const usdcBalance = await usdc.getFormattedTokenBalance(wallet.address);
   const wethBalance = await weth.getFormattedTokenBalance(wallet.address);

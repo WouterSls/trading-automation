@@ -1,9 +1,9 @@
 import { ethers } from "ethers";
-import { ChainType, getChainConfig } from "../../../../src/config/chain-config";
-import { getHardhatWallet_1 } from "../../../../src/hooks/useSetup";
-import { TradeRoute } from "../../../../src/models/smartcontracts/aerodrome/aerodrome-types";
-import { AerodromeRouter } from "../../../../src/models/smartcontracts/aerodrome/AerodromeRouter";
-import { createMinimalErc20 } from "../../../../src/models/smartcontracts/ERC/erc-utils";
+import { ChainType, getChainConfig } from "../../../src/config/chain-config";
+import { getHardhatWallet_1 } from "../../../src/hooks/useSetup";
+import { TradeRoute } from "../../../src/smartcontracts/aerodrome/aerodrome-types";
+import { AerodromeRouter } from "../../../src/smartcontracts/aerodrome/AerodromeRouter";
+import { createMinimalErc20 } from "../../../src/smartcontracts/ERC/erc-utils";
 
 export async function swapInteraction() {
   const chain = ChainType.BASE;
@@ -20,6 +20,8 @@ export async function swapInteraction() {
   const usdc = await createMinimalErc20(usdcAddress, wallet.provider!);
   const dai = await createMinimalErc20(daiAddress, wallet.provider!);
   const weth = await createMinimalErc20(wethAddress, wallet.provider!);
+
+  if (!usdc || !dai || !weth) throw new Error("Error during ERC20 creation")
 
   const usdcBalance = await usdc.getFormattedTokenBalance(wallet.address);
   const daiBalance = await dai.getFormattedTokenBalance(wallet.address);

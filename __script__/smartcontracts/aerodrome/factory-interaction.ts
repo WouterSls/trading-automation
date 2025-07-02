@@ -1,7 +1,7 @@
-import { ChainType, getChainConfig } from "../../../../src/config/chain-config";
-import { getHardhatWallet_1 } from "../../../../src/hooks/useSetup";
-import { AerodromePoolFactory } from "../../../../src/models/smartcontracts/aerodrome/AerodromePoolFactory";
-import { createMinimalErc20 } from "../../../../src/models/smartcontracts/ERC/erc-utils";
+import { ChainType, getChainConfig } from "../../../src/config/chain-config";
+import { getHardhatWallet_1 } from "../../../src/hooks/useSetup";
+import { createMinimalErc20 } from "../../../src/smartcontracts/ERC/erc-utils";
+import { AerodromePoolFactory } from "../../../src/smartcontracts/aerodrome/AerodromePoolFactory";
 
 export async function factoryInteraction() {
   const chain = ChainType.BASE;
@@ -14,9 +14,11 @@ export async function factoryInteraction() {
   const tokenB = chainConfig.tokenAddresses.dai;
 
   const usdc = await createMinimalErc20(tokenA, wallet.provider!);
+  if (!usdc) throw new Error("Error during USDC token creation")
   console.log(`${usdc.getName()} (${tokenA})`);
 
   const dai = await createMinimalErc20(tokenB, wallet.provider!);
+  if (!dai) throw new Error("Error during DAI token creation")
   console.log(`${dai.getName()} (${tokenB})`);
 
   const poolAddress = await aerodromeFactory.getPoolAddress(wallet, tokenA, tokenB, true);

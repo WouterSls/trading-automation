@@ -1,19 +1,19 @@
 import { ethers, Wallet, TransactionRequest } from "ethers";
 
-import { ChainType, getChainConfig } from "../../../../src/config/chain-config";
-import { FeeAmount } from "../../../../src/models/smartcontracts/uniswap-v3/uniswap-v3-types";
+import { ChainType, getChainConfig } from "../../../src/config/chain-config";
+import { FeeAmount } from "../../../src/smartcontracts/uniswap-v3/uniswap-v3-types";
 
-import { UniswapV3SwapRouterV2 } from "../../../../src/models/smartcontracts/uniswap-v3/UniswapV3SwapRouterV2";
-import { UniswapV3Factory } from "../../../../src/models/smartcontracts/uniswap-v3/UniswapV3Factory";
+import { UniswapV3SwapRouterV2 } from "../../../src/smartcontracts/uniswap-v3/UniswapV3SwapRouterV2";
+import { UniswapV3Factory } from "../../../src/smartcontracts/uniswap-v3/UniswapV3Factory";
 import {
   getEthWallet_1,
   getBaseWallet_1,
   getArbitrumWallet_1,
   getHardhatWallet_1,
-} from "../../../../src/hooks/useSetup";
-import { decodeLogs, validateNetwork } from "../../../../src/lib/utils";
-import { ERC20, createMinimalErc20 } from "../../../../src/models/smartcontracts/ERC/_index";
-import { encodePath } from "../../../../src/models/smartcontracts/uniswap-v3/uniswap-v3-utils";
+} from "../../../src/hooks/useSetup";
+import { decodeLogs, validateNetwork } from "../../../src/lib/utils";
+import { ERC20, createMinimalErc20 } from "../../../src/smartcontracts/ERC/_index";
+import { encodePath } from "../../../src/smartcontracts/uniswap-v3/uniswap-v3-utils";
 
 async function routerInteraction(chain: ChainType, wallet: Wallet) {
   await validateNetwork(wallet, chain);
@@ -49,6 +49,9 @@ async function routerInteraction(chain: ChainType, wallet: Wallet) {
   const usdcContract = await createMinimalErc20(USDC_ADDRESS, wallet.provider!);
   const wethContract = await createMinimalErc20(WETH_ADDRESS, wallet.provider!);
   const daiContract = await createMinimalErc20(DAI_ADDRESS, wallet.provider!);
+
+  if (!usdcContract || !wethContract || !daiContract) throw new Error("Error during ERC20 token creation");
+
   const gasBalance = await wallet.provider!.getBalance(wallet.address);
 
   const router = new UniswapV3SwapRouterV2(chain);

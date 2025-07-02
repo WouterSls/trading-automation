@@ -1,16 +1,16 @@
-import { ChainType, getChainConfig } from "../../../../src/config/chain-config";
-import { getHardhatWallet_1 } from "../../../../src/hooks/useSetup";
+import { ChainType, getChainConfig } from "../../../src/config/chain-config";
+import { getHardhatWallet_1 } from "../../../src/hooks/useSetup";
 import { Contract, ethers, Wallet } from "ethers";
-import { validateNetwork } from "../../../../src/lib/utils";
+import { validateNetwork } from "../../../src/lib/utils";
 import {
   UniswapV3QuoterV2,
   UniswapV3Factory,
   UniswapV3SwapRouterV2,
   UniswapV3Pool,
-} from "../../../../src/models/smartcontracts/uniswap-v3/index";
-import { WETH_INTERFACE } from "../../../../src/lib/smartcontract-abis/erc20";
+} from "../../../src/smartcontracts/uniswap-v3/index";
+import { WETH_INTERFACE } from "../../../src/lib/smartcontract-abis/erc20";
 import { exactInputSingleTrade, exactInputTrade } from "./router-interaction";
-import { createMinimalErc20 } from "../../../../src/models/smartcontracts/ERC/erc-utils";
+import { createMinimalErc20 } from "../../../src/smartcontracts/ERC/erc-utils";
 
 async function singleTickSwapInteraction(chain: ChainType, wallet: Wallet) {
   await validateNetwork(wallet, chain);
@@ -19,15 +19,18 @@ async function singleTickSwapInteraction(chain: ChainType, wallet: Wallet) {
 
   const USDC_ADDRESS = chainConfig.tokenAddresses.usdc;
   const usdc = await createMinimalErc20(USDC_ADDRESS, wallet.provider!);
+  if (!usdc) throw new Error("Error during USDC creation");
   const usdcBalance = await usdc.getFormattedTokenBalance(wallet.address);
 
   const WETH_ADDRESS = chainConfig.tokenAddresses.weth;
   const wethContract = new ethers.Contract(WETH_ADDRESS, WETH_INTERFACE, wallet);
   const weth = await createMinimalErc20(WETH_ADDRESS, wallet.provider!);
+  if (!weth) throw new Error("Error during WETH creation");
   const wethBalance = await weth.getFormattedTokenBalance(wallet.address);
 
   const DAI_ADDRESS = chainConfig.tokenAddresses.dai;
   const dai = await createMinimalErc20(DAI_ADDRESS, wallet.provider!);
+  if (!dai) throw new Error("Error during dai creation");
   const daiBalance = await dai.getFormattedTokenBalance(wallet.address);
 
   const walletBalance = await wallet.provider!.getBalance(wallet.address);
@@ -90,19 +93,23 @@ async function multiTickMultiPoolSwapInteraction(chain: ChainType, wallet: Walle
 
   const USDC_ADDRESS = chainConfig.tokenAddresses.usdc;
   const usdc = await createMinimalErc20(USDC_ADDRESS, wallet.provider!);
+  if (!usdc) throw new Error("Error during USDC creation");
   const usdcBalance = await usdc.getFormattedTokenBalance(wallet.address);
 
   const WETH_ADDRESS = chainConfig.tokenAddresses.weth;
   const wethContract = new ethers.Contract(WETH_ADDRESS, WETH_INTERFACE, wallet);
   const weth = await createMinimalErc20(WETH_ADDRESS, wallet.provider!);
+  if (!weth) throw new Error("Error during WETH creation");
   const wethBalance = await weth.getFormattedTokenBalance(wallet.address);
 
   const DAI_ADDRESS = chainConfig.tokenAddresses.dai;
   const dai = await createMinimalErc20(DAI_ADDRESS, wallet.provider!);
+  if (!dai) throw new Error("Error during DAI creation");
   const daiBalance = await dai.getFormattedTokenBalance(wallet.address);
 
   const WBTC_ADDRESS = "0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599";
   const wbtc = await createMinimalErc20(WBTC_ADDRESS, wallet.provider!);
+  if (!wbtc) throw new Error("Error during WBTC creation");
   const wbtcBalance = await wbtc.getFormattedTokenBalance(wallet.address);
 
   const walletBalance = await wallet.provider!.getBalance(wallet.address);

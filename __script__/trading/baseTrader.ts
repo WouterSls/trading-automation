@@ -1,12 +1,12 @@
 import { ethers, Wallet } from "ethers";
-import { getBaseWallet_1, getCoingeckoApi, getHardhatWallet_1, getTheGraphApi } from "../../../src/hooks/useSetup";
-import { createMinimalErc20 } from "../../../src/models/smartcontracts/ERC/erc-utils";
-import { TraderFactory } from "../../../src/trading/TraderFactory";
-import { GeckoTerminalApi } from "../../../src/external-apis/GeckoTerminalApi";
-import { ChainType, getChainConfig } from "../../../src/config/chain-config";
-import { BuyTrade, BuyTradeCreationDto, InputType } from "../../../src/trading/types/_index";
-import { ITradingStrategy } from "../../../src/trading/ITradingStrategy";
-import { encodePath, FeeAmount, UniswapV3QuoterV2 } from "../../../src/models/smartcontracts/uniswap-v3";
+import { getBaseWallet_1, getCoingeckoApi, getHardhatWallet_1, getTheGraphApi } from "../../src/hooks/useSetup";
+import { createMinimalErc20 } from "../../src/smartcontracts/ERC/erc-utils";
+import { TraderFactory } from "../../src/trading/TraderFactory";
+import { GeckoTerminalApi } from "../../src/external-apis/GeckoTerminalApi";
+import { ChainType, getChainConfig } from "../../src/config/chain-config";
+import { InputType, TradeCreationDto } from "../../src/trading/types/_index";
+import { ITradingStrategy } from "../../src/trading/ITradingStrategy";
+import { encodePath, FeeAmount, UniswapV3QuoterV2 } from "../../src/smartcontracts/uniswap-v3";
 
 // Define types for trade paths
 interface SingleHopPath {
@@ -157,8 +157,7 @@ async function baseTraderInteraction(wallet: Wallet) {
 
   const UNI_ADDRESS = "0x1f9840a85d5af5bf1d1762f925bdaddc4201f984";
   const INPUT_AMOUNT = 1;
-  const trade: BuyTradeCreationDto = {
-    tradeType: "BUY",
+  const trade: TradeCreationDto = {
     chain: chain,
     inputType: InputType.ETH,
     inputToken: ethers.ZeroAddress,
@@ -176,6 +175,7 @@ async function baseTraderInteraction(wallet: Wallet) {
   const GAME_ADDRESS = "0x1c4cca7c5db003824208adda61bd749e55f463a3";
   const WETH_ADDRESS = chainConfig.tokenAddresses.weth;
   const game = await createMinimalErc20(GAME_ADDRESS, wallet.provider!);
+  if (!game) throw new Error("Error during GAME token creation");
   const gameUsdPrice = await geckoTerminalApi.getTokenUsdPrice(chain, GAME_ADDRESS);
   console.log(`${game.getName()} | ${game.getTokenAddress()}`);
   console.log(`$${gameUsdPrice}`);

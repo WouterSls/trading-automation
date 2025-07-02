@@ -1,11 +1,11 @@
 import { ethers, Wallet, TransactionRequest, Contract } from "ethers";
 import { getHardhatWallet_1 } from "../../src/hooks/useSetup";
 import { ChainType, getChainConfig } from "../../src/config/chain-config";
-import { ERC20, createMinimalErc20 } from "../../src/models/smartcontracts/ERC/_index";
-import { UniswapV2RouterV2 } from "../../src/models/smartcontracts/uniswap-v2/UniswapV2RouterV2";
+import { ERC20, createMinimalErc20 } from "../../src/smartcontracts/ERC/_index";
+import { UniswapV2RouterV2 } from "../../src/smartcontracts/uniswap-v2/UniswapV2RouterV2";
 import { WETH_INTERFACE } from "../../src/lib/smartcontract-abis/erc20";
-import { UniswapV3SwapRouterV2, UniswapV3QuoterV2 } from "../../src/models/smartcontracts/uniswap-v3/index";
-import { FeeAmount } from "../../src/models/smartcontracts/uniswap-v3/uniswap-v3-types";
+import { UniswapV3SwapRouterV2, UniswapV3QuoterV2 } from "../../src/smartcontracts/uniswap-v3/index";
+import { FeeAmount } from "../../src/smartcontracts/uniswap-v3/uniswap-v3-types";
 
 export async function forkTesting(wallet: Wallet, chain: ChainType) {
   const chainConfig = getChainConfig(chain);
@@ -24,8 +24,11 @@ export async function forkTesting(wallet: Wallet, chain: ChainType) {
   const usdcAddress = chainConfig.tokenAddresses.usdc;
   const wethAddress = chainConfig.tokenAddresses.weth;
 
-  const usdc: ERC20 = await createMinimalErc20(usdcAddress, wallet.provider!);
-  const wethErc20: ERC20 = await createMinimalErc20(wethAddress, wallet.provider!);
+  const usdc: ERC20 | null = await createMinimalErc20(usdcAddress, wallet.provider!);
+  const wethErc20: ERC20 | null = await createMinimalErc20(wethAddress, wallet.provider!);
+
+  if (!usdc || wethErc20) throw new Error("Error during ERC20 token creation");
+
   const weth: Contract = new ethers.Contract(wethAddress, WETH_INTERFACE, wallet);
 
   console.log("Wallet token info:");

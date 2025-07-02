@@ -1,22 +1,22 @@
 import {  ethers, Wallet } from "ethers";
-import { getHardhatWallet_1 } from "../../../../src/hooks/useSetup";
-import { ChainConfig, ChainType, getChainConfig } from "../../../../src/config/chain-config";
-import { UniversalRouter } from "../../../../src/models/smartcontracts/universal-router/UniversalRouter";
+import { getHardhatWallet_1 } from "../../../src/hooks/useSetup";
+import { ChainConfig, ChainType, getChainConfig } from "../../../src/config/chain-config";
+import { UniversalRouter } from "../../../src/smartcontracts/universal-router/UniversalRouter";
 import {
   CommandType,
   IPermitSingle,
   IPermitTransferFrom,
-} from "../../../../src/models/smartcontracts/universal-router/universal-router-types";
-import { OutputType, SellTradeCreationDto } from "../../../../src/trading/types/_index";
-import { decodeLogs } from "../../../../src/lib/utils";
-import { UniswapV2RouterV2 } from "../../../../src/models/smartcontracts/uniswap-v2/UniswapV2RouterV2";
-import { getLowPoolKey } from "../../../../src/models/smartcontracts/uniswap-v4/uniswap-v4-utils";
+} from "../../../src/smartcontracts/universal-router/universal-router-types";
+import { InputType, TradeCreationDto } from "../../../src/trading/types/_index";
+import { decodeLogs } from "../../../src/lib/utils";
+import { UniswapV2RouterV2 } from "../../../src/smartcontracts/uniswap-v2/UniswapV2RouterV2";
+import { getLowPoolKey } from "../../../src/smartcontracts/uniswap-v4/uniswap-v4-utils";
 import {
   encodePermitSingleInput,
   encodePermitTransferFromInput,
-} from "../../../../src/models/smartcontracts/universal-router/universal-router-utils";
-import { Permit2 } from "../../../../src/models/smartcontracts/permit2/Permit2";
-import { ERC20, createMinimalErc20 } from "../../../../src/models/smartcontracts/ERC/_index";
+} from "../../../src/smartcontracts/universal-router/universal-router-utils";
+import { Permit2 } from "../../../src/smartcontracts/permit2/Permit2";
+import { ERC20, createMinimalErc20 } from "../../../src/smartcontracts/ERC/_index";
 
 async function verifyOrGrantMaxUnitAllowance(wallet: Wallet, token: ERC20, spender: string) {
   const permit2Allowance = await token.getRawAllowance(wallet.address, spender);
@@ -58,7 +58,7 @@ async function testPermit2TransferFrom(wallet: Wallet, chain: ChainType) {
   console.log("transfer from transaction passed");
 }
 
-export async function v4SwapInteraction(wallet: Wallet, tradeCreationDto: SellTradeCreationDto) {
+export async function v4SwapInteraction(wallet: Wallet, tradeCreationDto: TradeCreationDto) {
   const chain: ChainType = tradeCreationDto.chain as ChainType;
   const chainConfig: ChainConfig = getChainConfig(chain);
   const outputTokenAddress = tradeCreationDto.outputToken;
@@ -71,6 +71,8 @@ export async function v4SwapInteraction(wallet: Wallet, tradeCreationDto: SellTr
   const wethAddress = chainConfig.tokenAddresses.weth;
   const usdc = await createMinimalErc20(usdcAddress, wallet.provider!);
   const weth = await createMinimalErc20(wethAddress, wallet.provider!);
+  
+  if (!usdc || !weth) throw new Error("Error during ERC20 token creation");
 
   //console.log("Swapping ETH for USDC...");
   //await v2Router.swapEthInUsdForToken(wallet, usdc, 200);
@@ -173,14 +175,12 @@ if (require.main === module) {
 
   const usdcInputAmount = ethers.parseUnits("50", 6);
 
-  const tradeCreationDto: SellTradeCreationDto = {
+  const tradeCreationDto: TradeCreationDto = {
     chain: chain,
+    inputType: InputType.TOKEN,
     inputToken: usdcAddress,
     inputAmount: usdcInputAmount.toString(),
-    outputType: OutputType.ETH,
     outputToken: ethers.ZeroAddress,
-    tradingPointPrice: "0",
-    tradeType: "SELL",
   };
   v4SwapInteraction(wallet, tradeCreationDto).catch(console.error);
 }
