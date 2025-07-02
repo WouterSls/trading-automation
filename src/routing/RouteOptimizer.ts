@@ -51,7 +51,7 @@ export class RouteOptimizer {
     return route;
   }
 
-  async getBestUniV4Route(tokenIn: string, amountIn: bigint, tokenOut: string,wallet: Wallet ): Promise<Route> {
+  async getBestUniV4Route(tokenIn: string, amountIn: bigint, tokenOut: string, wallet: Wallet): Promise<Route> {
     const route: Route = {
       amountOut: 0n,
       path: [],
@@ -72,7 +72,7 @@ export class RouteOptimizer {
     return route;
   }
 
-  async getBestAeroRoute( tokenIn: string, amountIn: bigint, tokenOut: string, wallet: Wallet,): Promise<Route> {
+  async getBestAeroRoute(tokenIn: string, amountIn: bigint, tokenOut: string, wallet: Wallet): Promise<Route> {
     const route: Route = {
       amountOut: 0n,
       path: [],
