@@ -4,7 +4,7 @@ import { ERC20_INTERFACE, WETH_INTERFACE } from "./smartcontract-abis/erc20";
 import { ChainType, mapNetworkNameToChainType } from "../config/chain-config";
 import { UNISWAP_V3_POOL_INTERFACE } from "./smartcontract-abis/uniswap-v3";
 import { UNISWAP_V2_PAIR_INTERFACE } from "./smartcontract-abis/uniswap-v2";
-import { calculatePriceFromSqrtPriceX96 } from "../models/smartcontracts/uniswap-v3/uniswap-v3-utils";
+import { calculatePriceFromSqrtPriceX96 } from "../smartcontracts/uniswap-v3/uniswap-v3-utils";
 import { UNIVERSAL_ROUTER_INTERFACE } from "./smartcontract-abis/universal-router";
 import { TradeCreationDto } from "../trading/types/dto/TradeCreationDto";
 import { InputType, TradeType } from "../trading/types/trading-types";
