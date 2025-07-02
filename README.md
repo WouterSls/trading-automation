@@ -6,13 +6,37 @@ A TypeScript library for interacting with various DeFi protocols across multiple
 
 This library provides a clean, type-safe interface for blockchain interactions, price data retrieval, and trading on decentralized exchanges. It supports multiple chains and protocols with a unified API.
 
-## Features
+## Architecture
 
-- **Multi-Chain Support**: Ethereum, Arbitrum, and Base networks
-- **Protocol Integrations**: Uniswap V2, Uniswap V3, Uniswap V4 and Aerodrome
-- **Price Data**: Integration with GeckoTerminal, Alchemy and TheGraph for token pricing and price info
-- **Trading**: Token swapping and trading functionality
-- **Type Safety**: Full TypeScript typing for a safer development experience
+The project is organized into the following structure:
+
+### Core Source (`src/`)
+
+- **config/**: Chain configuration and trading setup
+- **external-apis/**: External API integrations
+- **hooks/**: Custom hooks and setup utilities
+- **lib/**: Utility functions and type definitions
+- **routing/**: Routing models strategies and logic
+- **smartcontracts/**: Smartcontract interaction models
+- **trading/**: Trading-specific models and logic
+
+### Scripts (`__script__/`)
+
+- **external-apis/**: Scripts for external service interactions
+  - Alchemy wallet information retrieval
+  - GeckoTerminal price and pool data
+  - The Graph token pool information
+- **hardhat/**: Hardhat-related scripts for testing and development
+- **lib/**: library scripts for testing and development
+- **smartcontracts/**: smartcontract interaction scripts
+- **trading/**: Trading operation scripts
+
+### Tests (`__test__/`)
+
+- **external-apis/**: Scripts for external service interactions
+- **helpers/**: Test utility functions and helpers
+- **smartcontracts/**: Unit tests for smartcontracts abstractions
+- **trading/**: Trading operation scripts
 
 ## Configuration
 
@@ -39,36 +63,13 @@ setup and usage of .env variables can be found in hooks/useSetup.ts
 
 for interaction with the trading engine check the (`__script__/`) directory for all interaction scripts
 
-## Architecture
+## Features
 
-The project is organized into the following structure:
-
-### Core Source (`src/`)
-
-- **config/**: Chain configuration and trading setup
-- **hooks/**: Custom hooks and setup utilities
-- **lib/**: Utility functions and type definitions
-- **models/**: Core business logic and abstractions
-  - **smartcontracts/**: Smartcontract interaction models
-  - **trading/**: Trading-specific models and logic
-- **services/**: External API integrations
-
-### Scripts (`__script__/`)
-
-- **hardhat/**: Hardhat-related scripts for testing and development
-- **models/**: Executable scripts for models
-  - **smartcontracts/**: Blockchain interaction scripts
-  - **trading/**: Trading operation scripts
-- **services/**: Scripts for external service interactions
-  - Alchemy wallet information retrieval
-  - GeckoTerminal price and pool data
-  - The Graph token pool information
-
-### Tests (`__test__/`)
-
-- **helpers/**: Test utility functions and helpers
-- **models/**: Unit tests for core models and business logic
-- **services/**: Tests for external API integrations
+- **Multi-Chain Support**: Ethereum, Arbitrum, and Base networks
+- **Protocol Integrations**: Uniswap V2, Uniswap V3, Uniswap V4 and Aerodrome
+- **Price Data**: Integration with GeckoTerminal, Alchemy and TheGraph for token pricing and price info
+- **Trading**: Token swapping and trading functionality
+- **Type Safety**: Full TypeScript typing for a safer development experience
 
 ## Supported Chains
 
