@@ -18,6 +18,8 @@ export class Trader {
   getStrategies = (): ITradingStrategy[] => this.strategies;
 
   async trade(tradeRequest: TradeCreationDto): Promise<TradeConfirmation> {
+    await this.validateTrade(tradeRequest);
+
     const bestStrategy: ITradingStrategy = await this.getBestStrategy(tradeRequest);
 
     console.log("Checking approval...");
@@ -61,6 +63,18 @@ export class Trader {
     return tradeConfirmation;
   }
 
+  private validateTrade(tradeRequest: TradeCreationDto) {
+    const inputAmountNumber = Number(tradeRequest.inputAmount);
+
+    if (isNaN(inputAmountNumber)) {
+      throw new Error("Input Amount is not a valid number");
+    }
+
+    if (inputAmountNumber <= 0) {
+      throw new Error("Input Amount must be greater than zero");
+    }
+  }
+
   /**
    * Finds the optimal strategy for a trade by comparing quotes
    *
@@ -80,7 +94,6 @@ export class Trader {
 
         console.log(`${strategy.getName()}:`);
         console.log(`  Output: ${quote.outputAmount}`);
-        console.log(`  Price Impact: ${quote.priceImpact}%`);
         console.log(`  Route: ${quote.route.path.join(" → ")}`);
 
         if (!bestQuote || bestQuote.outputAmount < quote.outputAmount) {
@@ -95,12 +108,6 @@ export class Trader {
 
     if (!bestStrategy || !bestQuote) {
       throw new Error(`No strategy could provide a valid quote for trade`);
-    }
-
-    if (bestQuote.priceImpact > TRADING_CONFIG.MAX_PRICE_IMPACT_PERCENTAGE) {
-      throw new Error(
-        `Price impact too high: ${bestQuote.priceImpact.toFixed(2)}%, max allowed: ${TRADING_CONFIG.MAX_PRICE_IMPACT_PERCENTAGE}%`,
-      );
     }
 
     console.log(`Best strategy: ${bestStrategy.getName()}`);
