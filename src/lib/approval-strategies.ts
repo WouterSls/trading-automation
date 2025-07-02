@@ -95,7 +95,9 @@ export async function ensurePermit2Approval(
   amount: string,
   permit2Address: string,
   routerAddress: string,
-): Promise<void> {
+): Promise<void | null> {
+  const token = await createMinimalErc20(tokenAddress, wallet.provider!);
+  if (!token) return null;
   try {
     // Ste, checkTokenAllowance p 1: Check if token is approved to Permit2 contract
     const balanceOfTxData = ERC20_INTERFACE.encodeFunctionData("balanceOf", [permit2Address]);
