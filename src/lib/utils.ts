@@ -261,3 +261,14 @@ export function calculatePriceImpact(expectedOutput: bigint, actualOutput: bigin
 export function calculateSlippageAmount(actualOutput: bigint) {
   return (actualOutput * BigInt(TRADING_CONFIG.SLIPPAGE_TOLERANCE * 100)) / 100n;
 }
+
+export function displayTrade(trade: TradeCreationDto) {
+  console.log("--------------------------------");
+  console.log("Trade");
+  console.log("--------------------------------");
+  console.log("\tInput type:", trade.inputType);
+  console.log("\tInput token: ", trade.inputToken);
+  console.log("\tInput amount:", trade.inputAmount);
+  console.log("\tOutput token:", trade.outputToken);
+  console.log();
+}
