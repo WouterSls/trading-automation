@@ -5,7 +5,7 @@ export interface ITradingStrategy {
   getName(): string;
   getEthUsdcPrice(wallet: Wallet): Promise<string>;
 
-  ensureTokenApproval(wallet: Wallet, tokenAddress: string, amount: string): Promise<string | null>;
+  ensureTokenApproval(tokenAddress: string, amount: string, wallet: Wallet): Promise<string | null>;
 
   getQuote(trade: TradeCreationDto, wallet: Wallet): Promise<Quote>;
   createTransaction(trade: TradeCreationDto, wallet: Wallet): Promise<TransactionRequest>;

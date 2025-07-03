@@ -24,9 +24,9 @@ export class Trader {
 
     console.log("Checking approval...");
     const approvalGasCost = await bestStrategy.ensureTokenApproval(
-      this.wallet,
       tradeRequest.inputToken,
       tradeRequest.inputAmount,
+      this.wallet,
     );
     console.log("Approval checked!");
 
@@ -96,7 +96,7 @@ export class Trader {
         console.log(`  Output: ${quote.outputAmount}`);
         console.log(`  Route: ${quote.route.path.join(" → ")}`);
 
-        if (!bestQuote || bestQuote.outputAmount < quote.outputAmount) {
+        if (!bestQuote || bestQuote.route.amountOut < quote.route.amountOut) {
           bestQuote = quote;
           bestStrategy = strategy;
         }

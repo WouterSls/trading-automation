@@ -53,22 +53,20 @@ export class UniswapV2Strategy implements ITradingStrategy {
 
   /**
    * Ensures token approval for trading operations
-   * @param wallet Connected wallet to use for approval
    * @param tokenAddress Address of the token to approve
    * @param amount Amount to approve (threshold validation or standard approval calculation )
+   * @param wallet Connected wallet to use for approval
    * @returns gas cost of approval if needed , null if already approved
    */
-  async ensureTokenApproval(wallet: Wallet, tokenAddress: string, amount: string): Promise<string | null> {
+  async ensureTokenApproval(tokenAddress: string, amount: string, wallet: Wallet): Promise<string | null> {
     await validateNetwork(wallet, this.chain);
-
-    if (tokenAddress === ethers.ZeroAddress) return null;
 
     const spender = this.router.getRouterAddress();
 
     if (TRADING_CONFIG.INFINITE_APPROVAL) {
-      return await ensureInfiniteApproval(wallet, tokenAddress, amount, spender);
+      return await ensureInfiniteApproval(tokenAddress, amount, spender, wallet);
     } else {
-      return await ensureStandardApproval(wallet, tokenAddress, amount, spender);
+      return await ensureStandardApproval(tokenAddress, amount, spender, wallet);
     }
   }
 
