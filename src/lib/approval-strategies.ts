@@ -8,14 +8,16 @@ import { ERC20_INTERFACE } from "./smartcontract-abis/erc20";
  * Used by most DEX protocols (Uniswap V2, V3, Sushiswap, etc.)
  */
 export async function ensureStandardApproval(
-  wallet: Wallet,
   tokenAddress: string,
   amount: string,
   spenderAddress: string,
+  wallet: Wallet,
 ): Promise<string | null> {
   try {
+    if (tokenAddress === ethers.ZeroAddress) return null;
     const token = await createMinimalErc20(tokenAddress, wallet.provider!);
-    if (!token) return null;
+    if (!token) throw new Error("Invalid Token Address For Approval");
+
     const rawAmount = ethers.parseUnits(amount, token.getDecimals());
     const routerAllowance = await token.getRawAllowance(wallet.address, spenderAddress);
 
@@ -46,14 +48,16 @@ export async function ensureStandardApproval(
  * Approves maximum amount to avoid future approval transactions
  */
 export async function ensureInfiniteApproval(
-  wallet: Wallet,
   tokenAddress: string,
   amount: string,
   spenderAddress: string,
+  wallet: Wallet,
 ): Promise<string | null> {
+  if (tokenAddress === ethers.ZeroAddress) return null;
+  const token = await createMinimalErc20(tokenAddress, wallet.provider!);
+  if (!token) throw new Error("Invalid Token Address For Approval");
+
   try {
-    const token = await createMinimalErc20(tokenAddress, wallet.provider!);
-    if (!token) return null;
     const rawAmount = ethers.parseUnits(amount, token.getDecimals());
     const routerAllowance = await token.getRawAllowance(wallet.address, spenderAddress);
 
@@ -90,14 +94,16 @@ export async function ensureInfiniteApproval(
  * This is a placeholder implementation - you would implement the full Permit2 flow here
  */
 export async function ensurePermit2Approval(
-  wallet: Wallet,
   tokenAddress: string,
   amount: string,
   permit2Address: string,
   routerAddress: string,
+  wallet: Wallet,
 ): Promise<void | null> {
+  if (tokenAddress === ethers.ZeroAddress) return null;
   const token = await createMinimalErc20(tokenAddress, wallet.provider!);
-  if (!token) return null;
+  if (!token) throw new Error("Invalid Token Address For Approval");
+
   try {
     // Ste, checkTokenAllowance p 1: Check if token is approved to Permit2 contract
     const balanceOfTxData = ERC20_INTERFACE.encodeFunctionData("balanceOf", [permit2Address]);
