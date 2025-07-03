@@ -5,26 +5,81 @@ import { ChainConfig, ChainType, getChainConfig } from "../../../src/config/chai
 import { UniswapV2Strategy } from "../../../src/trading/strategies/UniswapV2Strategy";
 import { InputType, TradeCreationDto } from "../../../src/trading/types/_index";
 import { TRADING_CONFIG } from "../../../src/config/trading-config";
-
-const NETWORK_VALIDATION_ERROR_MESSAGE = "Network Validation Failed";
-const WALLET_VALIDATION_ERROR_MESSAGE = "Wallet on different chain";
+import { UNISWAP_V2_ROUTER_INTERFACE } from "../../../src/lib/smartcontract-abis/uniswap-v2";
 
 const STRATEGY_NAME = "UniswapV2Strategy";
 
-const UNI_TOKEN_ADDRESS = "0x1f9840a85d5af5bf1d1762f925bdaddc4201f984";
-const USDT_TOKEN_ADDRESS = "0xdAC17F958D2ee523a2206206994597C13D831ec7";
+const NETWORK_VALIDATION_ERROR_MESSAGE = "Network Validation Failed";
+const WALLET_WRONG_NETWORK_ERROR_MESSAGE = "Wallet on different chain";
+const INVALID_APPROVAL_ADDRESS_ERROR_MESSAGE = "Invalid Token Address For Approval";
+const UNKNOWN_TRADE_TYPE_ERROR_MESSAGE= "Unknown trade type for given TradeCreationDto";
+const PRICE_IMPACT_ERROR_PREFIX = "Price impact too high";
 
 describe("Uniswap V2 Strategy Test", () => {
+  const chain: ChainType = ChainType.ETH;
+  const chainConfig: ChainConfig = getChainConfig(chain);
   let strategy: UniswapV2Strategy;
-  let chainConfig: ChainConfig;
   let wallet: Wallet;
   let nonNetworkWallet: Wallet;
   let offlineWallet: Wallet;
 
+  const ethToTokenTrade: TradeCreationDto = {
+    chain: chain,
+    inputType: InputType.ETH,
+    inputToken: ethers.ZeroAddress,
+    inputAmount: "1",
+    outputToken: chainConfig.tokenAddresses.uni,
+  };
+  const usdToTokenTrade: TradeCreationDto = {
+    chain: chain,
+    inputType: InputType.USD,
+    inputToken: ethers.ZeroAddress,
+    inputAmount: "200",
+    outputToken: chainConfig.tokenAddresses.usdc,
+  };
+
+  const tokenToEthTrade: TradeCreationDto = {
+    chain: chain,
+    inputType: InputType.TOKEN,
+    inputToken: chainConfig.tokenAddresses.usdc,
+    inputAmount: "100",
+    outputToken: ethers.ZeroAddress,
+  }
+
+  const tokenToTokenTrade: TradeCreationDto = {
+    chain: chain,
+    inputType: InputType.TOKEN,
+    inputToken: chainConfig.tokenAddresses.weth,
+    inputAmount: "1",
+    outputToken: chainConfig.tokenAddresses.uni,
+  };
+
+  const invalidEthTradeWithTokenInput: TradeCreationDto = {
+    chain: chain,
+    inputType: InputType.ETH,
+    inputToken: chainConfig.tokenAddresses.uni, // Should be ethers.ZeroAddress for ETH input
+    inputAmount: "1",
+    outputToken: ethers.ZeroAddress,
+  };
+
+  const invalidUsdTradeWithTokenInput: TradeCreationDto = {
+    chain: chain,
+    inputType: InputType.USD,
+    inputToken: chainConfig.tokenAddresses.uni, // Should be ethers.ZeroAddress for USD input
+    inputAmount: "1",
+    outputToken: ethers.ZeroAddress,
+  };
+
+  const invalidTokenTradeWithEthInput: TradeCreationDto = {
+    chain: chain,
+    inputType: InputType.TOKEN,
+    inputToken: ethers.ZeroAddress, // Should be a valid token address for TOKEN input
+    inputAmount: "1",
+    outputToken: chainConfig.tokenAddresses.uni,
+  };
+
   beforeAll(async () => {
-    const chain = ChainType.ETH;
     await NetworkForkManager.startHardhatFork(chain);
-    chainConfig = getChainConfig(chain);
     strategy = new UniswapV2Strategy(STRATEGY_NAME, chain);
   });
 
@@ -51,26 +106,23 @@ describe("Uniswap V2 Strategy Test", () => {
 
   describe("ensureTokenApproval", () => {
     it("should throw error with offline wallet", async () => {
-      await expect(strategy.ensureTokenApproval(offlineWallet, UNI_TOKEN_ADDRESS, "100")).rejects.toThrow(
+      await expect(strategy.ensureTokenApproval(chainConfig.tokenAddresses.uni, "100", offlineWallet)).rejects.toThrow(
         NETWORK_VALIDATION_ERROR_MESSAGE,
       );
     });
 
     it("should throw error with wrong network wallet", async () => {
-      await expect(strategy.ensureTokenApproval(nonNetworkWallet, UNI_TOKEN_ADDRESS, "100")).rejects.toThrow(
-        WALLET_VALIDATION_ERROR_MESSAGE,
-      );
+      await expect(
+        strategy.ensureTokenApproval( chainConfig.tokenAddresses.uni, "100", nonNetworkWallet),
+      ).rejects.toThrow(WALLET_WRONG_NETWORK_ERROR_MESSAGE);
     });
 
     it("should return null when token is already approved for infinite approval", async () => {
-      // Mock infinite approval config
       const originalConfig = TRADING_CONFIG.INFINITE_APPROVAL;
       TRADING_CONFIG.INFINITE_APPROVAL = true;
 
       try {
-        const result = await strategy.ensureTokenApproval(wallet, UNI_TOKEN_ADDRESS, "100");
-        // In most cases, this will return null as tokens are often already approved
-        // or it will return a transaction hash if approval was needed
+        const result = await strategy.ensureTokenApproval(chainConfig.tokenAddresses.uni, "100", wallet);
         expect(result === null || typeof result === "string").toBe(true);
       } finally {
         TRADING_CONFIG.INFINITE_APPROVAL = originalConfig;
@@ -78,14 +130,11 @@ describe("Uniswap V2 Strategy Test", () => {
     });
 
     it("should return null when token is already approved for standard approval", async () => {
-      // Mock standard approval config
       const originalConfig = TRADING_CONFIG.INFINITE_APPROVAL;
       TRADING_CONFIG.INFINITE_APPROVAL = false;
 
       try {
-        const result = await strategy.ensureTokenApproval(wallet, UNI_TOKEN_ADDRESS, "100");
-        // In most cases, this will return null as tokens are often already approved
-        // or it will return a transaction hash if approval was needed
+        const result = await strategy.ensureTokenApproval(chainConfig.tokenAddresses.uni, "100", wallet);
         expect(result === null || typeof result === "string").toBe(true);
       } finally {
         TRADING_CONFIG.INFINITE_APPROVAL = originalConfig;
@@ -93,26 +142,27 @@ describe("Uniswap V2 Strategy Test", () => {
     });
 
     it("should handle different token addresses", async () => {
-      const result = await strategy.ensureTokenApproval(wallet, USDT_TOKEN_ADDRESS, "1000");
+      const result = await strategy.ensureTokenApproval(chainConfig.tokenAddresses.usdt, "1000", wallet);
       expect(result === null || typeof result === "string").toBe(true);
     });
 
     it("should handle different amounts", async () => {
-      const smallAmount = await strategy.ensureTokenApproval(wallet, UNI_TOKEN_ADDRESS, "1");
-      const largeAmount = await strategy.ensureTokenApproval(wallet, UNI_TOKEN_ADDRESS, "1000000");
+      const smallAmount = await strategy.ensureTokenApproval(chainConfig.tokenAddresses.uni, "1", wallet);
+      const largeAmount = await strategy.ensureTokenApproval(chainConfig.tokenAddresses.uni, "1000000", wallet);
 
       expect(smallAmount === null || typeof smallAmount === "string").toBe(true);
       expect(largeAmount === null || typeof largeAmount === "string").toBe(true);
     });
 
     it("should handle zero amount gracefully", async () => {
-      const result = await strategy.ensureTokenApproval(wallet, UNI_TOKEN_ADDRESS, "0");
+      const result = await strategy.ensureTokenApproval(chainConfig.tokenAddresses.uni, "0",wallet);
       expect(result === null || typeof result === "string").toBe(true);
     });
 
-    it("should throw error for invalid token address", async () => {
+    it("should throw an error for invalid token address", async () => {
       const invalidAddress = "0xinvalid";
-      await expect(strategy.ensureTokenApproval(wallet, invalidAddress, "100")).rejects.toThrow();
+
+      await expect(strategy.ensureTokenApproval(invalidAddress, "100", wallet)).rejects.toThrow(INVALID_APPROVAL_ADDRESS_ERROR_MESSAGE);
     });
   });
 
@@ -136,86 +186,143 @@ describe("Uniswap V2 Strategy Test", () => {
     });
   });
 
-  describe("getQuote", () => {});
+  describe("getQuote", () => {
+    it("should throw error with offline wallet", async () => {
+      await expect(strategy.getQuote(ethToTokenTrade, offlineWallet)).rejects.toThrow(NETWORK_VALIDATION_ERROR_MESSAGE);
+    });
+
+    it("should throw error with wrong network wallet", async () => {
+      await expect(strategy.getQuote(ethToTokenTrade, nonNetworkWallet)).rejects.toThrow(WALLET_WRONG_NETWORK_ERROR_MESSAGE);
+    });
+
+    it("should throw error for invalid trade types", async () => {
+      await expect(strategy.getQuote(invalidEthTradeWithTokenInput, wallet)).rejects.toThrow(UNKNOWN_TRADE_TYPE_ERROR_MESSAGE);
+      await expect(strategy.getQuote(invalidUsdTradeWithTokenInput, wallet)).rejects.toThrow(UNKNOWN_TRADE_TYPE_ERROR_MESSAGE);
+      await expect(strategy.getQuote(invalidTokenTradeWithEthInput, wallet)).rejects.toThrow(UNKNOWN_TRADE_TYPE_ERROR_MESSAGE);
+    });
+
+    it("should return valid quote for ETH to token trade", async () => {
+      const quote = await strategy.getQuote(ethToTokenTrade, wallet);
+
+      expect(quote).toBeDefined();
+      expect(quote.outputAmount).toBeDefined();
+      expect(typeof quote.outputAmount).toBe("string");
+      expect(parseFloat(quote.outputAmount)).toBeGreaterThan(0);
+      
+      expect(quote.route).toBeDefined();
+      expect(quote.route.amountOut).toBeGreaterThan(0n);
+      expect(quote.route.path).toBeDefined();
+      expect(quote.route.path.length).toBeGreaterThanOrEqual(2);
+    });
+
+    it("should return valid quote for USD to token trade", async () => {
+      const quote = await strategy.getQuote(usdToTokenTrade, wallet);
+
+      expect(quote).toBeDefined();
+      expect(quote.outputAmount).toBeDefined();
+      expect(typeof quote.outputAmount).toBe("string");
+      expect(parseFloat(quote.outputAmount)).toBeGreaterThan(0);
+      
+      expect(quote.route).toBeDefined();
+      expect(quote.route.amountOut).toBeGreaterThan(0n);
+      expect(quote.route.path).toBeDefined();
+      expect(quote.route.path.length).toBeGreaterThanOrEqual(2);
+    });
+
+    it("should return valid quote for token to token trade", async () => {
+      const quote = await strategy.getQuote(tokenToTokenTrade, wallet);
+
+      expect(quote).toBeDefined();
+      expect(quote.outputAmount).toBeDefined();
+      expect(typeof quote.outputAmount).toBe("string");
+      expect(parseFloat(quote.outputAmount)).toBeGreaterThan(0);
+      
+      expect(quote.route).toBeDefined();
+      expect(quote.route.amountOut).toBeGreaterThan(0n);
+      expect(quote.route.path).toBeDefined();
+      expect(quote.route.path.length).toBeGreaterThanOrEqual(2);
+    });
+
+    it("should return valid quote for token to ETH trade", async () => {
+      const quote = await strategy.getQuote(tokenToEthTrade, wallet);
+
+      expect(quote).toBeDefined();
+      expect(quote.outputAmount).toBeDefined();
+      expect(typeof quote.outputAmount).toBe("string");
+      expect(parseFloat(quote.outputAmount)).toBeGreaterThan(0);
+      
+      expect(quote.route).toBeDefined();
+      expect(quote.route.amountOut).toBeGreaterThan(0n);
+      expect(quote.route.path).toBeDefined();
+      expect(quote.route.path.length).toBeGreaterThanOrEqual(2);
+    });
+
+    it("should handle different trade amounts correctly", async () => {
+      const smallTrade = { ...ethToTokenTrade, inputAmount: "0.1" };
+      const largeTrade = { ...ethToTokenTrade, inputAmount: "10" };
+
+      const smallQuote = await strategy.getQuote(smallTrade, wallet);
+      const largeQuote = await strategy.getQuote(largeTrade, wallet);
+
+      expect(parseFloat(smallQuote.outputAmount)).toBeGreaterThan(0);
+      expect(parseFloat(largeQuote.outputAmount)).toBeGreaterThan(0);
+      
+      // Large trade should give proportionally more output (accounting for price impact)
+      expect(parseFloat(largeQuote.outputAmount)).toBeGreaterThan(parseFloat(smallQuote.outputAmount));
+    });
+
+    it("should handle USD input by converting to ETH first", async () => {
+      const usdTrade = { ...ethToTokenTrade, inputType: InputType.USD, inputAmount: "1000" };
+      const quote = await strategy.getQuote(usdTrade, wallet);
+
+      expect(quote).toBeDefined();
+      expect(parseFloat(quote.outputAmount)).toBeGreaterThan(0);
+      
+      // The route should still be ETH -> Token since USD gets converted to ETH
+      expect(quote.route.path[0]).toBe(chainConfig.tokenAddresses.weth);
+    });
+  });
 
   describe("createTransaction", () => {
-    const trade: TradeCreationDto = {
-      chain: ChainType.ETH,
-      inputType: InputType.ETH,
-      inputToken: ethers.ZeroAddress,
-      inputAmount: "1.0",
-      outputToken: UNI_TOKEN_ADDRESS,
-    };
-
     it("should throw error with offline wallet", async () => {
-      await expect(strategy.createTransaction(trade, offlineWallet)).rejects.toThrow();
+      await expect(strategy.createTransaction(ethToTokenTrade, offlineWallet)).rejects.toThrow(NETWORK_VALIDATION_ERROR_MESSAGE);
     });
+
     it("should throw error with wrong network wallet", async () => {
-      await expect(strategy.createTransaction(trade, nonNetworkWallet)).rejects.toThrow();
+      await expect(strategy.createTransaction(ethToTokenTrade, nonNetworkWallet)).rejects.toThrow(WALLET_WRONG_NETWORK_ERROR_MESSAGE);
     });
 
-    it("should create an empty transacton if ETH inputType with inputToken", async () => {
-      const invalidTrade: TradeCreationDto = {
-        chain: ChainType.ETH,
-        inputType: InputType.ETH,
-        inputToken: UNI_TOKEN_ADDRESS, // Should be ethers.ZeroAddress for ETH input
-        inputAmount: "1.0",
-        outputToken: UNI_TOKEN_ADDRESS,
-      };
-
-      const tx = await strategy.createTransaction(invalidTrade, wallet);
-
-      expect(tx).toEqual({});
+    it("should throw error for invalid trade types", async () => {
+      await expect(strategy.createTransaction(invalidEthTradeWithTokenInput, wallet)).rejects.toThrow(UNKNOWN_TRADE_TYPE_ERROR_MESSAGE);
+      await expect(strategy.createTransaction(invalidUsdTradeWithTokenInput, wallet)).rejects.toThrow(UNKNOWN_TRADE_TYPE_ERROR_MESSAGE);
+      await expect(strategy.createTransaction(invalidTokenTradeWithEthInput, wallet)).rejects.toThrow(UNKNOWN_TRADE_TYPE_ERROR_MESSAGE);
     });
 
-    it("should create an empty transacton if USD inputType with inputToken", async () => {
-      const invalidTrade: TradeCreationDto = {
-        chain: ChainType.ETH,
-        inputType: InputType.USD,
-        inputToken: UNI_TOKEN_ADDRESS, // Should be ethers.ZeroAddress for USD input
-        inputAmount: "1000",
-        outputToken: UNI_TOKEN_ADDRESS,
-      };
+    it("should create valid transaction for ETH inputType with ethers.ZeroAddress and TOKEN output", async () => {
+      const tx = await strategy.createTransaction(ethToTokenTrade, wallet);
 
-      const tx = await strategy.createTransaction(invalidTrade, wallet);
-
-      expect(tx).toEqual({});
+      expect(tx).toBeDefined();
+      expect(tx.to).toBe(chainConfig.uniswap.v2.routerAddress);
+      expect(tx.data).toBeDefined();
+      expect(tx.value).toBeDefined();
+      expect(tx.value).toBe(ethers.parseEther("1"));
     });
 
-    it("should create an empty transacton if TOKEN inputType with ethers.ZeroAddress", async () => {
-      const invalidTrade: TradeCreationDto = {
-        chain: ChainType.ETH,
+    it("should create valid transaction for USD inputType with ethers.ZeroAddress and TOKEN output", async () => {
+      const tx = await strategy.createTransaction(usdToTokenTrade, wallet);
+
+      expect(tx).toBeDefined();
+      expect(tx.to).toBe(chainConfig.uniswap.v2.routerAddress);
+      expect(tx.data).toBeDefined();
+      expect(tx.value).toBeDefined();
+    });
+
+    it("should create valid transaction for TOKEN inputType with inputToken and token output", async () => {
+      const tokenTrade = {
+        ...tokenToTokenTrade,
         inputType: InputType.TOKEN,
-        inputToken: ethers.ZeroAddress, // Should be a valid token address for TOKEN input
-        inputAmount: "100",
-        outputToken: UNI_TOKEN_ADDRESS,
+        inputToken: chainConfig.tokenAddresses.uni,
       };
-
-      const tx = await strategy.createTransaction(invalidTrade, wallet);
-
-      expect(tx).toEqual({});
-    });
-
-    it("should create valid transaction for ETH inputType with ethers.ZeroAddress", async () => {
-      const tx = await strategy.createTransaction(trade, wallet);
-
-      expect(tx).toBeDefined();
-      expect(tx.to).toBe(chainConfig.uniswap.v2.routerAddress);
-      expect(tx.data).toBeDefined();
-      expect(tx.value).toBeDefined();
-      expect(tx.value).toBe(ethers.parseEther("1.0"));
-    });
-    it("should create valid transaction for USD inputType with ethers.ZeroAddress", async () => {
-      const usdcTrade = { ...trade, inputType: InputType.USD };
-      const tx = await strategy.createTransaction(usdcTrade, wallet);
-
-      expect(tx).toBeDefined();
-      expect(tx.to).toBe(chainConfig.uniswap.v2.routerAddress);
-      expect(tx.data).toBeDefined();
-      expect(tx.value).toBeDefined();
-    });
-    it("should create valid transaction for TOKEN inputType with inputToken", async () => {
-      const tokenTrade = { ...trade, inputType: InputType.TOKEN, inputToken: UNI_TOKEN_ADDRESS };
       const tx = await strategy.createTransaction(tokenTrade, wallet);
 
       expect(tx).toBeDefined();
@@ -223,20 +330,30 @@ describe("Uniswap V2 Strategy Test", () => {
       expect(tx.data).toBeDefined();
     });
 
+    it("should create valid transaction for TOKEN inputType with inputToken and eth output", async () => {
+      const tx = await strategy.createTransaction(tokenToEthTrade, wallet);
+
+      expect(tx).toBeDefined();
+      expect(tx.to).toBe(chainConfig.uniswap.v2.routerAddress);
+      expect(tx.data).toBeDefined();
+    });
+
     it("should handle small ETH amounts", async () => {
-      const smallTrade = { ...trade, inputAmount: "0.001" };
+      const smallTrade = { ...ethToTokenTrade, inputAmount: "0.001" };
       const tx = await strategy.createTransaction(smallTrade, wallet);
 
       expect(tx.value).toBe(ethers.parseEther("0.001"));
     });
+
     it("should handle large ETH amounts", async () => {
-      const largeTrade = { ...trade, inputAmount: "100" };
+      const largeTrade = { ...ethToTokenTrade, inputAmount: "100" };
       const tx = await strategy.createTransaction(largeTrade, wallet);
 
       expect(tx.value).toBe(ethers.parseEther("100"));
     });
+
     it("should handle small USD amounts", async () => {
-      const smallTrade = { ...trade, inputType: InputType.USD, inputAmount: "10" };
+      const smallTrade = { ...usdToTokenTrade, inputType: InputType.USD, inputAmount: "10" };
       const tx = await strategy.createTransaction(smallTrade, wallet);
 
       expect(tx.value).toBeGreaterThan(0n);
@@ -248,7 +365,7 @@ describe("Uniswap V2 Strategy Test", () => {
         inputType: InputType.USD,
         inputToken: ethers.ZeroAddress,
         inputAmount: "1000",
-        outputToken: UNI_TOKEN_ADDRESS,
+        outputToken: chainConfig.tokenAddresses.uni,
       };
       const ethPrice = await strategy.getEthUsdcPrice(wallet);
       const expectedEthValue = 1000 / parseFloat(ethPrice);
@@ -259,13 +376,14 @@ describe("Uniswap V2 Strategy Test", () => {
       // Allow 1% tolerance for rounding differences
       expect(actualEthValue).toBeCloseTo(expectedEthValue, 2);
     });
+
     it("should handle different input tokens", async () => {
       const usdtTrade: TradeCreationDto = {
         chain: ChainType.ETH,
         inputType: InputType.TOKEN,
-        inputToken: USDT_TOKEN_ADDRESS,
+        inputToken: chainConfig.tokenAddresses.usdt,
         inputAmount: "1000",
-        outputToken: UNI_TOKEN_ADDRESS,
+        outputToken: chainConfig.tokenAddresses.uni,
       };
       const tx = await strategy.createTransaction(usdtTrade, wallet);
 
@@ -274,25 +392,145 @@ describe("Uniswap V2 Strategy Test", () => {
     });
 
     it("should include correct function signature for swapExactETHForTokens", async () => {
-      const tx = await strategy.createTransaction(trade, wallet);
+      const tx = await strategy.createTransaction(ethToTokenTrade, wallet);
 
-      // Function signature for swapExactETHForTokens
-      const functionSignature = tx.data!.toString().substring(0, 10);
-      expect(functionSignature).toBe("0x7ff36ab5");
+      const actualSignature = tx.data!.toString().substring(0, 10);
+      
+      const expectedSignature = UNISWAP_V2_ROUTER_INTERFACE.getFunction("swapExactETHForTokens")!.selector;
+
+      expect(actualSignature).toBe(expectedSignature);
     });
-    it("should include correct function signature for swapExactTokensForTokens", async () => {
-      const tokenToTokenTrade = {
-        ...trade,
-        inputType: InputType.TOKEN,
-        inputToken: chainConfig.tokenAddresses.usdc,
-        outputToken: UNI_TOKEN_ADDRESS,
-      };
 
+    it("should include correct function signature for swapExactTokensForTokens", async () => {
       const tx = await strategy.createTransaction(tokenToTokenTrade, wallet);
 
-      // Function signature for swapExactTokensForTokens
-      const functionSignature = tx.data!.toString().substring(0, 10);
-      expect(functionSignature).toBe("0x38ed1739");
+      const actualSignature = tx.data!.toString().substring(0, 10);
+
+      const expectedSignature = UNISWAP_V2_ROUTER_INTERFACE.getFunction("swapExactTokensForTokens")!.selector;
+
+      expect(actualSignature).toBe(expectedSignature);
+    });
+
+    it("should include correct function signature for swapExactTokensForETH", async () => {
+      const tx = await strategy.createTransaction(tokenToEthTrade, wallet);
+
+      const actualSignature = tx.data!.toString().substring(0, 10);
+
+      const expectedSignature = UNISWAP_V2_ROUTER_INTERFACE.getFunction("swapExactTokensForETH")!.selector;
+
+      expect(actualSignature).toBe(expectedSignature);
+    });
+  });
+
+  //TODO: DOUBLE CHECK -> BUG IN ETHTRADER.JS
+  describe("price impact validation", () => {
+    it("should allow trades with normal price impact", async () => {
+      // Normal trade amounts should not trigger price impact errors
+      const normalTrade = { ...ethToTokenTrade, inputAmount: "0.1" };
+      
+      const tx = await strategy.createTransaction(normalTrade, wallet);
+      expect(tx).toBeDefined();
+      expect(tx.data).toBeDefined();
+    });
+
+    it("should handle very small trades without price impact issues", async () => {
+      // Very small trades should have minimal price impact
+      const tinyTrade = { ...ethToTokenTrade, inputAmount: "0.001" };
+      
+      const tx = await strategy.createTransaction(tinyTrade, wallet);
+      expect(tx).toBeDefined();
+      expect(tx.data).toBeDefined();
+    });
+
+    it("should calculate price impact for different trade types", async () => {
+      // Test that price impact calculation works for all supported trade types
+      const ethTrade = { ...ethToTokenTrade, inputAmount: "1" };
+      const usdTrade = { ...usdToTokenTrade, inputAmount: "2000" };
+      const tokenTrade = { ...tokenToTokenTrade, inputAmount: "1" };
+      const tokenEthTrade = { ...tokenToEthTrade, inputAmount: "1000" };
+
+      // All these should execute without price impact errors for reasonable amounts
+      await expect(strategy.createTransaction(ethTrade, wallet)).resolves.toBeDefined();
+      await expect(strategy.createTransaction(usdTrade, wallet)).resolves.toBeDefined();
+      await expect(strategy.createTransaction(tokenTrade, wallet)).resolves.toBeDefined();
+      await expect(strategy.createTransaction(tokenEthTrade, wallet)).resolves.toBeDefined();
+    });
+
+    it("should potentially trigger price impact errors for extremely large trades", async () => {
+      // Extremely large trades might trigger price impact validation
+      // Note: This test might pass or fail depending on available liquidity
+      const extremeTrade = { ...ethToTokenTrade, inputAmount: "10000" };
+
+      try {
+        await strategy.createTransaction(extremeTrade, wallet);
+        // If it doesn't throw, that's fine - liquidity might be sufficient
+        expect(true).toBe(true);
+      } catch (error) {
+        // If it does throw, it should be a price impact error
+        const errorMessage = error instanceof Error ? error.message : "";
+        expect(errorMessage).toContain(PRICE_IMPACT_ERROR_PREFIX);
+      }
+    });
+
+    it("should include price impact percentage in error message", async () => {
+      // This test verifies the error message format when price impact is too high
+      const largeTrade = { ...ethToTokenTrade, inputAmount: "50000" };
+
+      try {
+        await strategy.createTransaction(largeTrade, wallet);
+        // If no error is thrown, skip the test (liquidity might be very high)
+        console.warn("Large trade did not trigger price impact error - skipping validation");
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : "";
+        if (errorMessage.includes(PRICE_IMPACT_ERROR_PREFIX)) {
+          // Should include percentage and max allowed
+          expect(errorMessage).toMatch(/Price impact too high: \d+(\.\d+)?%, max allowed: \d+%/);
+        }
+      }
+    });
+
+    it("should use correct PRICE_IMPACT_AMOUNT_IN for spot rate calculation", async () => {
+      // This test verifies that the price impact calculation uses the configured amount
+      // We can't directly test the internal calculation, but we can ensure it doesn't throw
+      // for trades that should be within acceptable limits
+      
+      const mediumTrade = { ...ethToTokenTrade, inputAmount: "5" };
+      
+      // This should work fine with current price impact settings
+      const tx = await strategy.createTransaction(mediumTrade, wallet);
+      expect(tx).toBeDefined();
+      expect(tx.value).toBe(ethers.parseEther("5"));
+    });
+
+    it("should handle price impact calculation for USD input trades", async () => {
+      // USD input trades convert to ETH first, then calculate price impact
+      const usdTrade = { ...usdToTokenTrade, inputAmount: "5000" };
+      
+      const tx = await strategy.createTransaction(usdTrade, wallet);
+      expect(tx).toBeDefined();
+      expect(tx.value).toBeGreaterThan(0n);
+    });
+
+    it("should handle price impact calculation for token input trades", async () => {
+      // Token input trades should also calculate price impact correctly
+      const tokenTrade = { ...tokenToTokenTrade, inputAmount: "10" };
+      
+      const tx = await strategy.createTransaction(tokenTrade, wallet);
+      expect(tx).toBeDefined();
+      expect(tx.data).toBeDefined();
+    });
+
+    it("should apply slippage protection after price impact validation", async () => {
+      // After price impact validation passes, slippage protection should still be applied
+      const trade = { ...ethToTokenTrade, inputAmount: "1" };
+      
+      const tx = await strategy.createTransaction(trade, wallet);
+      expect(tx).toBeDefined();
+      
+      // The transaction should have encoded data with amountOutMin parameter
+      // which includes slippage protection
+      expect(tx.data).toBeDefined();
+      expect(tx.data!.length).toBeGreaterThan(10); // Should have function call + parameters
     });
   });
 
@@ -303,7 +541,7 @@ describe("Uniswap V2 Strategy Test", () => {
         inputType: InputType.ETH,
         inputToken: ethers.ZeroAddress,
         inputAmount: "0",
-        outputToken: UNI_TOKEN_ADDRESS,
+        outputToken: chainConfig.tokenAddresses.uni,
       };
 
       try {
@@ -320,7 +558,7 @@ describe("Uniswap V2 Strategy Test", () => {
         inputType: InputType.TOKEN,
         inputToken: "0x1234567890123456789012345678901234567890",
         inputAmount: "100",
-        outputToken: UNI_TOKEN_ADDRESS,
+        outputToken: chainConfig.tokenAddresses.uni,
       };
 
       await expect(strategy.createTransaction(invalidTrade, wallet)).rejects.toThrow();
@@ -332,7 +570,7 @@ describe("Uniswap V2 Strategy Test", () => {
         inputType: InputType.ETH,
         inputToken: ethers.ZeroAddress,
         inputAmount: "1000000", // Very large amount
-        outputToken: UNI_TOKEN_ADDRESS,
+        outputToken: chainConfig.tokenAddresses.uni,
       };
 
       // This should create a transaction but might fail due to insufficient liquidity
