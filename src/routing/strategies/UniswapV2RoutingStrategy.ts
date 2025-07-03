@@ -29,6 +29,7 @@ export class UniswapV2RoutingStrategy extends BaseRoutingStrategy {
 
   async getBestRoute(tokenIn: string, amountIn: bigint, tokenOut: string, wallet: Wallet): Promise<Route> {
     tokenIn = tokenIn === ethers.ZeroAddress ? this.chainConfig.tokenAddresses.weth : tokenIn;
+    tokenOut = tokenOut === ethers.ZeroAddress ? this.chainConfig.tokenAddresses.weth : tokenOut;
 
     const multicall3Contexts: Multicall3Context[] = [];
     let requestIndex = 0;
