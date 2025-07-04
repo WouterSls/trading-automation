@@ -158,6 +158,7 @@ export class UniswapV2Strategy implements ITradingStrategy {
   /**
    * Creates a transaction based on the provided trade parameters
    * Includes price impact validation and slippage protection
+   * 
    * @param trade trade creation parameters
    * @param wallet Connected wallet to create transaction for
    * @returns Transaction request object ready to be sent
@@ -209,21 +210,8 @@ export class UniswapV2Strategy implements ITradingStrategy {
 
     const route = await this.routeOptimizer.getBestUniV2Route(trade.inputToken, amountIn, trade.outputToken, wallet);
 
-    console.log("Amount in for spot rate:");
-    console.log(amountInForSpotRate);
-    console.log("");
-
-    const amountsOut = await this.router.getAmountsOut(wallet, amountInForSpotRate, route.path);
-    console.log("amounts out");
-    console.log(amountsOut);
-    const expectedOutput = amountsOut[amountsOut.length - 1];
+    const expectedOutput = await this.calculateExpectedOutput(amountInForSpotRate, amountIn, route.path, wallet);
     const actualOutput = route.amountOut;
-
-    console.log("Expected output:");
-    console.log(expectedOutput);
-    console.log();
-    console.log("Actual output:");
-    console.log(actualOutput);
 
     const priceImpact = calculatePriceImpact(expectedOutput, actualOutput);
     if (priceImpact > TRADING_CONFIG.MAX_PRICE_IMPACT_PERCENTAGE) {
@@ -251,5 +239,45 @@ export class UniswapV2Strategy implements ITradingStrategy {
     }
 
     return tx;
+  }
+
+  /**
+   * Calculates expected output for price impact calculation using multiple fallback spot rates
+   * 
+   * @param amountInForSpotRate Original configured spot rate amount
+   * @param amountIn Actual trade amount
+   * @param path Trading path
+   * @param wallet Connected wallet
+   * @returns Expected output amount scaled to actual trade size
+   */
+  private async calculateExpectedOutput(
+    amountInForSpotRate: bigint,
+    amountIn: bigint,
+    path: string[],
+    wallet: Wallet,
+  ): Promise<bigint> {
+    const spotRateAmounts = [
+      amountInForSpotRate,           // Original configured amount
+      amountIn / 100n,               // 1% of trade amount
+      amountIn / 50n,                // 2% of trade amount
+      amountIn / 20n,                // 5% of trade amount
+    ];
+
+    for (const spotAmount of spotRateAmounts) {
+      if (spotAmount > 0n) {
+        try {
+          const amountsOut = await this.router.getAmountsOut(wallet, spotAmount, path);
+          const spotOutput = amountsOut[amountsOut.length - 1];
+          
+          if (spotOutput > 0n) {
+            return (spotOutput * amountIn) / spotAmount;
+          }
+        } catch (error) {
+          continue;
+        }
+      }
+    }
+
+    return 0n;
   }
 }
