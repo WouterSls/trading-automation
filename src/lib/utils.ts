@@ -255,6 +255,10 @@ export function determineTradeType(trade: TradeCreationDto): TradeType {
 }
 
 export function calculatePriceImpact(expectedOutput: bigint, actualOutput: bigint) {
+  if (expectedOutput === 0n) {
+    return 0n;
+  }
+  
   return ((expectedOutput - actualOutput) / expectedOutput) * 100n;
 }
 
