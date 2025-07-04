@@ -433,6 +433,29 @@ describe("Uniswap V2 Strategy Test", () => {
       expect(tx.data).toBeDefined();
     });
 
+    it("should handle extremely low-value tokens that cause division by zero in price impact calculation", async () => {
+      // This test reproduces the edge case where:
+      // 1. The spot rate calculation (0.000001 ETH) returns 0 tokens for extremely low-value tokens
+      // 2. This causes division by zero in calculatePriceImpact function
+      // 3. After fix, it should handle gracefully and return a valid transaction
+      
+      // Create a trade with a very low-value token (PEPE is often used for this type of scenario)
+      const PEPE_ADDRESS = "0x6982508145454Ce325dDbE47a25d4ec3d2311933";
+      const lowValueTokenTrade: TradeCreationDto = {
+        chain: chain,
+        inputType: InputType.TOKEN,
+        inputToken: PEPE_ADDRESS,
+        inputAmount: "200000", // Small amount of PEPE tokens
+        outputToken: chainConfig.tokenAddresses.usdc,
+      };
+
+      // After implementing the fix, this should succeed and return a valid transaction
+      const tx = await strategy.createTransaction(lowValueTokenTrade, wallet);
+      expect(tx).toBeDefined();
+      expect(tx.data).toBeDefined();
+      expect(tx.to).toBe(chainConfig.uniswap.v2.routerAddress);
+    });
+
     it("should handle very small trades without price impact issues", async () => {
       // Very small trades should have minimal price impact
       const tinyTrade = { ...ethToTokenTrade, inputAmount: "0.001" };
