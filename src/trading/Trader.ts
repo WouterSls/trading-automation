@@ -32,7 +32,7 @@ export class Trader {
 
     const ethUsdPriceSnapshot = await bestStrategy.getEthUsdcPrice(this.wallet);
 
-    console.log("Creating buy transaction...");
+    console.log("Creating transaction...");
     const tx = await bestStrategy.createTransaction(tradeRequest, this.wallet);
     console.log("Transaction created!");
 
@@ -41,8 +41,10 @@ export class Trader {
       await this.wallet.call(tx);
       console.log("Transaction passed!");
     } catch (error) {
+      //TODO: add transfer from failed check -> approval & insufficienct input check -> no tokens
       const errorMessage = error instanceof Error ? error.message : "An Unknown Error Occurred";
       console.log(errorMessage);
+      throw error;
     }
 
     console.log("Sending transaction...");

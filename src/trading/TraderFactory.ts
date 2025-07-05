@@ -18,7 +18,7 @@ export class TraderFactory {
     switch (chain) {
       case ChainType.ETH:
         strategies.push(new UniswapV2Strategy(`UniswapV2-${chain}`, chain));
-        //strategies.push(new UniswapV3Strategy(`UniswapV3-${chain}`, chain));
+        strategies.push(new UniswapV3Strategy(`UniswapV3-${chain}`, chain));
         //strategies.push(new UniswapV4Strategy(`UniswapV4-${chain}`, chain));
         // Add more strategies as needed
         // strategies.push(new SushiswapV2Strategy(`SushiswapV2-${chain}`, chain));
@@ -27,12 +27,12 @@ export class TraderFactory {
 
       case ChainType.ARB:
         strategies.push(new UniswapV2Strategy(`UniswapV2-${chain}`, chain));
-        //strategies.push(new UniswapV3Strategy(`UniswapV3-${chain}`, chain));
+        strategies.push(new UniswapV3Strategy(`UniswapV3-${chain}`, chain));
         break;
 
       case ChainType.BASE:
         strategies.push(new UniswapV2Strategy(`UniswapV2-${chain}`, chain));
-        //strategies.push(new UniswapV3Strategy(`UniswapV3-${chain}`, chain));
+        strategies.push(new UniswapV3Strategy(`UniswapV3-${chain}`, chain));
         //strategies.push(new AerodromeStrategy(`Aerodrome-${chain}`, chain));
         break;
     }
