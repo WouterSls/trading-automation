@@ -1,4 +1,4 @@
-import { Contract, ethers, TransactionRequest, Wallet } from "ethers";
+import { Contract, ethers, TransactionRequest } from "ethers";
 import { FeeAmount } from "./uniswap-v3-types";
 import { ChainType, getChainConfig } from "../../config/chain-config";
 import { UNISWAP_V3_ROUTER_INTERFACE } from "../../lib/smartcontract-abis/_index";
@@ -7,7 +7,7 @@ export class UniswapV3SwapRouterV2 {
   private routerContract: Contract;
   private routerAddress: string;
 
-  constructor(private chain: ChainType) {
+  constructor(chain: ChainType) {
     const chainConfig = getChainConfig(chain);
 
     this.routerAddress = chainConfig.uniswap.v3.swapRouterV2Address;
@@ -234,14 +234,24 @@ export class UniswapV3SwapRouterV2 {
    * Function for encoding exactInput transaction data
    * Can be used in multicall transaction crafting
    *
-   * @param encodedPath The encoded path including the path of tokens to trade along of with the fee amounts
-   * @param recipient The recipient of the tokens
-   * @param amountIn The amount of input tokens to trade
-   * @param amountOutMin The minimum amount of tokens to receive
+   * @param value the amount of ETH to wrap
    * @returns The encoded transaction data
    */
   encodeWrapETH(value: bigint): string {
     const encodedData = this.routerContract.interface.encodeFunctionData("wrapETH", [value]);
+    return encodedData;
+  }
+
+  /**
+   * Function for encoding exactInput transaction data
+   * Can be used in multicall transaction crafting
+   *
+   * @param amountOutMin The minimum amount of tokens to receive
+   * @param recipient The recipient of the tokens
+   * @returns The encoded transaction data
+   */
+  encodeUnwrapWETH9(amountOutMin: bigint, recipient: string): string {
+    const encodedData = this.routerContract.interface.encodeFunctionData("unwrapWETH9", [amountOutMin, recipient]);
     return encodedData;
   }
 

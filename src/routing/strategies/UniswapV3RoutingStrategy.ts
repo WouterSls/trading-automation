@@ -13,7 +13,6 @@ import {
 export class UniswapV3RoutingStrategy extends BaseRoutingStrategy {
   private intermediaryTokenList: string[] = [];
   private intermediaryTokenCombinations: { firstToken: string; secondToken: string; name: string }[] = [];
-  private feeCombinations: { fees: FeeAmount[]; name: string }[];
 
   private uniswapV3QuoterV2: UniswapV3QuoterV2;
   private multicall3: Multicall3;
@@ -22,7 +21,6 @@ export class UniswapV3RoutingStrategy extends BaseRoutingStrategy {
     super(chain);
     this.intermediaryTokenList = this.getIntermediaryTokenList();
     this.intermediaryTokenCombinations = this.getIntermediaryTokenCombinations();
-    this.feeCombinations = this.getFeeCombinations();
 
     this.uniswapV3QuoterV2 = new UniswapV3QuoterV2(chain);
     this.multicall3 = new Multicall3(chain);
@@ -30,17 +28,12 @@ export class UniswapV3RoutingStrategy extends BaseRoutingStrategy {
 
   async getBestRoute(tokenIn: string, amountIn: bigint, tokenOut: string, wallet: Wallet): Promise<Route> {
     tokenIn = tokenIn === ethers.ZeroAddress ? this.chainConfig.tokenAddresses.weth : tokenIn;
-
-    let bestRoute: Route = {
-      amountOut: 0n,
-      path: [],
-      fees: [],
-      encodedPath: null,
-      poolKey: null,
-    };
+    tokenOut = tokenOut === ethers.ZeroAddress ? this.chainConfig.tokenAddresses.weth : tokenOut;
 
     const multicall3Contexts: Multicall3Context[] = [];
     let requestIndex = 0;
+
+    console.log("CREATING MULTICALL CONTEXTS...");
 
     const directRoutesMulticallContexts = this.createDirectRouteMulticall3Contexts(
       tokenIn,
@@ -60,15 +53,34 @@ export class UniswapV3RoutingStrategy extends BaseRoutingStrategy {
     multicall3Contexts.push(...multihopRoutesMulticallContexts);
     requestIndex += multihopRoutesMulticallContexts.length;
 
+    console.log(`CREATED ${multicall3Contexts.length} MULTICALL CONTEXTS`);
+    console.log("EXECUTING MULTICALL...");
+
     const multicall3Request: Multicall3Request[] = multicall3Contexts.map((context) => context.request);
-    console.log(multicall3Contexts);
-    console.log(requestIndex);
-    throw new Error("Stop");
-    const multicall3Results: Multicall3Result[] = await this.multicall3.aggregate3StaticCall(wallet, multicall3Request);
 
-    const route = this.findBestRouteFromResults(multicall3Results, multicall3Contexts);
+    try {
+      const multicall3Results: Multicall3Result[] = await this.multicall3.aggregate3StaticCall(
+        wallet,
+        multicall3Request,
+      );
+      console.log("MULTICALL COMPLETED SUCCESSFULLY!");
 
-    return bestRoute;
+      console.log("SEARCHING FOR BEST ROUTE...");
+      const bestRoute = this.findBestRouteFromResults(multicall3Results, multicall3Contexts);
+      console.log("BEST ROUTE FOUND");
+
+      if (bestRoute.path.length > 0 && bestRoute.fees.length > 0) {
+        console.log("ENCODING PATH FOR BEST ROUTE...");
+        const encodedPath = encodePath(bestRoute.path, bestRoute.fees);
+        bestRoute.encodedPath = encodedPath;
+        console.log("PATH ENCODING COMPLETED");
+      }
+
+      return bestRoute;
+    } catch (error) {
+      console.error("MULTICALL FAILED:", error);
+      throw error;
+    }
   }
 
   createDirectRouteMulticall3Contexts(
@@ -133,18 +145,44 @@ export class UniswapV3RoutingStrategy extends BaseRoutingStrategy {
       return [];
     }
 
-    const allPaths: { path: string[]; description: string }[] = [];
-
     const singleIntermediaryPaths = this.generateSingleIntermediaryPaths(tokenIn, tokenOut);
-    //const doubleIntermediaryPaths = this.generateDoubleIntermediaryPaths(tokenIn, tokenOut);
+    const doubleIntermediaryPaths = this.generateDoubleIntermediaryPaths(tokenIn, tokenOut);
 
-    allPaths.push(...singleIntermediaryPaths);
+    for (const pathInfo of singleIntermediaryPaths) {
+      const twoHopFeeCombinations = this.getFeeCombinations();
 
-    for (const pathInfo of allPaths) {
-      for (const combo of this.feeCombinations) {
+      for (const combo of twoHopFeeCombinations) {
         const encodedPath = encodePath(pathInfo.path, combo.fees);
         const callData = this.uniswapV3QuoterV2.encodeQuoteExactInput(encodedPath, amountIn);
-        const description = `${pathInfo.description} | ${combo.fees}`;
+        const description = `${pathInfo.description} | ${combo.fees.join("-")}`;
+
+        const request: Multicall3Request = {
+          target: this.uniswapV3QuoterV2.getQuoterAddress(),
+          allowFailure: true,
+          callData: callData,
+        };
+
+        const metadata: Mutlicall3Metadata = {
+          requestIndex: currentRequestIndex,
+          type: "quote",
+          path: pathInfo.path,
+          description: description,
+          fees: combo.fees,
+          encodedPath: encodedPath,
+        };
+
+        multicall3Contexts.push({ request, metadata });
+        currentRequestIndex++;
+      }
+    }
+
+    for (const pathInfo of doubleIntermediaryPaths) {
+      const threeHopFeeCombinations = this.getThreeHopFeeCombinations();
+
+      for (const combo of threeHopFeeCombinations) {
+        const encodedPath = encodePath(pathInfo.path, combo.fees);
+        const callData = this.uniswapV3QuoterV2.encodeQuoteExactInput(encodedPath, amountIn);
+        const description = `${pathInfo.description} | ${combo.fees.join("-")}`;
 
         const request: Multicall3Request = {
           target: this.uniswapV3QuoterV2.getQuoterAddress(),
@@ -232,6 +270,21 @@ export class UniswapV3RoutingStrategy extends BaseRoutingStrategy {
     let bestRoute: Route | null = null;
     let bestAmountOut = 0n;
 
+    if (!multicall3Results || multicall3Results.length === 0) {
+      console.warn("No multicall results provided");
+      return this.createDefaultRoute();
+    }
+
+    if (!multicall3Contexts || multicall3Contexts.length === 0) {
+      console.warn("No multicall contexts provided");
+      return this.createDefaultRoute();
+    }
+
+    if (multicall3Results.length !== multicall3Contexts.length) {
+      console.warn("Mismatch between results and contexts length");
+      return this.createDefaultRoute();
+    }
+
     for (let i = 0; i < multicall3Results.length; i++) {
       const result = multicall3Results[i];
       const context = multicall3Contexts[i];
@@ -272,13 +325,7 @@ export class UniswapV3RoutingStrategy extends BaseRoutingStrategy {
 
     if (!bestRoute) {
       console.warn("No valid routes found, returning default route");
-      return {
-        amountOut: 0n,
-        path: [],
-        fees: [],
-        encodedPath: null,
-        poolKey: null,
-      };
+      return this.createDefaultRoute();
     }
 
     console.log();
