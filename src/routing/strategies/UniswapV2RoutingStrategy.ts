@@ -193,6 +193,21 @@ export class UniswapV2RoutingStrategy extends BaseRoutingStrategy {
     let bestRoute: Route | null = null;
     let bestAmountOut = 0n;
 
+    if (!multicall3Results || multicall3Results.length === 0) {
+      console.warn("No multicall results provided");
+      return this.createDefaultRoute();
+    }
+
+    if (!multicall3Contexts || multicall3Contexts.length === 0) {
+      console.warn("No multicall contexts provided");
+      return this.createDefaultRoute();
+    }
+
+    if (multicall3Results.length !== multicall3Contexts.length) {
+      console.warn("Mismatch between results and contexts length");
+      return this.createDefaultRoute();
+    }
+
     for (let i = 0; i < multicall3Results.length; i++) {
       const result = multicall3Results[i];
       const context = multicall3Contexts[i];
@@ -225,13 +240,7 @@ export class UniswapV2RoutingStrategy extends BaseRoutingStrategy {
 
     if (!bestRoute) {
       console.warn("No valid routes found, returning default route");
-      return {
-        amountOut: 0n,
-        path: [],
-        fees: [],
-        encodedPath: null,
-        poolKey: null,
-      };
+      return this.createDefaultRoute();
     }
 
     console.log();
