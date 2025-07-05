@@ -54,13 +54,13 @@ export class AerodromeStrategy implements ITradingStrategy {
    * @param amount Amount to approve (threshold validation or standard approval calculation)
    * @returns gas cost of if needed, null if already approved
    */
-  async ensureTokenApproval(wallet: Wallet, tokenAddress: string, amount: string): Promise<string | null> {
+  async ensureTokenApproval(tokenAddress: string, amount: string, wallet: Wallet): Promise<string | null> {
     await validateNetwork(wallet, this.chain);
     const spender = this.router.getRouterAddress();
     if (TRADING_CONFIG.INFINITE_APPROVAL) {
-      return await ensureInfiniteApproval(wallet, tokenAddress, amount, spender);
+      return await ensureInfiniteApproval(tokenAddress, amount, spender, wallet);
     } else {
-      return await ensureStandardApproval(wallet, tokenAddress, amount, spender);
+      return await ensureStandardApproval(tokenAddress, amount, spender, wallet);
     }
   }
 
@@ -87,15 +87,13 @@ export class AerodromeStrategy implements ITradingStrategy {
     return amountFormatted;
   }
 
-  async getQuote(trade: TradeCreationDto, wallet: Wallet): Promise<Quote>{
-    throw new Error("Not implemented")
+  async getQuote(trade: TradeCreationDto, wallet: Wallet): Promise<Quote> {
+    throw new Error("Not implemented");
   }
 
   async createTransaction(trade: TradeCreationDto, wallet: Wallet): Promise<TransactionRequest> {
     throw new Error("Not implemented");
-
   }
-
 
   /**
    * Creates a buy transaction based on the provided trade parameters
@@ -150,7 +148,7 @@ export class AerodromeStrategy implements ITradingStrategy {
       const tokenIn = await createMinimalErc20(trade.inputToken, wallet.provider!);
       const tokenOut = await createMinimalErc20(trade.outputToken, wallet.provider!);
 
-      if (!tokenIn || !tokenOut) throw new Error("Token error")
+      if (!tokenIn || !tokenOut) throw new Error("Token error");
 
       const routes: TradeRoute[] = [
         {

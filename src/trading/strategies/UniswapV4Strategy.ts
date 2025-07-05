@@ -67,13 +67,13 @@ export class UniswapV4Strategy implements ITradingStrategy {
    * @param amount Amount to approve (threshold validation or standard approval calculation )
    * @returns gas cost of approval if needed , null if already approved
    */
-  async ensureTokenApproval(wallet: Wallet, tokenAddress: string, amount: string): Promise<string | null> {
+  async ensureTokenApproval(tokenAddress: string, amount: string, wallet: Wallet): Promise<string | null> {
     await validateNetwork(wallet, this.chain);
     const spender = this.universalRouter.getRouterAddress();
     if (TRADING_CONFIG.INFINITE_APPROVAL) {
-      return await ensureInfiniteApproval(wallet, tokenAddress, amount, spender);
+      return await ensureInfiniteApproval(tokenAddress, amount, spender, wallet);
     } else {
-      return await ensureStandardApproval(wallet, tokenAddress, amount, spender);
+      return await ensureStandardApproval(tokenAddress, amount, spender, wallet);
     }
   }
 
