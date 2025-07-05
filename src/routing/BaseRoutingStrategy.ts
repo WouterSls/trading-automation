@@ -151,23 +151,42 @@ export abstract class BaseRoutingStrategy {
     return intermediaryCombinations;
   }
 
-  protected getFeeCombinations() {
-    const feeCombinations = [
-      {
-        fees: [FeeAmount.LOWEST, FeeAmount.LOWEST],
-        name: "LOWEST - LOWEST",
-      },
-      {
-        fees: [FeeAmount.LOWEST, FeeAmount.LOW],
-        name: "LOWEST - LOW",
-      },
-      {
-        fees: [FeeAmount.LOW, FeeAmount.LOWEST],
-        name: "LOW - LOWEST",
-      },
+  protected getFeeCombinations(): { fees: FeeAmount[]; name: string }[] {
+    return [
+      { fees: [FeeAmount.LOWEST, FeeAmount.LOWEST], name: "LOWEST-LOWEST" },
+      { fees: [FeeAmount.LOWEST, FeeAmount.LOW], name: "LOWEST-LOW" },
+      { fees: [FeeAmount.LOWEST, FeeAmount.MEDIUM], name: "LOWEST-MEDIUM" },
+      { fees: [FeeAmount.LOW, FeeAmount.LOWEST], name: "LOW-LOWEST" },
+      { fees: [FeeAmount.LOW, FeeAmount.LOW], name: "LOW-LOW" },
+      { fees: [FeeAmount.LOW, FeeAmount.MEDIUM], name: "LOW-MEDIUM" },
+      { fees: [FeeAmount.MEDIUM, FeeAmount.LOWEST], name: "MEDIUM-LOWEST" },
+      { fees: [FeeAmount.MEDIUM, FeeAmount.LOW], name: "MEDIUM-LOW" },
+      { fees: [FeeAmount.MEDIUM, FeeAmount.MEDIUM], name: "MEDIUM-MEDIUM" },
     ];
+  }
 
-    return feeCombinations;
+  protected getThreeHopFeeCombinations(): { fees: FeeAmount[]; name: string }[] {
+    return [
+      { fees: [FeeAmount.LOWEST, FeeAmount.LOWEST, FeeAmount.LOWEST], name: "LOWEST-LOWEST-LOWEST" },
+      { fees: [FeeAmount.LOWEST, FeeAmount.LOWEST, FeeAmount.LOW], name: "LOWEST-LOWEST-LOW" },
+      { fees: [FeeAmount.LOWEST, FeeAmount.LOW, FeeAmount.LOWEST], name: "LOWEST-LOW-LOWEST" },
+      { fees: [FeeAmount.LOWEST, FeeAmount.LOW, FeeAmount.LOW], name: "LOWEST-LOW-LOW" },
+      { fees: [FeeAmount.LOW, FeeAmount.LOWEST, FeeAmount.LOWEST], name: "LOW-LOWEST-LOWEST" },
+      { fees: [FeeAmount.LOW, FeeAmount.LOWEST, FeeAmount.LOW], name: "LOW-LOWEST-LOW" },
+      { fees: [FeeAmount.LOW, FeeAmount.LOW, FeeAmount.LOWEST], name: "LOW-LOW-LOWEST" },
+      { fees: [FeeAmount.LOW, FeeAmount.LOW, FeeAmount.LOW], name: "LOW-LOW-LOW" },
+      { fees: [FeeAmount.MEDIUM, FeeAmount.MEDIUM, FeeAmount.MEDIUM], name: "MEDIUM-MEDIUM-MEDIUM" },
+    ];
+  }
+
+  protected createDefaultRoute(): Route {
+    return {
+      amountOut: 0n,
+      path: [],
+      fees: [],
+      encodedPath: null,
+      poolKey: null,
+    };
   }
 
   /**
