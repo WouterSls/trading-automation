@@ -47,7 +47,7 @@ export class ERC20 {
     return await this.contract.balanceOf(address);
   }
 
-  public async createApproveTransaction(spenderAddress: string, rawAmount: bigint): Promise<TransactionRequest> {
+  public createApproveTransaction(spenderAddress: string, rawAmount: bigint): TransactionRequest {
     try {
       if (rawAmount <= 0n) throw new UserError("Invalid amount for approve transaction");
 
