@@ -1,7 +1,7 @@
 import { ChainType, getChainConfig } from "../../../src/config/chain-config";
 import { getHardhatWallet_1 } from "../../../src/hooks/useSetup";
-import { Contract, ethers, Wallet } from "ethers";
-import { validateNetwork } from "../../../src/lib/utils";
+import { ethers, Wallet } from "ethers";
+import { calculateSlippageAmount, decodeLogs, validateNetwork } from "../../../src/lib/utils";
 import {
   UniswapV3QuoterV2,
   UniswapV3Factory,
@@ -9,8 +9,210 @@ import {
   UniswapV3Pool,
 } from "../../../src/smartcontracts/uniswap-v3/index";
 import { WETH_INTERFACE } from "../../../src/lib/smartcontract-abis/erc20";
-import { exactInputSingleTrade, exactInputTrade } from "./router-interaction";
 import { createMinimalErc20 } from "../../../src/smartcontracts/ERC/erc-utils";
+import { TRADING_CONFIG } from "../../../src/config/trading-config";
+import { FeeAmount } from "../../../src/smartcontracts/uniswap-v4/uniswap-v4-types";
+
+async function swapInteraction() {
+  const chain: ChainType = ChainType.ETH;
+  const wallet = getHardhatWallet_1();
+  const chainConfig = getChainConfig(chain);
+  const blockNumber = await wallet.provider!.getBlockNumber();
+
+  const usdcAddress = chainConfig.tokenAddresses.usdc;
+  const wethAddress = chainConfig.tokenAddresses.weth;
+  const uniAddress = chainConfig.tokenAddresses.uni;
+  const usdc = await createMinimalErc20(usdcAddress, wallet.provider!);
+  const weth = await createMinimalErc20(wethAddress, wallet.provider!);
+  const uni = await createMinimalErc20(uniAddress, wallet.provider!);
+
+  if (!usdc || !weth || !uni) throw new Error("Error during ERC20 token creation");
+
+  const usdcBalance = await usdc.getFormattedTokenBalance(wallet.address);
+  const wethBalance = await weth.getFormattedTokenBalance(wallet.address);
+  const uniBalance = await uni.getFormattedTokenBalance(wallet.address);
+  const ethBalance = await wallet.provider!.getBalance(wallet.address);
+
+  const router = new UniswapV3SwapRouterV2(chain);
+  const quoter = new UniswapV3QuoterV2(chain);
+
+  console.log("--------------------------------");
+  console.log("Chain", chain);
+  console.log("--------------------------------");
+  console.log("Block:", blockNumber);
+  console.log("Wallet Info:");
+  console.log("\twallet address", wallet.address);
+  console.log("\tETH balance", ethers.formatEther(ethBalance));
+  console.log(`\t${usdc.getSymbol()} balance: ${usdcBalance}`);
+  console.log(`\t${weth.getSymbol()} balance: ${wethBalance}`);
+  console.log(`\t${uni.getSymbol()} balance: ${uniBalance}`);
+  console.log();
+
+  /**
+  const approvalTx = usdc.createApproveTransaction(router.getRouterAddress(), ethers.MaxUint256);
+  console.log("approving...");
+  await wallet.sendTransaction(approvalTx);
+  console.log("approved!");
+ */
+
+  const tokenIn = usdc.getTokenAddress();
+  const amountInFormatted = "200";
+  const amountIn = ethers.parseUnits(amountInFormatted, usdc.getDecimals());
+  const tokenOutWeth = weth.getTokenAddress();
+  const tokenOutUni = uni.getTokenAddress();
+  const fee = FeeAmount.MEDIUM;
+  const recipient = wallet.address;
+
+  //await usdcToEthTrade(router, quoter, tokenIn, tokenOutWeth, fee, recipient, amountIn, wallet);
+  //await usdcToUniTrade(router, quoter, tokenIn, tokenOutUni, fee, recipient, amountIn, wallet);
+}
+
+async function usdcToEthTrade(
+  router: UniswapV3SwapRouterV2,
+  quoter: UniswapV3QuoterV2,
+  tokenIn: string,
+  tokenOut: string,
+  fee: FeeAmount,
+  recipient: string,
+  amountIn: bigint,
+  wallet: Wallet,
+) {
+  console.log("USDC -> ETH Trade");
+  const quoteAmountOut = 0n;
+  const quoteSqrtPriceLimitX96 = 0n;
+  const { amountOut } = await quoter.quoteExactInputSingle(
+    wallet,
+    tokenIn,
+    tokenOut,
+    fee,
+    recipient,
+    amountIn,
+    quoteAmountOut,
+    quoteSqrtPriceLimitX96,
+  );
+
+  console.log(ethers.formatEther(amountOut));
+
+  const slippageAmount = calculateSlippageAmount(amountOut);
+  const amountOutMin = amountOut - slippageAmount;
+
+  console.log("AmountOut");
+  console.log(amountOut);
+  console.log();
+
+  console.log("AmountOutMin");
+  console.log(amountOutMin);
+
+  // TRADE USDC -> WETH -> ETH | Single Hop = ExactInputSingle & unwrapWETH9
+  const exactInputSingleTxData = router.encodeExactInputSingle(
+    tokenIn,
+    tokenOut,
+    fee,
+    router.getRouterAddress(),
+    amountIn,
+    amountOutMin,
+    quoteSqrtPriceLimitX96,
+  );
+
+  /// @notice Unwraps the contract's WETH9 balance and sends it to recipient as ETH.
+  /// @dev The amountMinimum parameter prevents malicious contracts from stealing WETH9 from users.
+  /// @param amountMinimum The minimum amount of WETH9 to unwrap
+  /// @param recipient The address receiving ETH
+  //const unwrapWETH9 = UNISWAP_V3_ROUTER_INTERFACE.encodeFunctionData("unwrapWETH9", [amountOutMin, recipient]);
+  const unwrapWETH9 = router.encodeUnwrapWETH9(amountOutMin, recipient);
+
+  const multicallTx = router.createMulticallTransaction(TRADING_CONFIG.DEADLINE, [exactInputSingleTxData, unwrapWETH9]);
+
+  try {
+    await wallet.call(multicallTx);
+  } catch (error) {
+    console.log(error);
+    throw error;
+  }
+
+  const txResponse = await wallet.sendTransaction(multicallTx);
+  const txReceipt = await txResponse.wait(1);
+
+  if (!txReceipt) {
+    throw new Error("Deposit transaction failed");
+  }
+
+  const logs = decodeLogs(txReceipt.logs);
+  console.log("LOGS");
+  console.log("--------------------------------");
+  console.log(logs);
+  console.log("--------------------------------");
+}
+
+async function usdcToUniTrade(
+  router: UniswapV3SwapRouterV2,
+  quoter: UniswapV3QuoterV2,
+  tokenIn: string,
+  tokenOut: string,
+  fee: FeeAmount,
+  recipient: string,
+  amountIn: bigint,
+  wallet: Wallet,
+) {
+  console.log("USDC -> UNI Trade");
+  const quoteAmountOut = 0n;
+  const quoteSqrtPriceLimitX96 = 0n;
+
+  console.log("Amount in:");
+  console.log(amountIn);
+
+  const { amountOut } = await quoter.quoteExactInputSingle(
+    wallet,
+    tokenIn,
+    tokenOut,
+    fee,
+    recipient,
+    amountIn,
+    quoteAmountOut,
+    quoteSqrtPriceLimitX96,
+  );
+
+  const slippageAmount = calculateSlippageAmount(amountOut);
+  const amountOutMin = amountOut - slippageAmount;
+
+  console.log("AmountOut");
+  console.log(amountOut);
+  console.log();
+
+  console.log("AmountOutMin");
+  console.log(amountOutMin);
+
+  // TRADE USDC -> UNI | Single Hop = ExactInputSingle
+  const tx = router.createExactInputSingleTransaction(
+    tokenIn,
+    tokenOut,
+    fee,
+    recipient,
+    amountIn,
+    amountOutMin,
+    quoteSqrtPriceLimitX96,
+  );
+
+  try {
+    await wallet.call(tx);
+  } catch (error) {
+    console.log(error);
+    throw error;
+  }
+
+  const txResponse = await wallet.sendTransaction(tx);
+  const txReceipt = await txResponse.wait(1);
+
+  if (!txReceipt) {
+    throw new Error("Deposit transaction failed");
+  }
+
+  const logs = decodeLogs(txReceipt.logs);
+  console.log("LOGS");
+  console.log("--------------------------------");
+  console.log(logs);
+  console.log("--------------------------------");
+}
 
 async function singleTickSwapInteraction(chain: ChainType, wallet: Wallet) {
   await validateNetwork(wallet, chain);
@@ -85,7 +287,6 @@ async function singleTickSwapInteraction(chain: ChainType, wallet: Wallet) {
   console.log(`Calculated liquidity at new tick:`, calculatedLiquidityAtNewTick);
   console.log("Actual Liquidity after change tick:", await daiWethPool.getLiquidity());
 }
-
 async function multiTickMultiPoolSwapInteraction(chain: ChainType, wallet: Wallet) {
   await validateNetwork(wallet, chain);
 
@@ -159,19 +360,6 @@ async function multiTickMultiPoolSwapInteraction(chain: ChainType, wallet: Walle
   console.log(`Formatted amount of input tokens needed to change tick:`, formattedTokensNeededToChangeTick);
 }
 
-async function depositWeth(wallet: Wallet, weth: Contract, amount: number) {
-  console.log("Depositing WETH...");
-  console.log(`amount: ${amount}`);
-  const amountToDeposit = ethers.parseEther(amount.toString());
-  const tx = await weth.deposit({ value: amountToDeposit });
-  const txReceipt = await tx.wait();
-  if (!txReceipt) throw new Error("Transaction failed");
-  console.log("Tx confirmed!");
-  const newBalance = await weth.balanceOf(wallet.address);
-  const formattedBalance = ethers.formatEther(newBalance);
-  console.log(`New ${await weth.symbol()} balance: ${formattedBalance}`);
-}
-
 async function calculateSqrtPriceAtTick(tick: number) {
   return 1.0001 ** (tick / 2);
 }
@@ -204,9 +392,5 @@ async function displayPoolInfo(pool: UniswapV3Pool) {
 }
 
 if (require.main === module) {
-  const hardhatWallet = getHardhatWallet_1();
-
-  const chain = ChainType.ETH;
-  //singleTickSwapInteraction(chain, hardhatWallet).catch(console.error);
-  multiTickMultiPoolSwapInteraction(chain, hardhatWallet).catch(console.error);
+  swapInteraction();
 }
