@@ -15,7 +15,7 @@ import { UniswapV4RoutingStrategy } from "./strategies/UniswapV4RoutingStrategy"
 import { AerodromeRoutingStrategy } from "./strategies/AerodromeRoutingStrategy";
 
 export class RouteOptimizer {
-  private routeCache: NodeCache = new NodeCache({ stdTTL: 600 });
+  private routeCache: NodeCache = new NodeCache({ stdTTL: 600 }); //10 min
 
   private uniswapV2RoutingStrategy: UniswapV2RoutingStrategy;
   private uniswapV3RoutingStrategy: UniswapV3RoutingStrategy;
@@ -46,7 +46,7 @@ export class RouteOptimizer {
     if (cachedRoute) {
       return cachedRoute;
     }
-    const route = this.uniswapV3RoutingStrategy.getBestRoute(tokenIn, amountIn, tokenOut, wallet);
+    const route = await this.uniswapV3RoutingStrategy.getBestRoute(tokenIn, amountIn, tokenOut, wallet);
     this.routeCache.set(cacheKey, route);
     return route;
   }
