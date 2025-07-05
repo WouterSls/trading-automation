@@ -21,7 +21,7 @@ export async function multicallInteraction() {
   const usdc = await createMinimalErc20(usdcAddress, wallet.provider!);
   const weth = await createMinimalErc20(wethAddress, wallet.provider!);
 
-  if (!usdc || !weth ) throw new Error("Error during ERC20 token creation");
+  if (!usdc || !weth) throw new Error("Error during ERC20 token creation");
 
   const usdcBalance = await usdc.getFormattedTokenBalance(wallet.address);
   const wethBalance = await weth.getFormattedTokenBalance(wallet.address);
@@ -37,27 +37,6 @@ export async function multicallInteraction() {
   console.log(`\t${usdc.getSymbol()} balance: ${usdcBalance}`);
   console.log(`\t${weth.getSymbol()} balance: ${wethBalance}`);
   console.log();
-
-  /**
-   * 
-  const recipient = wallet.address;
-  const tokenIn = "0xA0b86a33E6441c95C4567D44D8A";
-  const tokenOut = "0xC02aaA39b223FE8D0A0e5C4F27e";
-  const fee = FeeAmount.MEDIUM;
-  const amountIn = ethers.parseEther("1");
-  const amountOutMin = 0n;
-  const sqrtPriceLimitX96 = 0n;
-  // Encode individual function calls
-  const swapData = router.encodeExactInputSingle(
-    tokenIn,
-    tokenOut,
-    fee,
-    recipient,
-    amountIn,
-    amountOutMin,
-    sqrtPriceLimitX96,
-  );
- */
 
   const ethInput = ethers.parseEther("1");
   const uniswapV3Router = new UniswapV3SwapRouterV2(chain);
@@ -84,22 +63,31 @@ export async function multicallInteraction() {
     sqrtPriceLimitX96,
   );
 
+  const pullTxData = UNISWAP_V3_ROUTER_INTERFACE.encodeFunctionData("pull", [wethAddress, ethInput]);
+
+  /// @notice Transfers the full amount of a token held by this contract to recipient
+  /// @dev The amountMinimum parameter prevents malicious contracts from stealing the token from users
+  /// @param token The contract address of the token which will be transferred to `recipient`
+  /// @param amountMinimum The minimum amount of token required for a transfer
+  /// @param recipient The destination address of the token
+  const tokenToSweep = "";
   const sweepTokenTxData = UNISWAP_V3_ROUTER_INTERFACE.encodeFunctionData("sweepToken", [
-    wethAddress,
+    tokenToSweep,
     amountOutMin,
     wallet.address,
   ]);
 
-  const pullTxData = UNISWAP_V3_ROUTER_INTERFACE.encodeFunctionData("pull", [wethAddress, ethInput]);
+  /// @notice Refunds any ETH balance held by this contract to the `msg.sender`
+  /// @dev Useful for bundling with mint or increase liquidity that uses ether, or exact output swaps
+  /// that use ether for the input amount
+  const refundETHTxData = UNISWAP_V3_ROUTER_INTERFACE.encodeFunctionData("refundETH", []);
+
   /**
    * Incorrect Approval: approveMax(WETH_ADDRESS) doesn't approve your tokens for the router - it actually has the router approve itself as a spender for another protocol component. This is meant for advanced token handling within Uniswap's infrastructure.
    *
    */
   const approveMaxTxData = UNISWAP_V3_ROUTER_INTERFACE.encodeFunctionData("approveMax", [wethAddress]);
 
-  // TODO: token -> token testing
-  // Will require selfPermit or approval functionality?
-  // exactInputSingle swaps try to take the tokens from the msg.sender
   const multicallTx = uniswapV3Router.createMulticallTransaction(TRADING_CONFIG.DEADLINE, [exactInputSingleTxData]);
 
   multicallTx.value = ethInput;
