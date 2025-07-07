@@ -52,6 +52,8 @@ export class UniswapV2RoutingStrategy extends BaseRoutingStrategy {
     multicall3Contexts.push(...multihopRoutesMulticallContexts);
     requestIndex += multihopRoutesMulticallContexts.length;
 
+    //console.log(`CREATED ${multicall3Contexts.length} MULTICALL CONTEXTS`);
+
     //TODO: Implement
     const theGraphQuotesCall3 = this.createTheGraphRoutesMulticall3Contexts();
 
@@ -213,7 +215,7 @@ export class UniswapV2RoutingStrategy extends BaseRoutingStrategy {
       const context = multicall3Contexts[i];
 
       if (!result.success || !result.returnData) {
-        console.log(`Route failed: ${context.metadata.description}`);
+        //console.log(`Route failed: ${context.metadata.description}`);
         continue;
       }
 
@@ -221,14 +223,14 @@ export class UniswapV2RoutingStrategy extends BaseRoutingStrategy {
         const decoded = this.uniswapV2RouterV2.decodeGetAmountsOutResult(result.returnData);
         const amountOut = decoded[decoded.length - 1];
 
-        console.log(`Route: ${context.metadata.description} | AmountOut: ${amountOut.toString()}`);
+        //console.log(`Route: ${context.metadata.description} | AmountOut: ${amountOut.toString()}`);
 
         if (amountOut > bestAmountOut) {
           bestAmountOut = amountOut;
           bestRoute = {
             amountOut: bestAmountOut,
             path: context.metadata.path,
-            fees: [FeeAmount.MEDIUM], // Default fee if not specified
+            fees: [], 
             encodedPath: null,
             poolKey: null,
           };
@@ -243,7 +245,6 @@ export class UniswapV2RoutingStrategy extends BaseRoutingStrategy {
       return this.createDefaultRoute();
     }
 
-    console.log();
     console.log(`Best route selected: ${bestRoute.path.join(" -> ")} with output: ${bestAmountOut.toString()}`);
     return bestRoute;
   }

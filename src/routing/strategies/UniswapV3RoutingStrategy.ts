@@ -33,7 +33,6 @@ export class UniswapV3RoutingStrategy extends BaseRoutingStrategy {
     const multicall3Contexts: Multicall3Context[] = [];
     let requestIndex = 0;
 
-    console.log("CREATING MULTICALL CONTEXTS...");
 
     const directRoutesMulticallContexts = this.createDirectRouteMulticall3Contexts(
       tokenIn,
@@ -53,8 +52,7 @@ export class UniswapV3RoutingStrategy extends BaseRoutingStrategy {
     multicall3Contexts.push(...multihopRoutesMulticallContexts);
     requestIndex += multihopRoutesMulticallContexts.length;
 
-    console.log(`CREATED ${multicall3Contexts.length} MULTICALL CONTEXTS`);
-    console.log("EXECUTING MULTICALL...");
+    //console.log(`CREATED ${multicall3Contexts.length} MULTICALL CONTEXTS`);
 
     const multicall3Request: Multicall3Request[] = multicall3Contexts.map((context) => context.request);
 
@@ -63,17 +61,13 @@ export class UniswapV3RoutingStrategy extends BaseRoutingStrategy {
         wallet,
         multicall3Request,
       );
-      console.log("MULTICALL COMPLETED SUCCESSFULLY!");
+      //console.log("MULTICALL COMPLETED SUCCESSFULLY!");
 
-      console.log("SEARCHING FOR BEST ROUTE...");
       const bestRoute = this.findBestRouteFromResults(multicall3Results, multicall3Contexts);
-      console.log("BEST ROUTE FOUND");
 
       if (bestRoute.path.length > 0 && bestRoute.fees.length > 0) {
-        console.log("ENCODING PATH FOR BEST ROUTE...");
         const encodedPath = encodePath(bestRoute.path, bestRoute.fees);
         bestRoute.encodedPath = encodedPath;
-        console.log("PATH ENCODING COMPLETED");
       }
 
       return bestRoute;
@@ -290,7 +284,7 @@ export class UniswapV3RoutingStrategy extends BaseRoutingStrategy {
       const context = multicall3Contexts[i];
 
       if (!result.success || !result.returnData) {
-        console.log(`Route failed: ${context.metadata.description}`);
+        //console.log(`Route failed: ${context.metadata.description}`);
         continue;
       }
 
@@ -306,7 +300,7 @@ export class UniswapV3RoutingStrategy extends BaseRoutingStrategy {
           amountOut = decoded;
         }
 
-        console.log(`Route: ${context.metadata.description} | AmountOut: ${amountOut.toString()}`);
+        //console.log(`Route: ${context.metadata.description} | AmountOut: ${amountOut.toString()}`);
 
         if (amountOut > bestAmountOut) {
           bestAmountOut = amountOut;
@@ -328,7 +322,6 @@ export class UniswapV3RoutingStrategy extends BaseRoutingStrategy {
       return this.createDefaultRoute();
     }
 
-    console.log();
     console.log(
       `Best route selected: ${bestRoute.path.join(" -> ")} with fees: ${bestRoute.fees.join(" -> ")} | output: ${bestAmountOut.toString()}`,
     );
