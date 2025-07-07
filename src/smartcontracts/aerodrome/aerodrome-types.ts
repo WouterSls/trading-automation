@@ -1,4 +1,4 @@
-export interface TradeRoute {
+export interface AerodromeTradeRoute {
   from: string;
   to: string;
   stable: boolean;

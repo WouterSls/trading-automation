@@ -1,7 +1,7 @@
 import { ethers } from "ethers";
 import { ChainType, getChainConfig } from "../../../src/config/chain-config";
 import { getHardhatWallet_1 } from "../../../src/hooks/useSetup";
-import { TradeRoute } from "../../../src/smartcontracts/aerodrome/aerodrome-types";
+import { AerodromeTradeRoute} from "../../../src/smartcontracts/aerodrome/aerodrome-types";
 import { AerodromeRouter } from "../../../src/smartcontracts/aerodrome/AerodromeRouter";
 import { createMinimalErc20 } from "../../../src/smartcontracts/ERC/erc-utils";
 
@@ -40,14 +40,14 @@ export async function swapInteraction() {
   console.log();
 
   throw new Error("Stop");
-  const singleHop: TradeRoute = {
+  const singleHop: AerodromeTradeRoute= {
     from: wethAddress,
     to: usdcAddress,
     stable: false,
     factory: router.getFactoryAddress(),
   };
 
-  const multiHop: TradeRoute[] = [
+  const multiHop: AerodromeTradeRoute[] = [
     {
       from: wethAddress,
       to: usdcAddress,
@@ -68,7 +68,7 @@ export async function swapInteraction() {
   console.log("Amount out:", formattedAmountOut);
 
   const deadline = Math.floor(Date.now() / 1000) + 1200;
-  const tx = await router.createSwapExactETHForTokensTransaction(wallet, 0n, multiHop, wallet.address, deadline);
+  const tx = await router.createSwapExactETHForTokensTransaction(0n, multiHop, wallet.address, deadline);
 
   tx.value = inputAmount;
 
