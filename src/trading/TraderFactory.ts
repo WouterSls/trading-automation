@@ -33,7 +33,7 @@ export class TraderFactory {
       case ChainType.BASE:
         strategies.push(new UniswapV2Strategy(`UniswapV2-${chain}`, chain));
         strategies.push(new UniswapV3Strategy(`UniswapV3-${chain}`, chain));
-        //strategies.push(new AerodromeStrategy(`Aerodrome-${chain}`, chain));
+        strategies.push(new AerodromeStrategy(`Aerodrome-${chain}`, chain));
         break;
     }
 
