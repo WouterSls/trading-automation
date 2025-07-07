@@ -35,9 +35,9 @@ export class Multicall3 {
 
     const REQUEST_LIMIT = 15;
 
-    console.log("Doing batch request");
+    //console.log("DOING BATCH REQUEST");
     for (let i = 0; i < multicall3Request.length; i += REQUEST_LIMIT) {
-      console.log(`REQUESTS DONE: ${i}`);
+      //console.log(`REQUESTS DONE: ${i}`);
       const batch = multicall3Request.slice(i, i + REQUEST_LIMIT);
 
       try {
