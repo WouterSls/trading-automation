@@ -73,13 +73,13 @@ export class RouteOptimizer {
   }
 
   async getBestAeroRoute(tokenIn: string, amountIn: bigint, tokenOut: string, wallet: Wallet): Promise<Route> {
-    const route: Route = {
-      amountOut: 0n,
-      path: [],
-      fees: [],
-      encodedPath: null,
-      poolKey: null,
-    };
+    const cacheKey = `${tokenIn}_${amountIn.toString()}_${tokenOut}`;
+    const cachedRoute = this.routeCache.get<Route>(cacheKey);
+    if (cachedRoute) {
+      return cachedRoute;
+    }
+    const route = await this.aerodromeRoutingStrategy.getBestRoute(tokenIn, amountIn, tokenOut, wallet);
+    this.routeCache.set(cacheKey, route);
     return route;
   }
 }

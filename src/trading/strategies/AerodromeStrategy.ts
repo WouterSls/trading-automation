@@ -6,17 +6,20 @@ import { TRADING_CONFIG } from "../../config/trading-config";
 import { ERC20, createMinimalErc20 } from "../../smartcontracts/ERC/_index";
 import { AerodromeRouter } from "../../smartcontracts/aerodrome/AerodromeRouter";
 import { AerodromePoolFactory } from "../../smartcontracts/aerodrome/AerodromePoolFactory";
-import { TradeRoute } from "../../smartcontracts/aerodrome/aerodrome-types";
+import { AerodromeTradeRoute} from "../../smartcontracts/aerodrome/aerodrome-types";
 
 import { ITradingStrategy } from "../ITradingStrategy";
-import { InputType, Quote, TradeCreationDto } from "../types/_index";
+import { InputType, Quote, TradeCreationDto, TradeType } from "../types/_index";
 
 import { ERC20_INTERFACE } from "../../lib/smartcontract-abis/_index";
-import { ensureInfiniteApproval, ensureStandardApproval, validateNetwork } from "../../lib/_index";
+import { determineTradeType, ensureInfiniteApproval, ensureStandardApproval, validateNetwork } from "../../lib/_index";
+import { RouteOptimizer } from "../../routing/RouteOptimizer";
 
 export class AerodromeStrategy implements ITradingStrategy {
   private router: AerodromeRouter;
   private factory: AerodromePoolFactory;
+
+  private routeOptimizer: RouteOptimizer;
 
   private WETH_ADDRESS: string;
   private USDC_ADDRESS: string;
@@ -39,6 +42,8 @@ export class AerodromeStrategy implements ITradingStrategy {
 
     this.router = new AerodromeRouter(chain);
     this.factory = new AerodromePoolFactory(chain);
+
+    this.routeOptimizer = new RouteOptimizer(chain);
   }
 
   /**
@@ -72,7 +77,7 @@ export class AerodromeStrategy implements ITradingStrategy {
   async getEthUsdcPrice(wallet: Wallet): Promise<string> {
     await validateNetwork(wallet, this.chain);
 
-    const routes: TradeRoute[] = [
+    const routes: AerodromeTradeRoute[] = [
       {
         from: this.WETH_ADDRESS,
         to: this.USDC_ADDRESS,
@@ -88,7 +93,64 @@ export class AerodromeStrategy implements ITradingStrategy {
   }
 
   async getQuote(trade: TradeCreationDto, wallet: Wallet): Promise<Quote> {
-    throw new Error("Not implemented");
+    await validateNetwork(wallet, this.chain);
+
+    const inputToken: ERC20 | null = await createMinimalErc20(trade.inputToken, wallet.provider!);
+    const outputToken: ERC20 | null = await createMinimalErc20(trade.outputToken, wallet.provider!);
+
+    let quote: Quote = {
+      outputAmount: "0",
+      route: {
+        amountOut: 0n,
+        path: [],
+        fees: [],
+        encodedPath: null,
+        poolKey: null,
+      },
+    };
+
+    const tradeType: TradeType = determineTradeType(trade);
+
+    let amountIn;
+    switch (tradeType) {
+      case TradeType.ETHInputTOKENOutput:
+        if (trade.inputType === InputType.USD) {
+          const ethUsdcPrice = await this.getEthUsdcPrice(wallet);
+          const ethValue = parseFloat(trade.inputAmount) / parseFloat(ethUsdcPrice);
+          const ethValueFixed = ethValue.toFixed(18);
+          amountIn = ethers.parseEther(ethValueFixed);
+        } else {
+          amountIn = ethers.parseEther(trade.inputAmount);
+        }
+        break;
+      case TradeType.TOKENInputETHOutput:
+      case TradeType.TOKENInputTOKENOutput:
+        if (!inputToken) throw new Error("Invalid input token for trade with token input");
+        amountIn = ethers.parseUnits(trade.inputAmount, inputToken.getDecimals());
+        break;
+      default:
+        throw new Error("Unknown trade type");
+    }
+
+    let outputDecimals;
+    switch (tradeType) {
+      case TradeType.TOKENInputETHOutput:
+        outputDecimals = 18;
+        break;
+      case TradeType.ETHInputTOKENOutput:
+      case TradeType.TOKENInputTOKENOutput:
+        if (!outputToken) throw new Error("Invalid output token for trade with token output");
+        outputDecimals = outputToken.getDecimals();
+        break;
+      default:
+        throw new Error("Unknown trade type");
+    }
+
+    quote.route = await this.routeOptimizer.getBestAeroRoute(trade.inputToken, amountIn, trade.outputToken, wallet);
+
+    quote.outputAmount = ethers.formatUnits(quote.route.amountOut, outputDecimals);
+
+    return quote;
   }
 
   async createTransaction(trade: TradeCreationDto, wallet: Wallet): Promise<TransactionRequest> {
@@ -109,7 +171,7 @@ export class AerodromeStrategy implements ITradingStrategy {
     let tx: TransactionRequest = {};
 
     if (trade.inputType === InputType.ETH && trade.inputToken === ethers.ZeroAddress) {
-      const routes: TradeRoute[] = [
+      const routes: AerodromeTradeRoute[] = [
         {
           from: this.WETH_ADDRESS,
           to: trade.outputToken,
@@ -122,10 +184,10 @@ export class AerodromeStrategy implements ITradingStrategy {
       const amountOut = await this.router.getAmountsOut(wallet, amountIn, routes);
       const amountOutMin = (amountOut * 95n) / 100n;
 
-      tx = await this.router.createSwapExactETHForTokensTransaction(wallet, amountOutMin, routes, to, deadline);
+      tx = await this.router.createSwapExactETHForTokensTransaction(amountOutMin, routes, to, deadline);
       tx.value = amountIn;
     } else if (trade.inputType === InputType.USD && trade.inputToken === ethers.ZeroAddress) {
-      const routes: TradeRoute[] = [
+      const routes: AerodromeTradeRoute[] = [
         {
           from: this.WETH_ADDRESS,
           to: trade.outputToken,
@@ -142,7 +204,7 @@ export class AerodromeStrategy implements ITradingStrategy {
       const amountOut = await this.router.getAmountsOut(wallet, amountIn, routes);
       const amountOutMin = (amountOut * 95n) / 100n;
 
-      tx = await this.router.createSwapExactETHForTokensTransaction(wallet, amountOutMin, routes, to, deadline);
+      tx = await this.router.createSwapExactETHForTokensTransaction(amountOutMin, routes, to, deadline);
       tx.value = amountIn;
     } else if (trade.inputType === InputType.TOKEN && trade.inputToken != ethers.ZeroAddress) {
       const tokenIn = await createMinimalErc20(trade.inputToken, wallet.provider!);
@@ -150,7 +212,7 @@ export class AerodromeStrategy implements ITradingStrategy {
 
       if (!tokenIn || !tokenOut) throw new Error("Token error");
 
-      const routes: TradeRoute[] = [
+      const routes:AerodromeTradeRoute [] = [
         {
           from: tokenIn.getTokenAddress(),
           to: this.WETH_ADDRESS,
