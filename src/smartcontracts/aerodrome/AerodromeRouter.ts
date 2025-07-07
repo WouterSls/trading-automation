@@ -1,7 +1,8 @@
-import { Contract, TransactionRequest, Wallet } from "ethers";
+import { Contract, ethers, TransactionRequest, Wallet } from "ethers";
 import { ChainType, getChainConfig } from "../../config/chain-config";
 import { AERODROME_ROUTER_INTERFACE } from "../../lib/smartcontract-abis/_index";
-import { TradeRoute } from "./aerodrome-types";
+import { AerodromeTradeRoute } from "./aerodrome-types";
+import { validateNetwork } from "../../lib/utils";
 
 export class AerodromeRouter {
   private routerContract: Contract;
@@ -9,7 +10,7 @@ export class AerodromeRouter {
   private routerAddress: string;
   private factoryAddress: string;
 
-  constructor(chain: ChainType) {
+  constructor(private chain: ChainType) {
     const chainConfig = getChainConfig(chain);
 
     this.routerAddress = chainConfig.aerodrome.routerAddress;
@@ -24,7 +25,8 @@ export class AerodromeRouter {
   getRouterAddress = (): string => this.routerAddress;
   getFactoryAddress = (): string => this.factoryAddress;
 
-  async getAmountsOut(wallet: Wallet, amountIn: bigint, routes: TradeRoute[]) {
+  async getAmountsOut(wallet: Wallet, amountIn: bigint, routes: AerodromeTradeRoute[]) {
+    await validateNetwork(wallet, this.chain);
     this.routerContract = this.routerContract.connect(wallet) as Contract;
 
     const amountsOut = await this.routerContract.getAmountsOut(amountIn, routes);
@@ -32,15 +34,30 @@ export class AerodromeRouter {
     return amountOut;
   }
 
-  async createSwapExactETHForTokensTransaction(
-    wallet: Wallet,
+  encodeGetAmountsOut(amountIn: bigint, routes: AerodromeTradeRoute[]) {
+    const encodedData = this.routerContract.interface.encodeFunctionData("getAmountsOut", [amountIn, routes]);
+    return encodedData;
+  }
+
+  decodedGetAmountsOutResult(data: ethers.BytesLike): bigint[] {
+    const decodedResult = this.routerContract.interface.decodeFunctionResult("getAmountsOut", data);
+    
+    if (decodedResult && decodedResult.length > 0) {
+      const amountsOut = decodedResult[0];
+      if (Array.isArray(amountsOut)) {
+        return amountsOut.map((amount: any) => BigInt(amount.toString()));
+      }
+    }
+    
+    throw new Error("Failed to decode getAmountsOut result - invalid structure");
+  }
+
+  createSwapExactETHForTokensTransaction(
     amountOutMin: bigint,
-    routes: TradeRoute[],
+    routes: AerodromeTradeRoute[],
     to: string,
     deadline: number,
-  ): Promise<TransactionRequest> {
-    this.routerContract = this.routerContract.connect(wallet) as Contract;
-
+  ): TransactionRequest {
     const encodedData = this.routerContract.interface.encodeFunctionData("swapExactETHForTokens", [
       amountOutMin,
       routes,
@@ -59,7 +76,7 @@ export class AerodromeRouter {
   async createSwapExactTokensForTokensTransaction(
     amountIn: bigint,
     amountOutMin: bigint,
-    routes: TradeRoute[],
+    routes: AerodromeTradeRoute[],
     to: string,
     deadline: number,
   ): Promise<TransactionRequest> {
@@ -82,7 +99,7 @@ export class AerodromeRouter {
   async createSwapExactTokensForETHTransaction(
     amountIn: bigint,
     amountOutMin: bigint,
-    routes: TradeRoute[],
+    routes: AerodromeTradeRoute[],
     to: string,
     deadline: number,
   ): Promise<TransactionRequest> {
