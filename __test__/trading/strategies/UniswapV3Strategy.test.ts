@@ -410,6 +410,7 @@ describe("Uniswap V3 Strategy Test", () => {
       expect(tx.to).toBe(chainConfig.uniswap.v2.routerAddress);
     });
 
+    //TODO: uniswap V3 function signature depends on singleHop or multiHop and eth output or not
     it("should include correct function signature for swapExactETHForTokens", async () => {
       const tx = await strategy.createTransaction(ethToTokenTrade, wallet);
 
