@@ -19,6 +19,6 @@ export class UniswapV4RoutingStrategy extends BaseRoutingStrategy {
   }
 
   async getBestRoute(tokenIn: string, amountIn: bigint, tokenOut: string, wallet: Wallet): Promise<Route> {
-    throw new Error("Not implemented");
+    return this.createDefaultRoute();
   }
 }
