@@ -54,6 +54,22 @@ async function ethTraderTesting(chain: ChainType, wallet: Wallet) {
     outputToken: PEPE_ADDRESS,
   };
 
+  const singleHopEthToTokenTrade: TradeCreationDto = {
+    chain: chain,
+    inputType: InputType.ETH,
+    inputToken: ethers.ZeroAddress,
+    inputAmount: "1",
+    outputToken: chainConfig.tokenAddresses.usdt,
+  };
+
+  const mulitHopEthToTokenTrade: TradeCreationDto = {
+    chain: chain,
+    inputType: InputType.ETH,
+    inputToken: ethers.ZeroAddress,
+    inputAmount: "1",
+    outputToken: chainConfig.tokenAddresses.usdc,
+  };
+
   const usdToTokenTrade: TradeCreationDto = {
     chain: chain,
     inputType: InputType.USD,
