@@ -8,13 +8,11 @@ export class AerodromeRouter {
   private routerContract: Contract;
 
   private routerAddress: string;
-  private factoryAddress: string;
 
   constructor(private chain: ChainType) {
     const chainConfig = getChainConfig(chain);
 
     this.routerAddress = chainConfig.aerodrome.routerAddress;
-    this.factoryAddress = chainConfig.aerodrome.poolFactoryAddress;
 
     if (!this.routerAddress || this.routerAddress.trim() === "") {
       throw new Error(`Aerodrome Router address not defined for chain: ${chainConfig.name}`);
@@ -23,7 +21,6 @@ export class AerodromeRouter {
   }
 
   getRouterAddress = (): string => this.routerAddress;
-  getFactoryAddress = (): string => this.factoryAddress;
 
   async getAmountsOut(wallet: Wallet, amountIn: bigint, routes: AerodromeTradeRoute[]) {
     await validateNetwork(wallet, this.chain);
@@ -41,14 +38,14 @@ export class AerodromeRouter {
 
   decodedGetAmountsOutResult(data: ethers.BytesLike): bigint[] {
     const decodedResult = this.routerContract.interface.decodeFunctionResult("getAmountsOut", data);
-    
+
     if (decodedResult && decodedResult.length > 0) {
       const amountsOut = decodedResult[0];
       if (Array.isArray(amountsOut)) {
         return amountsOut.map((amount: any) => BigInt(amount.toString()));
       }
     }
-    
+
     throw new Error("Failed to decode getAmountsOut result - invalid structure");
   }
 
@@ -73,13 +70,13 @@ export class AerodromeRouter {
     return tx;
   }
 
-  async createSwapExactTokensForTokensTransaction(
+  createSwapExactTokensForTokensTransaction(
     amountIn: bigint,
     amountOutMin: bigint,
     routes: AerodromeTradeRoute[],
     to: string,
     deadline: number,
-  ): Promise<TransactionRequest> {
+  ): TransactionRequest {
     const encodedData = this.routerContract.interface.encodeFunctionData("swapExactTokensForTokens", [
       amountIn,
       amountOutMin,
@@ -96,13 +93,13 @@ export class AerodromeRouter {
     return tx;
   }
 
-  async createSwapExactTokensForETHTransaction(
+  createSwapExactTokensForETHTransaction(
     amountIn: bigint,
     amountOutMin: bigint,
     routes: AerodromeTradeRoute[],
     to: string,
     deadline: number,
-  ): Promise<TransactionRequest> {
+  ): TransactionRequest {
     const encodedData = this.routerContract.interface.encodeFunctionData("swapExactTokensForETH", [
       amountIn,
       amountOutMin,
