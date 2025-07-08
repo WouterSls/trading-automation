@@ -108,6 +108,7 @@ export class UniswapV2Strategy implements ITradingStrategy {
         fees: [],
         encodedPath: null,
         poolKey: null,
+        aeroRoutes: null,
       },
     };
 
@@ -158,7 +159,7 @@ export class UniswapV2Strategy implements ITradingStrategy {
   /**
    * Creates a transaction based on the provided trade parameters
    * Includes price impact validation and slippage protection
-   * 
+   *
    * @param trade trade creation parameters
    * @param wallet Connected wallet to create transaction for
    * @returns Transaction request object ready to be sent
@@ -243,7 +244,7 @@ export class UniswapV2Strategy implements ITradingStrategy {
 
   /**
    * Calculates expected output for price impact calculation using multiple fallback spot rates
-   * 
+   *
    * @param amountInForSpotRate Original configured spot rate amount
    * @param amountIn Actual trade amount
    * @param path Trading path
@@ -257,10 +258,10 @@ export class UniswapV2Strategy implements ITradingStrategy {
     wallet: Wallet,
   ): Promise<bigint> {
     const spotRateAmounts = [
-      amountInForSpotRate,           // Original configured amount
-      amountIn / 100n,               // 1% of trade amount
-      amountIn / 50n,                // 2% of trade amount
-      amountIn / 20n,                // 5% of trade amount
+      amountInForSpotRate, // Original configured amount
+      amountIn / 100n, // 1% of trade amount
+      amountIn / 50n, // 2% of trade amount
+      amountIn / 20n, // 5% of trade amount
     ];
 
     for (const spotAmount of spotRateAmounts) {
@@ -268,7 +269,7 @@ export class UniswapV2Strategy implements ITradingStrategy {
         try {
           const amountsOut = await this.router.getAmountsOut(wallet, spotAmount, path);
           const spotOutput = amountsOut[amountsOut.length - 1];
-          
+
           if (spotOutput > 0n) {
             return (spotOutput * amountIn) / spotAmount;
           }

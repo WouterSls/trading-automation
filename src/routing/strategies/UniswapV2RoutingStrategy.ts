@@ -230,9 +230,10 @@ export class UniswapV2RoutingStrategy extends BaseRoutingStrategy {
           bestRoute = {
             amountOut: bestAmountOut,
             path: context.metadata.path,
-            fees: [], 
+            fees: [],
             encodedPath: null,
             poolKey: null,
+            aeroRoutes: null,
           };
         }
       } catch (error) {

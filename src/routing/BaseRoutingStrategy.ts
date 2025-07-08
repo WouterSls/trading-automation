@@ -186,6 +186,7 @@ export abstract class BaseRoutingStrategy {
       fees: [],
       encodedPath: null,
       poolKey: null,
+      aeroRoutes: null,
     };
   }
 

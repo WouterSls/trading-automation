@@ -33,7 +33,6 @@ export class UniswapV3RoutingStrategy extends BaseRoutingStrategy {
     const multicall3Contexts: Multicall3Context[] = [];
     let requestIndex = 0;
 
-
     const directRoutesMulticallContexts = this.createDirectRouteMulticall3Contexts(
       tokenIn,
       amountIn,
@@ -310,6 +309,7 @@ export class UniswapV3RoutingStrategy extends BaseRoutingStrategy {
             fees: context.metadata.fees!,
             encodedPath: null,
             poolKey: null,
+            aeroRoutes: null,
           };
         }
       } catch (error) {

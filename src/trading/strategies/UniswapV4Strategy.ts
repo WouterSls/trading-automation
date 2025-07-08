@@ -136,6 +136,7 @@ export class UniswapV4Strategy implements ITradingStrategy {
       fees: [],
       encodedPath: null,
       poolKey: null,
+      aeroRoutes: null,
     };
 
     const isETHInputETHAmount = trade.inputType === InputType.ETH && trade.inputToken === ethers.ZeroAddress;

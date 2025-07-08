@@ -58,6 +58,7 @@ export class RouteOptimizer {
       fees: [],
       encodedPath: null,
       poolKey: null,
+      aeroRoutes: null,
     };
 
     const lowestPoolKey = getLowestFeePoolKey(tokenIn, tokenOut);
