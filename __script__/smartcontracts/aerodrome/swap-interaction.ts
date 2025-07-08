@@ -1,7 +1,7 @@
 import { ethers } from "ethers";
 import { ChainType, getChainConfig } from "../../../src/config/chain-config";
 import { getHardhatWallet_1 } from "../../../src/hooks/useSetup";
-import { AerodromeTradeRoute} from "../../../src/smartcontracts/aerodrome/aerodrome-types";
+import { AerodromeTradeRoute } from "../../../src/smartcontracts/aerodrome/aerodrome-types";
 import { AerodromeRouter } from "../../../src/smartcontracts/aerodrome/AerodromeRouter";
 import { createMinimalErc20 } from "../../../src/smartcontracts/ERC/erc-utils";
 
@@ -21,7 +21,7 @@ export async function swapInteraction() {
   const dai = await createMinimalErc20(daiAddress, wallet.provider!);
   const weth = await createMinimalErc20(wethAddress, wallet.provider!);
 
-  if (!usdc || !dai || !weth) throw new Error("Error during ERC20 creation")
+  if (!usdc || !dai || !weth) throw new Error("Error during ERC20 creation");
 
   const usdcBalance = await usdc.getFormattedTokenBalance(wallet.address);
   const daiBalance = await dai.getFormattedTokenBalance(wallet.address);
@@ -40,11 +40,11 @@ export async function swapInteraction() {
   console.log();
 
   throw new Error("Stop");
-  const singleHop: AerodromeTradeRoute= {
+  const singleHop: AerodromeTradeRoute = {
     from: wethAddress,
     to: usdcAddress,
     stable: false,
-    factory: router.getFactoryAddress(),
+    factory: chainConfig.aerodrome.poolFactoryAddress,
   };
 
   const multiHop: AerodromeTradeRoute[] = [
@@ -52,13 +52,13 @@ export async function swapInteraction() {
       from: wethAddress,
       to: usdcAddress,
       stable: false,
-      factory: router.getFactoryAddress(),
+      factory: chainConfig.aerodrome.poolFactoryAddress,
     },
     {
       from: usdcAddress,
       to: daiAddress,
       stable: true,
-      factory: router.getFactoryAddress(),
+      factory: chainConfig.aerodrome.poolFactoryAddress,
     },
   ];
 
