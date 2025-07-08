@@ -6,36 +6,11 @@ import { GeckoTerminalApi } from "../../src/external-apis/GeckoTerminalApi";
 import { ChainType, getChainConfig } from "../../src/config/chain-config";
 import { InputType, TradeCreationDto } from "../../src/trading/types/_index";
 import { ITradingStrategy } from "../../src/trading/ITradingStrategy";
-import { encodePath, FeeAmount, UniswapV3QuoterV2 } from "../../src/smartcontracts/uniswap-v3";
-import { TheGraphApi } from "../../src/external-apis/TheGraphApi";
-import { displayTrade, validateNetwork } from "../../src/lib/utils";
-
-// Define types for trade paths
-interface SingleHopPath {
-  type: "single";
-  tokenIn: string;
-  tokenOut: string;
-  fee: FeeAmount;
-  poolAddress: string;
-}
-
-interface MultiHopPath {
-  type: "multi";
-  path: string[];
-  fees: FeeAmount[];
-  encodedPath: string;
-  poolAddress: string; // The pool that connects to the intermediate token
-}
-
-type TradePath = SingleHopPath | MultiHopPath;
-
-interface TradePathResult {
-  inputToken: string;
-  inputTokenSymbol: string;
-  paths: TradePath[];
-}
+import { decodeLogs, displayTrade, validateNetwork } from "../../src/lib/utils";
+import { ERC20 } from "../../src/smartcontracts/ERC/ERC20";
 
 const GAME_ADDRESS = "0x1c4cca7c5db003824208adda61bd749e55f463a3";
+const CONVO_ADDRESS = "0xab964f7b7b6391bd6c4e8512ef00d01f255d9c0d";
 
 async function baseTraderInteraction(wallet: Wallet) {
   const chain = ChainType.BASE;
@@ -45,7 +20,6 @@ async function baseTraderInteraction(wallet: Wallet) {
   const chainConfig = getChainConfig(chain);
 
   const graphApi = getTheGraphApi();
-  const geckoTerminalApi = getCoingeckoApi();
 
   const blockNumber = await wallet.provider!.getBlockNumber();
 
@@ -57,14 +31,16 @@ async function baseTraderInteraction(wallet: Wallet) {
   const weth = await createMinimalErc20(wethAddress, wallet.provider!);
   const game = await createMinimalErc20(GAME_ADDRESS, wallet.provider!);
   const aero = await createMinimalErc20(aeroAddress, wallet.provider!);
+  const convo = await createMinimalErc20(CONVO_ADDRESS, wallet.provider!);
 
-  if (!usdc || !weth || !game || !aero) throw new Error("Error in ERC20 token setup");
+  if (!usdc || !weth || !game || !aero || !convo) throw new Error("Error in ERC20 token setup");
 
   const usdcBalance = await usdc.getFormattedTokenBalance(wallet.address);
   const wethBalance = await weth.getFormattedTokenBalance(wallet.address);
   const pepeBalance = await game.getFormattedTokenBalance(wallet.address);
   const aeroBalance = await aero.getFormattedTokenBalance(wallet.address);
   const ethBalance = await wallet.provider!.getBalance(wallet.address);
+  const convoBalance = await convo.getFormattedTokenBalance(wallet.address);
 
   const trader = await TraderFactory.createTrader(wallet);
 
@@ -79,33 +55,105 @@ async function baseTraderInteraction(wallet: Wallet) {
   console.log(`\t${weth.getSymbol()} (${weth.getTokenAddress()}) balance: ${wethBalance}`);
   console.log(`\t${game.getSymbol()} (${game.getTokenAddress()}) balance: ${pepeBalance}`);
   console.log(`\t${aero.getSymbol()} (${aero.getTokenAddress()}) balance: ${aeroBalance}`);
+  console.log(`\t${convo.getSymbol()} (${convo.getTokenAddress()}) balance: ${convoBalance}`);
   console.log();
 
-  const inputAmount = "1000";
-
-  const gameUsdPrice = await geckoTerminalApi.getTokenUsdPrice(chain, GAME_ADDRESS);
-  console.log(`${game.getName()} | ${game.getTokenAddress()}`);
-  console.log(`$${gameUsdPrice}`);
-  console.log(`amount received for ${inputAmount} = ${Number(inputAmount) / Number(gameUsdPrice)}`)
-  console.log();
-
-  const ethToTokenTrade: TradeCreationDto = {
+  const singleHopEthToTokenTrade: TradeCreationDto = {
     chain: chain,
     inputType: InputType.USD,
     inputToken: ethers.ZeroAddress,
     inputAmount: "1000",
-    outputToken: game.getTokenAddress(),
+    outputToken: usdc.getTokenAddress(),
+  };
+  const singleHopTokenToTokenTrade: TradeCreationDto = {
+    chain: chain,
+    inputType: InputType.TOKEN,
+    inputToken: usdc.getTokenAddress(),
+    inputAmount: "200",
+    outputToken: aero.getTokenAddress(),
+  };
+  const singleHopTokenToEthTrade: TradeCreationDto = {
+    chain: chain,
+    inputType: InputType.TOKEN,
+    inputToken: usdc.getTokenAddress(),
+    inputAmount: "200",
+    outputToken: ethers.ZeroAddress,
   };
 
-  displayTrade(ethToTokenTrade);
+  const multiHopTokenToTokenTrade = {};
+  const multiHopEthToTokenTrade = {};
+  const multiHopTokenToEthTrade = {};
 
   const strategies = trader.getStrategies();
+  const aeroStrat = strategies.filter((strat) => strat.getName().toLowerCase().includes("aero"))[0]!;
+
+  const singleHopTrades: TradeCreationDto[] = [
+    singleHopEthToTokenTrade,
+    singleHopTokenToTokenTrade,
+    singleHopTokenToEthTrade,
+  ];
+
+  //await aeroTesting(aeroStrat, singleHopTrades, wallet);
+
+  /**
+  const inputAmount = '1000'
+  const ethToTokenTrade: TradeCreationDto = {
+    chain: chain,
+    inputType: InputType.USD,
+    inputToken: ethers.ZeroAddress,
+    inputAmount: inputAmount,
+    outputToken: usdc.getTokenAddress(),
+  };
+
+  displayLivePriceAndExpectedOutput(chain, ethToTokenTrade, inputAmount)
+  displayTrade(ethToTokenTrade);
   for (const strat of strategies) {
     console.log(strat.getName());
     const quote = await strat.getQuote(ethToTokenTrade, wallet);
     console.log(`\tQuoted output amount: ${quote.outputAmount}`);
     console.log();
   }
+ */
+}
+
+async function aeroTesting(aero: ITradingStrategy | null, trades: TradeCreationDto[], wallet: Wallet) {
+  if (!aero) throw new Error("NO AERO TRADING STRAT SUPPLIED");
+
+  for (const trade of trades) {
+    console.log();
+    console.log("QUOTE");
+    console.log("----------------");
+    const quote = await aero.getQuote(trade, wallet);
+    console.log(quote);
+    console.log();
+
+    await aero.ensureTokenApproval(trade.inputToken, trade.inputAmount, wallet);
+
+    console.log();
+    console.log("TX");
+    console.log("----------------");
+    const tx = await aero.createTransaction(trade, wallet);
+    console.log(tx);
+
+    console.log("SENDING...");
+    const response = await wallet.sendTransaction(tx);
+    const receipt = await response.wait();
+    if (!receipt || receipt.status !== 1) {
+      console.log("ERROR DURING TRANSACTION");
+    } else {
+      console.log("TRANSACTION CONFIRMED");
+    }
+  }
+}
+
+async function displayLivePriceAndExpectedOutput(chain: ChainType, token: ERC20, inputAmount: string) {
+  const geckoTerminalApi = getCoingeckoApi();
+
+  const liveUsdPrice = await geckoTerminalApi.getTokenUsdPrice(chain, token.getTokenAddress());
+  console.log(`${token.getName()} | ${token.getTokenAddress()}`);
+  console.log(`$${liveUsdPrice}`);
+  console.log(`amount received for ${inputAmount} = ${Number(inputAmount) / Number(liveUsdPrice)}`);
+  console.log();
 }
 
 if (require.main === module) {

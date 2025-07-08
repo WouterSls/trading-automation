@@ -6,13 +6,19 @@ import { TRADING_CONFIG } from "../../config/trading-config";
 import { ERC20, createMinimalErc20 } from "../../smartcontracts/ERC/_index";
 import { AerodromeRouter } from "../../smartcontracts/aerodrome/AerodromeRouter";
 import { AerodromePoolFactory } from "../../smartcontracts/aerodrome/AerodromePoolFactory";
-import { AerodromeTradeRoute} from "../../smartcontracts/aerodrome/aerodrome-types";
+import { AerodromeTradeRoute } from "../../smartcontracts/aerodrome/aerodrome-types";
 
 import { ITradingStrategy } from "../ITradingStrategy";
 import { InputType, Quote, TradeCreationDto, TradeType } from "../types/_index";
 
-import { ERC20_INTERFACE } from "../../lib/smartcontract-abis/_index";
-import { determineTradeType, ensureInfiniteApproval, ensureStandardApproval, validateNetwork } from "../../lib/_index";
+import {
+  calculatePriceImpact,
+  calculateSlippageAmount,
+  determineTradeType,
+  ensureInfiniteApproval,
+  ensureStandardApproval,
+  validateNetwork,
+} from "../../lib/_index";
 import { RouteOptimizer } from "../../routing/RouteOptimizer";
 
 export class AerodromeStrategy implements ITradingStrategy {
@@ -106,6 +112,7 @@ export class AerodromeStrategy implements ITradingStrategy {
         fees: [],
         encodedPath: null,
         poolKey: null,
+        aeroRoutes: null,
       },
     };
 
@@ -154,7 +161,87 @@ export class AerodromeStrategy implements ITradingStrategy {
   }
 
   async createTransaction(trade: TradeCreationDto, wallet: Wallet): Promise<TransactionRequest> {
-    throw new Error("Not implemented");
+    await validateNetwork(wallet, this.chain);
+
+    let tx: TransactionRequest = {};
+
+    const to = wallet.address;
+    const deadline = TRADING_CONFIG.DEADLINE;
+
+    const tradeType: TradeType = determineTradeType(trade);
+
+    const inputToken = await createMinimalErc20(trade.inputToken, wallet.provider!);
+    const outputToken = await createMinimalErc20(trade.outputToken, wallet.provider!);
+
+    let amountIn;
+    let amountInForSpotRate;
+    switch (tradeType) {
+      case TradeType.ETHInputTOKENOutput:
+        if (trade.inputType === InputType.USD) {
+          const ethUsdcPrice = await this.getEthUsdcPrice(wallet);
+          const ethValue = parseFloat(trade.inputAmount) / parseFloat(ethUsdcPrice);
+          const ethValueFixed = ethValue.toFixed(18);
+          amountIn = ethers.parseEther(ethValueFixed);
+        } else {
+          amountIn = ethers.parseEther(trade.inputAmount);
+        }
+        amountInForSpotRate = ethers.parseEther(TRADING_CONFIG.PRICE_IMPACT_AMOUNT_IN);
+        break;
+      case TradeType.TOKENInputETHOutput:
+      case TradeType.TOKENInputTOKENOutput:
+        if (!inputToken) throw new Error("Invalid input token for trade with token input");
+        amountIn = ethers.parseUnits(trade.inputAmount, inputToken.getDecimals());
+        amountInForSpotRate = ethers.parseUnits(TRADING_CONFIG.PRICE_IMPACT_AMOUNT_IN, inputToken.getDecimals());
+        break;
+      default:
+        throw new Error("Unknown trade type");
+    }
+
+    switch (tradeType) {
+      case TradeType.ETHInputTOKENOutput:
+      case TradeType.TOKENInputTOKENOutput:
+        if (!outputToken) throw new Error("Invalid output token for trade with token output");
+        break;
+    }
+
+    const route = await this.routeOptimizer.getBestAeroRoute(trade.inputToken, amountIn, trade.outputToken, wallet);
+    if (!route.aeroRoutes) throw new Error("Error during Best Aerodrome Trade Route Generation");
+
+    const expectedOutput = await this.calculateExpectedOutput(amountInForSpotRate, amountIn, route.aeroRoutes, wallet);
+    const actualOutput = route.amountOut;
+
+    const priceImpact = calculatePriceImpact(expectedOutput, actualOutput);
+    if (priceImpact > TRADING_CONFIG.MAX_PRICE_IMPACT_PERCENTAGE) {
+      throw new Error(
+        `Price impact too high: ${priceImpact}%, max allowed: ${TRADING_CONFIG.MAX_PRICE_IMPACT_PERCENTAGE}%`,
+      );
+    }
+
+    const slippageAmount = calculateSlippageAmount(actualOutput);
+    const amountOutMin = actualOutput - slippageAmount;
+
+    switch (tradeType) {
+      case TradeType.ETHInputTOKENOutput:
+        tx = await this.router.createSwapExactETHForTokensTransaction(amountOutMin, route.aeroRoutes, to, deadline);
+        tx.value = amountIn;
+        break;
+      case TradeType.TOKENInputETHOutput:
+        tx = this.router.createSwapExactTokensForETHTransaction(amountIn, amountOutMin, route.aeroRoutes, to, deadline);
+        break;
+      case TradeType.TOKENInputTOKENOutput:
+        tx = this.router.createSwapExactTokensForTokensTransaction(
+          amountIn,
+          amountOutMin,
+          route.aeroRoutes,
+          to,
+          deadline,
+        );
+        break;
+      default:
+        throw new Error("Unknown trade type");
+    }
+
+    return tx;
   }
 
   /**
@@ -212,7 +299,7 @@ export class AerodromeStrategy implements ITradingStrategy {
 
       if (!tokenIn || !tokenOut) throw new Error("Token error");
 
-      const routes:AerodromeTradeRoute [] = [
+      const routes: AerodromeTradeRoute[] = [
         {
           from: tokenIn.getTokenAddress(),
           to: this.WETH_ADDRESS,
@@ -235,5 +322,45 @@ export class AerodromeStrategy implements ITradingStrategy {
     }
 
     return tx;
+  }
+
+  /**
+   * Calculates expected output for price impact calculation using multiple fallback spot rates
+   *
+   * @param amountInForSpotRate Original configured spot rate amount
+   * @param amountIn Actual trade amount
+   * @param path Trading path
+   * @param wallet Connected wallet
+   * @returns Expected output amount scaled to actual trade size
+   */
+  private async calculateExpectedOutput(
+    amountInForSpotRate: bigint,
+    amountIn: bigint,
+    aeroRoutes: AerodromeTradeRoute[],
+    wallet: Wallet,
+  ): Promise<bigint> {
+    const spotRateAmounts = [
+      amountInForSpotRate, // Original configured amount
+      amountIn / 100n, // 1% of trade amount
+      amountIn / 50n, // 2% of trade amount
+      amountIn / 20n, // 5% of trade amount
+    ];
+
+    for (const spotAmount of spotRateAmounts) {
+      if (spotAmount > 0n) {
+        try {
+          const amountsOut = await this.router.getAmountsOut(wallet, spotAmount, aeroRoutes);
+          const spotOutput = amountsOut[amountsOut.length - 1];
+
+          if (spotOutput > 0n) {
+            return (spotOutput * amountIn) / spotAmount;
+          }
+        } catch (error) {
+          continue;
+        }
+      }
+    }
+
+    return 0n;
   }
 }

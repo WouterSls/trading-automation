@@ -1,3 +1,4 @@
+import { AerodromeTradeRoute } from "../aerodrome/aerodrome-types";
 import { FeeAmount } from "../uniswap-v3";
 
 // Ethers.js returns multicall results as tuples (arrays), not objects
@@ -28,4 +29,5 @@ export interface Mutlicall3Metadata {
   description: string;
   fees?: FeeAmount[];
   encodedPath?: string;
+  aeroRoutes?: AerodromeTradeRoute[];
 }

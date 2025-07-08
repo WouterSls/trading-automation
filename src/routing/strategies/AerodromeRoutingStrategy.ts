@@ -49,8 +49,8 @@ export class AerodromeRoutingStrategy extends BaseRoutingStrategy {
     multicall3Contexts.push(...directRoutesMulticallContexts);
     requestIndex += directRoutesMulticallContexts.length;
 
-    const multiHopRoutesMulticallContexts = this.createMultiHopRoutes(tokenIn,amountIn, tokenOut, requestIndex);
-    multicall3Contexts.push(...multiHopRoutesMulticallContexts)
+    const multiHopRoutesMulticallContexts = this.createMultiHopRoutes(tokenIn, amountIn, tokenOut, requestIndex);
+    multicall3Contexts.push(...multiHopRoutesMulticallContexts);
     requestIndex += multiHopRoutesMulticallContexts.length;
 
     //console.log(`CREATED ${multicall3Contexts.length} MULTICALL CONTEXTS`);
@@ -82,33 +82,7 @@ export class AerodromeRoutingStrategy extends BaseRoutingStrategy {
 
     let currentRequestIndex = startingRequestIndex;
 
-    let isStable = false;
-    const nonStableTradeRoute: AerodromeTradeRoute = {
-      from: tokenIn,
-      to: tokenOut,
-      stable: isStable,
-      factory: this.aerodromeFactoryAddress,
-    };
-
-    const nonStableCallData = this.aerodromeRouter.encodeGetAmountsOut(amountIn, [nonStableTradeRoute]);
-    const nonStableRequest: Multicall3Request = {
-      target: this.aerodromeRouter.getRouterAddress(),
-      allowFailure: true,
-      callData: nonStableCallData,
-    };
-
-    const nonStableMetadata: Mutlicall3Metadata = {
-      requestIndex: currentRequestIndex,
-      type: "quote",
-      path: [tokenIn, tokenOut],
-      fees: [],
-      description: `${tokenIn} -> ${tokenOut} | stable: ${isStable}`,
-    };
-
-    multicall3Contexts.push({ request: nonStableRequest, metadata: nonStableMetadata });
-    currentRequestIndex++;
-
-    isStable = true;
+    const isStable = true;
     const stableTradeRoute: AerodromeTradeRoute = {
       from: tokenIn,
       to: tokenOut,
@@ -128,10 +102,38 @@ export class AerodromeRoutingStrategy extends BaseRoutingStrategy {
       type: "quote",
       path: [tokenIn, tokenOut],
       fees: [],
-      description: `${tokenIn} -> ${tokenOut} | stable: ${isStable}`,
+      description: `${tokenIn} -> ${tokenOut} | stable`,
+      aeroRoutes: [stableTradeRoute],
     };
 
     multicall3Contexts.push({ request: stableRequest, metadata: stableMetadata });
+    currentRequestIndex++;
+
+    const isVolatile = !isStable;
+    const volatileTradeRoute: AerodromeTradeRoute = {
+      from: tokenIn,
+      to: tokenOut,
+      stable: isVolatile,
+      factory: this.aerodromeFactoryAddress,
+    };
+
+    const volatileCallData = this.aerodromeRouter.encodeGetAmountsOut(amountIn, [volatileTradeRoute]);
+    const volatileRequest: Multicall3Request = {
+      target: this.aerodromeRouter.getRouterAddress(),
+      allowFailure: true,
+      callData: volatileCallData,
+    };
+
+    const volatileMetadata: Mutlicall3Metadata = {
+      requestIndex: currentRequestIndex,
+      type: "quote",
+      path: [tokenIn, tokenOut],
+      fees: [],
+      description: `${tokenIn} -> ${tokenOut} | volatile`,
+      aeroRoutes: [volatileTradeRoute],
+    };
+
+    multicall3Contexts.push({ request: volatileRequest, metadata: volatileMetadata });
     currentRequestIndex++;
 
     return multicall3Contexts;
@@ -187,7 +189,8 @@ export class AerodromeRoutingStrategy extends BaseRoutingStrategy {
           type: "quote",
           path: pathInfo.path,
           description: description,
-          fees: [], 
+          fees: [],
+          aeroRoutes: tradeRoutes,
         };
 
         multicall3Contexts.push({ request, metadata });
@@ -235,6 +238,7 @@ export class AerodromeRoutingStrategy extends BaseRoutingStrategy {
           path: pathInfo.path,
           description: description,
           fees: [],
+          aeroRoutes: tradeRoutes,
         };
 
         multicall3Contexts.push({ request, metadata });
@@ -372,9 +376,10 @@ export class AerodromeRoutingStrategy extends BaseRoutingStrategy {
           bestRoute = {
             amountOut: bestAmountOut,
             path: context.metadata.path,
-            fees: [], 
+            fees: [],
             encodedPath: null,
             poolKey: null,
+            aeroRoutes: context.metadata.aeroRoutes || null,
           };
         }
       } catch (error) {
