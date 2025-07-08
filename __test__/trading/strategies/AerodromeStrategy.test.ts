@@ -64,13 +64,13 @@ describe("Aerodrome Strategy Test", () => {
 
   describe("ensureTokenApproval", () => {
     it("should throw error with offline wallet", async () => {
-      await expect(strategy.ensureTokenApproval(offlineWallet, AERO_TOKEN_ADDRESS, "100")).rejects.toThrow(
+      await expect(strategy.ensureTokenApproval(AERO_TOKEN_ADDRESS, "100", offlineWallet)).rejects.toThrow(
         NETWORK_VALIDATION_FAILED,
       );
     });
 
     it("should throw error with wrong network wallet", async () => {
-      await expect(strategy.ensureTokenApproval(nonNetworkWallet, AERO_TOKEN_ADDRESS, "100")).rejects.toThrow(
+      await expect(strategy.ensureTokenApproval(AERO_TOKEN_ADDRESS, "100", nonNetworkWallet)).rejects.toThrow(
         INVALID_NETWORK_ERROR_MESSAGE,
       );
     });
@@ -80,8 +80,8 @@ describe("Aerodrome Strategy Test", () => {
       TRADING_CONFIG.INFINITE_APPROVAL = true;
 
       try {
-        const firstApprovalGasCost = await strategy.ensureTokenApproval(wallet, AERO_TOKEN_ADDRESS, "100");
-        const secondApporvalGasCost = await strategy.ensureTokenApproval(wallet, AERO_TOKEN_ADDRESS, "100");
+        const firstApprovalGasCost = await strategy.ensureTokenApproval(AERO_TOKEN_ADDRESS, "100", wallet);
+        const secondApporvalGasCost = await strategy.ensureTokenApproval(AERO_TOKEN_ADDRESS, "100", wallet);
 
         expect(typeof firstApprovalGasCost === "string").toBe(true);
         expect(secondApporvalGasCost).toBe(null);
@@ -91,26 +91,26 @@ describe("Aerodrome Strategy Test", () => {
     });
 
     it("should handle different token addresses", async () => {
-      const result = await strategy.ensureTokenApproval(wallet, CBETH_TOKEN_ADDRESS, "1000");
+      const result = await strategy.ensureTokenApproval(CBETH_TOKEN_ADDRESS, "1000", wallet);
       expect(result === null || typeof result === "string").toBe(true);
     });
 
     it("should handle different amounts", async () => {
-      const smallAmount = await strategy.ensureTokenApproval(wallet, AERO_TOKEN_ADDRESS, "1");
-      const largeAmount = await strategy.ensureTokenApproval(wallet, AERO_TOKEN_ADDRESS, "1000000");
+      const smallAmount = await strategy.ensureTokenApproval(AERO_TOKEN_ADDRESS, "1", wallet);
+      const largeAmount = await strategy.ensureTokenApproval(AERO_TOKEN_ADDRESS, "1000000", wallet);
 
       expect(smallAmount === null || typeof smallAmount === "string").toBe(true);
       expect(largeAmount === null || typeof largeAmount === "string").toBe(true);
     });
 
     it("should handle zero amount gracefully", async () => {
-      const result = await strategy.ensureTokenApproval(wallet, AERO_TOKEN_ADDRESS, "0");
+      const result = await strategy.ensureTokenApproval(AERO_TOKEN_ADDRESS, "0", wallet);
       expect(result === null || typeof result === "string").toBe(true);
     });
 
     it("should throw error for invalid token address", async () => {
       const invalidAddress = "0xinvalid";
-      await expect(strategy.ensureTokenApproval(wallet, invalidAddress, "100")).rejects.toThrow();
+      await expect(strategy.ensureTokenApproval(invalidAddress, "100", wallet)).rejects.toThrow();
     });
   });
 
@@ -133,6 +133,16 @@ describe("Aerodrome Strategy Test", () => {
       expect(parseFloat(price)).toBeLessThan(10000);
     });
   });
+
+  /**
+   * 
+   * 
+  const signature = tx.data!.toString().substring(0, 10);
+  const ethToTokenSignature = AERODROME_ROUTER_INTERFACE.getFunction("swapExactETHForTokens")!.selector;
+  const tokensToEthSignature = AERODROME_ROUTER_INTERFACE.getFunction("swapExactTokensForETH")!.selector;
+  const tokensToTokensSignature = AERODROME_ROUTER_INTERFACE.getFunction("swapExactTokensForTokens")!.selector;
+   * 
+   */
 
   /**
   describe("getTokenUsdcPrice", () => {
