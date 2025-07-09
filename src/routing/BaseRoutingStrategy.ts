@@ -151,7 +151,7 @@ export abstract class BaseRoutingStrategy {
     return intermediaryCombinations;
   }
 
-  protected getFeeCombinations(): { fees: FeeAmount[]; name: string }[] {
+  protected getTwoHopFeeCombinations(): { fees: FeeAmount[]; name: string }[] {
     return [
       { fees: [FeeAmount.LOWEST, FeeAmount.LOWEST], name: "LOWEST-LOWEST" },
       { fees: [FeeAmount.LOWEST, FeeAmount.LOW], name: "LOWEST-LOW" },
@@ -186,6 +186,7 @@ export abstract class BaseRoutingStrategy {
       fees: [],
       encodedPath: null,
       poolKey: null,
+      pathSegments: null,
       aeroRoutes: null,
     };
   }
