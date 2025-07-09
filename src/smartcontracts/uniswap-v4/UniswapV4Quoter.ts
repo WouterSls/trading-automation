@@ -67,6 +67,39 @@ export class UniswapV4Quoter {
   }
 
   /**
+   * Function for encoding quoteExactInputSingle call data on Uniswap V4 quoter
+   *
+   * @param poolKey The key for identifying a V4 pool
+   * @param zeroForOne If the swap is from currency0 to currency1
+   * @param exactAmount The desired input amount
+   * @param hookData arbitrary hookData to pass into the associated hooks
+   * @return the encoded transaction data
+   */
+  encodeQuoteExactInputSingle(poolKey: PoolKey, zeroForOne: boolean, amountSpecified: bigint, hookData: string) {
+    const params = {
+      poolKey,
+      zeroForOne,
+      exactAmount: amountSpecified,
+      hookData,
+    };
+
+    const encodedData = this.quoterContract.interface.encodeFunctionData("quoteExactInputSingle", [params]);
+    return encodedData;
+  }
+
+  /**
+   * Decode the quoteExactInputSingle result data to the returned values
+   * 
+   * @param data the hex result data from transaction with quoteExactInputSingle function data
+   * @return amountOut The output quote for the exactIn swap
+   * @return gasEstimate Estimated gas units used for the swap
+   */
+  decodeQuoteExactInputSingleResultData(data: ethers.BytesLike): {amountOut:bigint, gasEstimate: bigint} {
+    const {amountOut, gasEstimate} = this.quoterContract.interface.decodeFunctionResult("quoteExactInputSingle",data);
+    return {amountOut, gasEstimate}
+  }
+
+  /**
    * Quotes the amount out for a multi-hop exact input swap
    * @param wallet - The wallet instance connected to the blockchain provider
    * @param exactCurrency - The input currency address
@@ -106,6 +139,37 @@ export class UniswapV4Quoter {
 
       throw new Error(errorMessage);
     }
+  }
+
+  /**
+   * Function for encoding quoteExactInput call data on Uniswap V4 quoter
+   *
+   * @param exactCurrency - The input currency address
+   * @param path - Array of path segments defining the swap route
+   * @param exactAmount - The exact input amount to swap
+   * @return the encoded transaction data
+   */
+  encodeQuoteExactInput(exactCurrency: string, path: PathSegment[], exactAmount: bigint) {
+    const params = {
+      exactCurrency,
+      path,
+      exactAmount,
+    };
+
+    const encodedData = this.quoterContract.interface.encodeFunctionData("quoteExactInput", [params]);
+    return encodedData;
+  }
+
+  /**
+   * Decode the quoteExactInputresult data to the returned values
+   * 
+   * @param data the hex result data from transaction with quoteExactInputSingle function data
+   * @return amountOut The output quote for the exactIn swap
+   * @return gasEstimate Estimated gas units used for the swap
+   */
+  decodeQuoteExactInputResultData(data: ethers.BytesLike): {amountOut:bigint, gasEstimate: bigint} {
+    const {amountOut, gasEstimate} = this.quoterContract.interface.decodeFunctionResult("quoteExactInput", data);
+    return {amountOut, gasEstimate};
   }
 
   /**
