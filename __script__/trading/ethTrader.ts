@@ -102,8 +102,16 @@ async function ethTraderTesting(chain: ChainType, wallet: Wallet) {
     outputToken: weth.getTokenAddress(),
   };
 
-  displayTrade(usdToTokenTrade);
+  displayTrade(ethToUsdtTrade);
+  const strategies = trader.getStrategies();
+  for (const strat of strategies) {
+    console.log(strat.getName());
+    const quote = await strat.getQuote(ethToUsdtTrade, wallet);
+    console.log(`\tQuoted output amount: ${quote.outputAmount}`);
+    console.log();
+  }
 
+  return;
   const tradeConfirmation: TradeConfirmation = await trader.trade(usdToTokenTrade);
   console.log("--------------------------------");
   console.log("Trade Confirmation");
@@ -116,7 +124,9 @@ async function ethTraderTesting(chain: ChainType, wallet: Wallet) {
   console.log("\tTransaction Hash:", tradeConfirmation.transactionHash);
   console.log();
 
-  const strategies = trader.getStrategies();
+
+
+
   const uniV2 = strategies.filter((strat) => strat.getName().includes("UniswapV2"))[0];
   const uniV3 = strategies.filter((strat) => strat.getName().includes("UniswapV3"))[0];
   const uniV4 = strategies.filter((strat) => strat.getName().includes("UniswapV4"))[0];
@@ -211,5 +221,5 @@ if (require.main === module) {
   const wallet = getHardhatWallet_1();
   const ethWallet = getEthWallet_1();
 
-  ethTraderTesting(chain, wallet).catch(console.error);
+  ethTraderTesting(chain, ethWallet).catch(console.error);
 }

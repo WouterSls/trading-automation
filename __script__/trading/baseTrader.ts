@@ -106,14 +106,15 @@ async function baseTraderInteraction(wallet: Wallet) {
   };
 
   displayLivePriceAndExpectedOutput(chain, ethToTokenTrade, inputAmount)
-  displayTrade(ethToTokenTrade);
+
+ */
+  displayTrade(singleHopTokenToTokenTrade);
   for (const strat of strategies) {
     console.log(strat.getName());
-    const quote = await strat.getQuote(ethToTokenTrade, wallet);
+    const quote = await strat.getQuote(singleHopTokenToTokenTrade, wallet);
     console.log(`\tQuoted output amount: ${quote.outputAmount}`);
     console.log();
   }
- */
 }
 
 async function aeroTesting(aero: ITradingStrategy | null, trades: TradeCreationDto[], wallet: Wallet) {
@@ -158,9 +159,9 @@ async function displayLivePriceAndExpectedOutput(chain: ChainType, token: ERC20,
 
 if (require.main === module) {
   const wallet = getHardhatWallet_1();
-  const liveWallet = getBaseWallet_1();
+  const baseWallet = getBaseWallet_1();
 
-  baseTraderInteraction(wallet).catch(console.error);
+  baseTraderInteraction(baseWallet).catch(console.error);
 }
 
 export { baseTraderInteraction };
