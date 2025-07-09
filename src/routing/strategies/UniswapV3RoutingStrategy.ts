@@ -142,7 +142,7 @@ export class UniswapV3RoutingStrategy extends BaseRoutingStrategy {
     const doubleIntermediaryPaths = this.generateDoubleIntermediaryPaths(tokenIn, tokenOut);
 
     for (const pathInfo of singleIntermediaryPaths) {
-      const twoHopFeeCombinations = this.getFeeCombinations();
+      const twoHopFeeCombinations = this.getTwoHopFeeCombinations();
 
       for (const combo of twoHopFeeCombinations) {
         const encodedPath = encodePath(pathInfo.path, combo.fees);
@@ -292,10 +292,10 @@ export class UniswapV3RoutingStrategy extends BaseRoutingStrategy {
         let amountOut;
 
         if (isMultihop) {
-          const { amountOut: decoded } = this.uniswapV3QuoterV2.decodeQuoteExactInputResult(result.returnData);
+          const { amountOut: decoded } = this.uniswapV3QuoterV2.decodeQuoteExactInputResultData(result.returnData);
           amountOut = decoded;
         } else {
-          const { amountOut: decoded } = this.uniswapV3QuoterV2.decodeQuoteExactInputSingleResult(result.returnData);
+          const { amountOut: decoded } = this.uniswapV3QuoterV2.decodeQuoteExactInputSingleResultData(result.returnData);
           amountOut = decoded;
         }
 
@@ -309,6 +309,7 @@ export class UniswapV3RoutingStrategy extends BaseRoutingStrategy {
             fees: context.metadata.fees!,
             encodedPath: null,
             poolKey: null,
+            pathSegments: null,
             aeroRoutes: null,
           };
         }

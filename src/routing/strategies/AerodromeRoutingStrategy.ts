@@ -379,6 +379,7 @@ export class AerodromeRoutingStrategy extends BaseRoutingStrategy {
             fees: [],
             encodedPath: null,
             poolKey: null,
+            pathSegments: null,
             aeroRoutes: context.metadata.aeroRoutes || null,
           };
         }

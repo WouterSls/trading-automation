@@ -112,6 +112,7 @@ export class AerodromeStrategy implements ITradingStrategy {
         fees: [],
         encodedPath: null,
         poolKey: null,
+        pathSegments: null,
         aeroRoutes: null,
       },
     };
@@ -205,7 +206,7 @@ export class AerodromeStrategy implements ITradingStrategy {
     }
 
     const route = await this.routeOptimizer.getBestAeroRoute(trade.inputToken, amountIn, trade.outputToken, wallet);
-    if (!route.aeroRoutes) throw new Error("Error during Best Aerodrome Trade Route Generation");
+    if (!route.aeroRoutes) throw new Error("Error during Aerodrome route generation");
 
     const expectedOutput = await this.calculateExpectedOutput(amountInForSpotRate, amountIn, route.aeroRoutes, wallet);
     const actualOutput = route.amountOut;

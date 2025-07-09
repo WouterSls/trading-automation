@@ -108,6 +108,7 @@ export class UniswapV2Strategy implements ITradingStrategy {
         fees: [],
         encodedPath: null,
         poolKey: null,
+        pathSegments: null,
         aeroRoutes: null,
       },
     };

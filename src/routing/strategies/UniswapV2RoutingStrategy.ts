@@ -233,6 +233,7 @@ export class UniswapV2RoutingStrategy extends BaseRoutingStrategy {
             fees: [],
             encodedPath: null,
             poolKey: null,
+            pathSegments: null,
             aeroRoutes: null,
           };
         }

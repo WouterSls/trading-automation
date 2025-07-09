@@ -19,7 +19,6 @@ import { ERC20 } from "../../smartcontracts/ERC/ERC20";
 // TODO: implement Test Suite
 export class UniswapV3Strategy implements ITradingStrategy {
   private quoter: UniswapV3QuoterV2;
-  private factory: UniswapV3Factory;
   private router: UniswapV3SwapRouterV2;
   private permit2: Permit2;
 
@@ -41,7 +40,6 @@ export class UniswapV3Strategy implements ITradingStrategy {
     this.USDC_ADDRESS = chainConfig.tokenAddresses.usdc;
 
     this.quoter = new UniswapV3QuoterV2(chain);
-    this.factory = new UniswapV3Factory(chain);
     this.router = new UniswapV3SwapRouterV2(chain);
     this.permit2 = new Permit2(chain);
 
@@ -118,6 +116,7 @@ export class UniswapV3Strategy implements ITradingStrategy {
         fees: [],
         encodedPath: null,
         poolKey: null,
+        pathSegments: null,
         aeroRoutes: null,
       },
     };
@@ -211,6 +210,8 @@ export class UniswapV3Strategy implements ITradingStrategy {
     }
 
     const route = await this.routeOptimizer.getBestUniV3Route(trade.inputToken, amountIn, trade.outputToken, wallet);
+    if (!route.encodedPath) throw new Error("Error during best Uniswap V3 encoded path generation")
+
 
     // TODO: implemented expected output logic for price impact
     //const expectedOutput = await this.calculateExpectedOutput(amountInForSpotRate, amountIn, route.path, wallet);
@@ -235,7 +236,7 @@ export class UniswapV3Strategy implements ITradingStrategy {
       case TradeType.ETHInputTOKENOutput:
       case TradeType.TOKENInputTOKENOutput:
         if (isMultihop) {
-          tx = this.router.createExactInputTransaction(route.encodedPath!, to, amountIn, amountOutMin);
+          tx = this.router.createExactInputTransaction(route.encodedPath, to, amountIn, amountOutMin);
         } else {
           tx = this.router.createExactInputSingleTransaction(
             route.path[0],
@@ -255,7 +256,7 @@ export class UniswapV3Strategy implements ITradingStrategy {
       case TradeType.TOKENInputETHOutput:
         let swapData;
         if (isMultihop) {
-          swapData = this.router.encodeExactInput(route.encodedPath!, to, amountIn, amountOutMin);
+          swapData = this.router.encodeExactInput(route.encodedPath, to, amountIn, amountOutMin);
         } else {
           swapData = this.router.encodeExactInputSingle(
             route.path[0],
