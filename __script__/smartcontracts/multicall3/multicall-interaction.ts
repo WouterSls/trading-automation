@@ -126,7 +126,7 @@ export async function multicallInteraction() {
     console.log(result.success);
 
     if (result.success) {
-      const { amountOut } = uniswapV3Quoter.decodeQuoteExactInputSingleResult(result.returnData);
+      const { amountOut } = uniswapV3Quoter.decodeQuoteExactInputSingleResultData(result.returnData);
       console.log("raw amount out:");
       console.log(amountOut);
       const formattedAmountOut = ethers.formatEther(amountOut);
