@@ -128,14 +128,14 @@ export class UniswapV3QuoterV2 {
    * @param data - the resulting hex byte data from the  call request
    * @returns amountOut, sqrtPriceX96After, initiliazedTicksCrossed, gasEstimate
    */
-  decodeQuoteExactInputSingleResult(data: ethers.BytesLike): {
+  decodeQuoteExactInputSingleResultData(data: ethers.BytesLike): {
     amountOut: bigint;
     sqrtPriceX96After: bigint;
     initializedTicksCrossed: bigint;
     gasEstimate: bigint;
   } {
     const { amountOut, sqrtPriceX96After, initializedTicksCrossed, gasEstimate } =
-      UNISWAP_V3_QUOTER_INTERFACE.decodeFunctionResult("quoteExactInputSingle", data);
+      this.quoterContract.interface.decodeFunctionResult("quoteExactInputSingle", data);
 
     return { amountOut, sqrtPriceX96After, initializedTicksCrossed, gasEstimate };
   }
@@ -201,14 +201,14 @@ export class UniswapV3QuoterV2 {
    * @param data - the resulting hex byte data from the  call request
    * @returns amountOut, sqrtPriceX96After, initiliazedTicksCrossed, gasEstimate
    */
-  decodeQuoteExactInputResult(data: ethers.BytesLike): {
+  decodeQuoteExactInputResultData(data: ethers.BytesLike): {
     amountOut: bigint;
     sqrtPriceX96After: bigint;
     initializedTicksCrossed: bigint;
     gasEstimate: bigint;
   } {
     const { amountOut, sqrtPriceX96After, initializedTicksCrossed, gasEstimate } =
-      UNISWAP_V3_QUOTER_INTERFACE.decodeFunctionResult("quoteExactInput", data);
+      this.quoterContract.interface.decodeFunctionResult("quoteExactInput", data);
 
     return { amountOut, sqrtPriceX96After, initializedTicksCrossed, gasEstimate };
   }
