@@ -295,7 +295,9 @@ export class UniswapV3RoutingStrategy extends BaseRoutingStrategy {
           const { amountOut: decoded } = this.uniswapV3QuoterV2.decodeQuoteExactInputResultData(result.returnData);
           amountOut = decoded;
         } else {
-          const { amountOut: decoded } = this.uniswapV3QuoterV2.decodeQuoteExactInputSingleResultData(result.returnData);
+          const { amountOut: decoded } = this.uniswapV3QuoterV2.decodeQuoteExactInputSingleResultData(
+            result.returnData,
+          );
           amountOut = decoded;
         }
 
