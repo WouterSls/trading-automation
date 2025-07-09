@@ -1,12 +1,6 @@
 import NodeCache from "node-cache";
 
 import { Wallet } from "ethers";
-import {
-  getHighPoolKey,
-  getLowestFeePoolKey,
-  getLowPoolKey,
-  getMediumPoolKey,
-} from "../smartcontracts/uniswap-v4/uniswap-v4-utils";
 import { ChainType } from "../config/chain-config";
 import { Route } from "../trading/types/quoting-types";
 import { UniswapV2RoutingStrategy } from "./strategies/UniswapV2RoutingStrategy";
@@ -52,24 +46,13 @@ export class RouteOptimizer {
   }
 
   async getBestUniV4Route(tokenIn: string, amountIn: bigint, tokenOut: string, wallet: Wallet): Promise<Route> {
-    const route: Route = {
-      amountOut: 0n,
-      path: [],
-      fees: [],
-      encodedPath: null,
-      poolKey: null,
-      aeroRoutes: null,
-    };
-
-    const lowestPoolKey = getLowestFeePoolKey(tokenIn, tokenOut);
-    const lowPoolKey = getLowPoolKey(tokenIn, tokenOut);
-    const medPoolKey = getMediumPoolKey(tokenIn, tokenOut);
-    const highPoolKey = getHighPoolKey(tokenIn, tokenOut);
-
-    route.path = [tokenIn, tokenOut];
-    route.fees = [medPoolKey.fee];
-    route.poolKey = medPoolKey;
-
+    const cacheKey = `${tokenIn}_${amountIn.toString()}_${tokenOut}`;
+    const cachedRoute = this.routeCache.get<Route>(cacheKey);
+    if (cachedRoute) {
+      return cachedRoute;
+    }
+    const route = await this.uniswapV4RoutingStrategy.getBestRoute(tokenIn, amountIn, tokenOut, wallet);
+    this.routeCache.set(cacheKey, route);
     return route;
   }
 
