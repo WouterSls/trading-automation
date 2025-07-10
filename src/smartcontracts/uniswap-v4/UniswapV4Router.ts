@@ -1,4 +1,4 @@
-import { AbiCoder, ethers} from "ethers";
+import { AbiCoder, ethers } from "ethers";
 import {
   IV4ExactInputParams,
   IV4ExactInputSingleParams,
@@ -18,7 +18,8 @@ export type SwapExactInputSingleParams = [
   hookData: string,
 ];
 
-export type SettleAllParams = [inputCurrency: string, amountIn: bigint, zeroForOne: boolean];
+export type SettleAllParamsOld = [inputCurrency: string, amountIn: bigint, zeroForOne?: boolean];
+export type SettleAllParams = [inputCurrency: string, amountIn: bigint];
 
 export type TakeAllParams = [outputCurrency: string, recipient: string, amount: number];
 
@@ -37,6 +38,7 @@ export type PoolActionParams =
 export class UniswapV4Router {
   constructor() {}
 
+  /**
   encodeV4SwapExactInputSingle(
     poolKey: PoolKey,
     zeroForOne: boolean,
@@ -88,6 +90,7 @@ export class UniswapV4Router {
 
     return encodedInput;
   }
+ */
 
   public encodeV4SwapCommandInput(actions: string, encodedActionsData: string[]) {
     const encodedSwapCommandInput = AbiCoder.defaultAbiCoder().encode(
@@ -125,17 +128,22 @@ export class UniswapV4Router {
     return encodedData;
   }
 
-  private encodeSwapExactInput(swapParams: IV4ExactInputParams) {
+  public encodeSwapExactInput(swapParams: IV4ExactInputParams) {
     const encodedData = AbiCoder.defaultAbiCoder().encode([], []);
 
     return encodedData;
   }
 
-  public encodeSettleAll(inputCurrency: string, amountIn: bigint, zeroForOne: boolean) {
+  public encodeSettleAllOld(inputCurrency: string, amountIn: bigint, zeroForOne: boolean) {
     const encodedParams = AbiCoder.defaultAbiCoder().encode(
       ["address", "uint128", "bool"],
       [inputCurrency, amountIn, zeroForOne],
     );
+    return encodedParams;
+  }
+
+  public encodeSettleAll(inputCurrency: string, amountIn: bigint) {
+    const encodedParams = AbiCoder.defaultAbiCoder().encode(["address", "uint128"], [inputCurrency, amountIn]);
     return encodedParams;
   }
 
@@ -154,7 +162,7 @@ export class UniswapV4Router {
    * @returns Encoded data string
    */
   public encodePoolAction(v4PoolAction: V4PoolAction.SWAP_EXACT_IN_SINGLE, params: SwapExactInputSingleParams): string;
-  public encodePoolAction(v4PoolAction: V4PoolAction.SETTLE_ALL, params: SettleAllParams): string;
+  public encodePoolAction(v4PoolAction: V4PoolAction.SETTLE_ALL, params: SettleAllParamsOld): string;
   public encodePoolAction(v4PoolAction: V4PoolAction.TAKE_ALL, params: TakeAllParams): string;
   public encodePoolAction(v4PoolAction: V4PoolAction, params: any[]): string {
     switch (v4PoolAction) {
@@ -163,8 +171,10 @@ export class UniswapV4Router {
         return this.encodeSwapExactInputSingle(poolKey, zeroForOne, amountIn, amountOutMinimum, hookData);
 
       case V4PoolAction.SETTLE_ALL:
-        const [inputCurrency, settlAmountIn, settleZeroForOne] = params as SettleAllParams;
-        return this.encodeSettleAll(inputCurrency, settlAmountIn, settleZeroForOne);
+        //const [inputCurrency, settlAmountIn] = params as SettleAllParams;
+        //return this.encodeSettleAll(inputCurrency, settlAmountIn);
+        const [inputCurrency, settlAmountIn, settleZeroForOne] = params as SettleAllParamsOld;
+        return this.encodeSettleAllOld(inputCurrency, settlAmountIn, settleZeroForOne!);
 
       case V4PoolAction.TAKE_ALL:
         const [outputCurrency, recipient, amount] = params as TakeAllParams;

@@ -117,23 +117,23 @@ async function baseTraderInteraction(wallet: Wallet) {
   }
 }
 
-async function aeroTesting(aero: ITradingStrategy | null, trades: TradeCreationDto[], wallet: Wallet) {
-  if (!aero) throw new Error("NO AERO TRADING STRAT SUPPLIED");
+async function strategyTest(strat: ITradingStrategy | null, trades: TradeCreationDto[], wallet: Wallet) {
+  if (!strat) throw new Error("NO TRADING STRAT SUPPLIED");
 
   for (const trade of trades) {
     console.log();
     console.log("QUOTE");
     console.log("----------------");
-    const quote = await aero.getQuote(trade, wallet);
+    const quote = await strat.getQuote(trade, wallet);
     console.log(quote);
     console.log();
 
-    await aero.ensureTokenApproval(trade.inputToken, trade.inputAmount, wallet);
+    await strat.ensureTokenApproval(trade.inputToken, trade.inputAmount, wallet);
 
     console.log();
     console.log("TX");
     console.log("----------------");
-    const tx = await aero.createTransaction(trade, wallet);
+    const tx = await strat.createTransaction(trade, wallet);
     console.log(tx);
 
     console.log("SENDING...");

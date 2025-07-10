@@ -7,7 +7,7 @@ import { ensureInfiniteApproval, ensureStandardApproval, ensurePermit2Approval }
 import { ITradingStrategy } from "../ITradingStrategy";
 import { Quote, InputType, Route, TradeCreationDto, TradeType } from "../types/_index";
 import { createMinimalErc20 } from "../../smartcontracts/ERC/erc-utils";
-import { determineTradeType, validateNetwork } from "../../lib/utils";
+import { calculatePriceImpact, calculateSlippageAmount, determineTradeType, validateNetwork } from "../../lib/utils";
 import { TRADING_CONFIG } from "../../config/trading-config";
 import { UniswapV4Quoter } from "../../smartcontracts/uniswap-v4/UniswapV4Quoter";
 import {
@@ -15,6 +15,7 @@ import {
   SwapExactInputSingleParams,
   SettleAllParams,
   TakeAllParams,
+  SettleAllParamsOld,
 } from "../../smartcontracts/uniswap-v4/UniswapV4Router";
 import { UniversalRouter } from "../../smartcontracts/universal-router/UniversalRouter";
 import {
@@ -24,6 +25,7 @@ import {
 } from "../../smartcontracts/universal-router/universal-router-types";
 import { RouteOptimizer } from "../../routing/RouteOptimizer";
 import { ERC20 } from "../../smartcontracts/ERC/ERC20";
+import { determineSwapDirection } from "../../smartcontracts/uniswap-v4/uniswap-v4-utils";
 
 export class UniswapV4Strategy implements ITradingStrategy {
   private quoter: UniswapV4Quoter;
@@ -178,146 +180,115 @@ export class UniswapV4Strategy implements ITradingStrategy {
   }
 
   async createTransaction(trade: TradeCreationDto, wallet: Wallet): Promise<TransactionRequest> {
-    throw new Error("Not implemented");
-  }
-
-  async getBuyTradeQuote(wallet: Wallet, trade: TradeCreationDto): Promise<Quote> {
     await validateNetwork(wallet, this.chain);
-
-    const outputToken = await createMinimalErc20(trade.outputToken, wallet.provider!);
-
-    if (!outputToken) throw new Error("Error in output token creation");
-
-    let outputAmount = "0";
-    let route: Route = {
-      amountOut: 0n,
-      path: [],
-      fees: [],
-      encodedPath: null,
-      poolKey: null,
-      pathSegments: null,
-      aeroRoutes: null,
-    };
-
-    const isETHInputETHAmount = trade.inputType === InputType.ETH && trade.inputToken === ethers.ZeroAddress;
-    const isETHInputUSDAmount = trade.inputType === InputType.USD && trade.inputToken === ethers.ZeroAddress;
-    const isTOKENInputTOKENAmount = trade.inputType === InputType.TOKEN && trade.inputToken !== ethers.ZeroAddress;
-
-    if (isETHInputETHAmount) {
-      const amountIn = ethers.parseEther(trade.inputAmount);
-      const hookData = ethers.ZeroAddress;
-
-      route = await this.routeOptimizer.getBestUniV4Route(trade.inputToken, amountIn, trade.outputToken, wallet);
-
-      if (!route.poolKey) {
-        return {
-          outputAmount,
-          route,
-        };
-      }
-
-      const isZeroForOne = route.poolKey.currency0 === trade.inputToken;
-
-      const { amountOut, gasEstimate } = await this.quoter.quoteExactInputSingle(
-        wallet,
-        route.poolKey,
-        isZeroForOne,
-        amountIn,
-        hookData,
-      );
-
-      outputAmount = ethers.formatUnits(amountOut, outputToken.getDecimals());
-    }
-
-    if (isETHInputUSDAmount) {
-    }
-
-    if (isTOKENInputTOKENAmount) {
-    }
-
-    return {
-      outputAmount,
-      route,
-    };
-  }
-
-  async createBuyTransaction(wallet: Wallet, trade: TradeCreationDto): Promise<TransactionRequest> {
-    await validateNetwork(wallet, this.chain);
-
-    const outputToken = await createMinimalErc20(trade.outputToken, wallet.provider!);
-    if (!outputToken) throw new Error("Error in output token creation");
-
-    const recipient = wallet.address;
-    const deadline = TRADING_CONFIG.DEADLINE;
 
     let tx: TransactionRequest = {};
 
-    const isETHInputETHAmount = trade.inputType === InputType.ETH && trade.inputToken === ethers.ZeroAddress;
-    const isETHInputUSDAmount = trade.inputType === InputType.USD && trade.inputToken === ethers.ZeroAddress;
-    const isTOKENInputTOKENAmount = trade.inputType === InputType.TOKEN && trade.inputToken !== ethers.ZeroAddress;
+    const to = wallet.address;
+    const deadline = TRADING_CONFIG.DEADLINE;
 
-    if (isETHInputETHAmount) {
-      const tokenIn = trade.inputToken;
-      const tokenOut = outputToken.getTokenAddress();
-      const amountIn = ethers.parseEther(trade.inputAmount);
+    const tradeType: TradeType = determineTradeType(trade);
 
-      const route = await this.routeOptimizer.getBestUniV4Route(tokenIn, amountIn, tokenOut, wallet);
-      const poolKey = route.poolKey;
-      const hookData = ethers.ZeroAddress;
+    const inputToken = await createMinimalErc20(trade.inputToken, wallet.provider!);
+    const outputToken = await createMinimalErc20(trade.outputToken, wallet.provider!);
 
-      const zeroForOne = poolKey!.currency0 === tokenIn;
-
-      const minOutputAmount = 0n;
-
-      const isSingleHop = route.path.length === 2 && route.poolKey;
-      const isMultiHop = route.path.length > 2 && route.poolKey;
-
-      if (isSingleHop) {
-        const swapParams: SwapExactInputSingleParams = [
-          route.poolKey!,
-          zeroForOne,
-          amountIn,
-          minOutputAmount,
-          hookData,
-        ];
-
-        const inputCurrency = zeroForOne ? route.poolKey!.currency0 : route.poolKey!.currency1;
-        const settleParams: SettleAllParams = [ inputCurrency, amountIn, zeroForOne ];
-
-        const outputCurrency = zeroForOne ? route.poolKey!.currency1 : route.poolKey!.currency0;
-        const amount = V4PoolActionConstants.OPEN_DELTA
-        const takeParams: TakeAllParams = [ outputCurrency, recipient, amount ];
-
-        const actions = ethers.concat([V4PoolAction.SWAP_EXACT_IN_SINGLE, V4PoolAction.SETTLE, V4PoolAction.TAKE]);
-
-        const swapData = this.uniswapV4router.encodePoolAction(V4PoolAction.SWAP_EXACT_IN_SINGLE, swapParams);
-        const settleData = this.uniswapV4router.encodePoolAction(V4PoolAction.SETTLE_ALL, settleParams);
-        const takeData = this.uniswapV4router.encodePoolAction(V4PoolAction.TAKE_ALL,takeParams);
-
-        const v4SwapCommandInput = this.uniswapV4router.encodeV4SwapCommandInput(actions, [swapData, settleData, takeData]);
-
-        const command: CommandType = CommandType.V4_SWAP;
-
-        tx = this.universalRouter.createExecuteTransaction(command, [v4SwapCommandInput], deadline);
-        tx.value = amountIn;
-        return tx;
-      }
-
-      if (isMultiHop) {
-      }
+    let amountIn;
+    let amountInForSpotRate;
+    switch (tradeType) {
+      case TradeType.ETHInputTOKENOutput:
+        if (trade.inputType === InputType.USD) {
+          const ethUsdcPrice = await this.getEthUsdcPrice(wallet);
+          const ethValue = parseFloat(trade.inputAmount) / parseFloat(ethUsdcPrice);
+          const ethValueFixed = ethValue.toFixed(18);
+          amountIn = ethers.parseEther(ethValueFixed);
+        } else {
+          amountIn = ethers.parseEther(trade.inputAmount);
+        }
+        amountInForSpotRate = ethers.parseEther(TRADING_CONFIG.PRICE_IMPACT_AMOUNT_IN);
+        break;
+      case TradeType.TOKENInputETHOutput:
+      case TradeType.TOKENInputTOKENOutput:
+        if (!inputToken) throw new Error("Invalid input token for trade with token input");
+        amountIn = ethers.parseUnits(trade.inputAmount, inputToken.getDecimals());
+        amountInForSpotRate = ethers.parseUnits(TRADING_CONFIG.PRICE_IMPACT_AMOUNT_IN, inputToken.getDecimals());
+        break;
+      default:
+        throw new Error("Unknown trade type");
     }
 
-    if (isETHInputUSDAmount) {
-      const ethUsdcPrice = await this.getEthUsdcPrice(wallet);
-      const ethValue = parseFloat(trade.inputAmount) / parseFloat(ethUsdcPrice);
-      const ethValueFixed = ethValue.toFixed(18);
-      const amountIn = ethers.parseEther(ethValueFixed);
+    switch (tradeType) {
+      case TradeType.ETHInputTOKENOutput:
+      case TradeType.TOKENInputTOKENOutput:
+        if (!outputToken) throw new Error("Invalid output token for trade with token output");
+        break;
     }
 
-    if (isTOKENInputTOKENAmount) {
-      const tokenIn = await createMinimalErc20(trade.inputToken, wallet.provider!);
-      if (!tokenIn) throw new Error("Error in input token creation");
-      const amountIn = ethers.parseUnits(trade.inputAmount, tokenIn.getDecimals());
+    const route = await this.routeOptimizer.getBestUniV4Route(trade.inputToken, amountIn, trade.outputToken, wallet);
+    if (!route.poolKey && !route.pathSegments) throw new Error("Error during best Uniswap V4 route generation");
+
+    // TODO: implemented expected output logic for price impact
+    //const expectedOutput = await this.calculateExpectedOutput(amountInForSpotRate, amountIn, route.path, wallet);
+    const expectedOutput = 0n;
+    const actualOutput = route.amountOut;
+
+    const priceImpact = calculatePriceImpact(expectedOutput, actualOutput);
+    if (priceImpact > TRADING_CONFIG.MAX_PRICE_IMPACT_PERCENTAGE) {
+      throw new Error(
+        `Price impact too high: ${priceImpact}%, max allowed: ${TRADING_CONFIG.MAX_PRICE_IMPACT_PERCENTAGE}%`,
+      );
+    }
+
+    const slippageAmount = calculateSlippageAmount(actualOutput);
+    //const amountOutMin = actualOutput - slippageAmount;
+    const amountOutMin = 0n;
+
+    const isSinglehop = route.path.length === 2 && route.poolKey;
+    const isMultihop = route.path.length > 2 && route.pathSegments;
+
+    const hookData = ethers.ZeroAddress;
+
+    switch (tradeType) {
+      case TradeType.ETHInputTOKENOutput:
+      case TradeType.TOKENInputTOKENOutput:
+      case TradeType.TOKENInputETHOutput:
+        if (isMultihop) {
+        } else {
+          const zeroForOne = determineSwapDirection(trade.inputToken, route.poolKey!);
+          const inputCurrency = zeroForOne ? route.poolKey!.currency0 : route.poolKey!.currency1;
+          const outputCurrency = zeroForOne ? route.poolKey!.currency1 : route.poolKey!.currency0;
+          const amount = V4PoolActionConstants.OPEN_DELTA;
+
+          const actions = ethers.concat([V4PoolAction.SWAP_EXACT_IN_SINGLE, V4PoolAction.SETTLE, V4PoolAction.TAKE]);
+
+          const swapParams: SwapExactInputSingleParams = [route.poolKey!, zeroForOne, amountIn, amountOutMin, hookData];
+          const swapData = this.uniswapV4router.encodePoolAction(V4PoolAction.SWAP_EXACT_IN_SINGLE, swapParams);
+
+          const settleAllParams: SettleAllParamsOld = [inputCurrency, amountIn, zeroForOne];
+          //const settleAllParams: SettleAllParams = [inputCurrency, amountIn];
+          const settleAllData = this.uniswapV4router.encodePoolAction(V4PoolAction.SETTLE_ALL, settleAllParams);
+
+          const takeAllParams: TakeAllParams = [outputCurrency, to, amount];
+          const takeAllData = this.uniswapV4router.encodePoolAction(V4PoolAction.TAKE_ALL, takeAllParams);
+
+          const v4SwapCommandInput = this.uniswapV4router.encodeV4SwapCommandInput(actions, [
+            swapData,
+            settleAllData,
+            takeAllData,
+          ]);
+
+          const command: CommandType = CommandType.V4_SWAP;
+
+          tx = this.universalRouter.createExecuteTransaction(command, [v4SwapCommandInput], deadline);
+        }
+
+        if (tradeType === TradeType.ETHInputTOKENOutput) {
+          tx.value = amountIn;
+        }
+
+        tx;
+        break;
+      default:
+        throw new Error("Unknown trade type");
     }
 
     return tx;

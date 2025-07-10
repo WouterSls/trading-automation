@@ -46,73 +46,44 @@ async function ethTraderTesting(chain: ChainType, wallet: Wallet) {
   console.log(`\t${usdt.getSymbol()} (${usdt.getTokenAddress()}) balance: ${usdtBalance}`);
   console.log();
 
-  const ethToTokenTrade: TradeCreationDto = {
-    chain: chain,
-    inputType: InputType.ETH,
-    inputToken: ethers.ZeroAddress,
-    inputAmount: "1",
-    outputToken: PEPE_ADDRESS,
-  };
-
   const singleHopEthToTokenTrade: TradeCreationDto = {
     chain: chain,
-    inputType: InputType.ETH,
-    inputToken: ethers.ZeroAddress,
-    inputAmount: "1",
-    outputToken: chainConfig.tokenAddresses.usdt,
-  };
-
-  const mulitHopEthToTokenTrade: TradeCreationDto = {
-    chain: chain,
-    inputType: InputType.ETH,
-    inputToken: ethers.ZeroAddress,
-    inputAmount: "1",
-    outputToken: chainConfig.tokenAddresses.usdc,
-  };
-
-  const usdToTokenTrade: TradeCreationDto = {
-    chain: chain,
     inputType: InputType.USD,
     inputToken: ethers.ZeroAddress,
-    inputAmount: "3000",
+    inputAmount: "1000",
     outputToken: usdc.getTokenAddress(),
   };
-
-  const ethToUsdtTrade: TradeCreationDto = {
-    chain: chain,
-    inputType: InputType.USD,
-    inputToken: ethers.ZeroAddress,
-    inputAmount: "2000",
-    outputToken: chainConfig.tokenAddresses.usdt,
-  };
-
-  const tokenToTokenTrade: TradeCreationDto = {
+  const singleHopTokenToEthTrade: TradeCreationDto = {
     chain: chain,
     inputType: InputType.TOKEN,
-    inputToken: chainConfig.tokenAddresses.uni,
-    inputAmount: "200000",
-    outputToken: usdc.getTokenAddress(),
+    inputToken: usdc.getTokenAddress(),
+    inputAmount: "200",
+    outputToken: ethers.ZeroAddress,
   };
-
-  const invalidTrade: TradeCreationDto = {
+  const singleHopTokenToTokenTrade: TradeCreationDto = {
     chain: chain,
     inputType: InputType.TOKEN,
-    inputToken: ethers.ZeroAddress,
-    inputAmount: "1",
-    outputToken: weth.getTokenAddress(),
+    inputToken: usdc.getTokenAddress(),
+    inputAmount: "200",
+    outputToken: pepe.getTokenAddress(),
   };
 
-  displayTrade(ethToUsdtTrade);
+  const singleHopTrades = [singleHopEthToTokenTrade, singleHopTokenToEthTrade, singleHopTokenToTokenTrade];
+
+  const multiHopTokenToTokenTrade = {};
+  const multiHopEthToTokenTrade = {};
+  const multiHopTokenToEthTrade = {};
+
   const strategies = trader.getStrategies();
-  for (const strat of strategies) {
-    console.log(strat.getName());
-    const quote = await strat.getQuote(ethToUsdtTrade, wallet);
-    console.log(`\tQuoted output amount: ${quote.outputAmount}`);
-    console.log();
-  }
+
+  const uniV2 = strategies.filter((strat) => strat.getName().toLowerCase().includes("uniswapv2"))[0];
+  const uniV3 = strategies.filter((strat) => strat.getName().toLowerCase().includes("uniswapv3"))[0];
+  const uniV4 = strategies.filter((strat) => strat.getName().toLowerCase().includes("uniswapv4"))[0];
+
+  await strategyTest(singleHopTrades, uniV4, wallet);
 
   return;
-  const tradeConfirmation: TradeConfirmation = await trader.trade(usdToTokenTrade);
+  const tradeConfirmation: TradeConfirmation = await trader.trade(singleHopEthToTokenTrade);
   console.log("--------------------------------");
   console.log("Trade Confirmation");
   console.log("--------------------------------");
@@ -123,95 +94,38 @@ async function ethTraderTesting(chain: ChainType, wallet: Wallet) {
   console.log("\tTokens Received:", tradeConfirmation.tokensReceivedFormatted);
   console.log("\tTransaction Hash:", tradeConfirmation.transactionHash);
   console.log();
-
-
-
-
-  const uniV2 = strategies.filter((strat) => strat.getName().includes("UniswapV2"))[0];
-  const uniV3 = strategies.filter((strat) => strat.getName().includes("UniswapV3"))[0];
-  const uniV4 = strategies.filter((strat) => strat.getName().includes("UniswapV4"))[0];
-  //await uniV2Test(usdToTokenTrade, uniV2, wallet);
-  //await uniV3Test(ethToUsdtTrade, uniV3, wallet);
-  //await uniV4Test(usdToTokenTrade, uniV4, wallet);
 }
 
-async function uniV2Test(trade: TradeCreationDto, uniV2: ITradingStrategy, wallet: Wallet) {
-  const quote = await uniV2.getQuote(trade, wallet);
-  console.log();
-  console.log("QUOTE");
-  console.log("-------------------");
-  console.log(quote);
+async function strategyTest(trades: TradeCreationDto[], strat: ITradingStrategy, wallet: Wallet) {
+  if (!strat) throw new Error("NO TRADING STRAT SUPPLIED");
 
-  const txRequest = await uniV2.createTransaction(trade, wallet);
-  console.log();
-  console.log("TX");
-  console.log("-------------------");
-  console.log(txRequest);
-}
+  for (const trade of trades) {
+    console.log();
+    console.log("QUOTE");
+    console.log("----------------");
+    const quote = await strat.getQuote(trade, wallet);
+    console.log(quote);
+    console.log();
 
-async function uniV3Test(trade: TradeCreationDto, uniV3: ITradingStrategy, wallet: Wallet) {
-  const quote = await uniV3.getQuote(trade, wallet);
-  console.log();
-  console.log("QUOTE");
-  console.log("-------------------");
-  console.log(quote);
+    await strat.ensureTokenApproval(trade.inputToken, trade.inputAmount, wallet);
 
-  const txRequest = await uniV3.createTransaction(trade, wallet);
-  console.log();
-  console.log("TX");
-  console.log("-------------------");
-  console.log(txRequest);
-  console.log("-------------------");
-}
+    console.log();
+    console.log("TX");
+    console.log("----------------");
+    const tx = await strat.createTransaction(trade, wallet);
+    console.log(tx);
 
-async function uniV4Test(trade: TradeCreationDto, uniV4: ITradingStrategy, wallet: Wallet) {
-  const buyTx = await uniV4.createTransaction(trade, wallet);
-  console.log("--------------------------------");
-  console.log("Transaction Request:");
-  console.log("--------------------------------");
-  console.log(buyTx);
-  console.log("--------------------------------");
+    console.log("SENDING...");
+    const response = await wallet.sendTransaction(tx);
+    const receipt = await response.wait();
 
-  console.log("Sending...");
-
-  // Pre-transaction validation
-  console.log("Performing pre-transaction checks...");
-
-  // Check ETH balance
-  const ethBalance = await wallet.provider!.getBalance(wallet.address);
-  const requiredEth = buyTx.value || 0n;
-  if (ethBalance < BigInt(requiredEth)) {
-    console.error(
-      `Insufficient ETH balance. Required: ${ethers.formatEther(requiredEth)}, Available: ${ethers.formatEther(ethBalance)}`,
-    );
-    return;
-  }
-
-  // Check if Universal Router contract exists
-  const universalRouterAddress = buyTx.to;
-  const routerCode = await wallet.provider!.getCode(universalRouterAddress!);
-  if (routerCode === "0x") {
-    console.error(`Universal Router contract not found at address: ${universalRouterAddress}`);
-    return;
-  }
-
-  console.log("✓ ETH balance sufficient");
-  console.log("✓ Universal Router contract exists");
-  console.log(`✓ Transaction value: ${ethers.formatEther(requiredEth)} ETH`);
-
-  try {
-    const txResponse = await wallet.sendTransaction(buyTx);
-    const txReceipt = await txResponse.wait();
-    console.log("Confirmed!");
-  } catch (error: any) {
-    console.log("Transaction failed!");
-
-    if (error.data) {
-      console.log("\n=== COMPREHENSIVE ERROR ANALYSIS ===");
-      const errorAnalysis = decodeError(error.data);
-      console.log("Error Analysis:", JSON.stringify(errorAnalysis, null, 2));
-      console.log("=== END ERROR ANALYSIS ===\n");
+    if (!receipt || receipt!.status !== 1) {
+      console.log("ERROR DURING TRANSACTION");
+    } else {
+      console.log("TRANSACTION CONFIRMED");
     }
+
+    return;
   }
 }
 
@@ -221,5 +135,5 @@ if (require.main === module) {
   const wallet = getHardhatWallet_1();
   const ethWallet = getEthWallet_1();
 
-  ethTraderTesting(chain, ethWallet).catch(console.error);
+  ethTraderTesting(chain, wallet).catch(console.error);
 }
