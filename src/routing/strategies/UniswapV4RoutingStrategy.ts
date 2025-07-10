@@ -3,7 +3,12 @@ import { BaseRoutingStrategy } from "../BaseRoutingStrategy";
 import { Route } from "../../trading/types/quoting-types";
 import { Multicall3 } from "../../smartcontracts/multicall3/Multicall3";
 import { UniswapV4Quoter } from "../../smartcontracts/uniswap-v4/UniswapV4Quoter";
-import { FeeAmount, FeeToTickSpacing, PoolKey, PathSegment } from "../../smartcontracts/uniswap-v4/uniswap-v4-types";
+import { FeeAmount } from "../../smartcontracts/uniswap-v4/uniswap-v4-types";
+import {
+  createPoolKey,
+  determineSwapDirection,
+  createPathSegments,
+} from "../../smartcontracts/uniswap-v4/uniswap-v4-utils";
 import {
   Multicall3Context,
   Multicall3Request,
@@ -81,16 +86,11 @@ export class UniswapV4RoutingStrategy extends BaseRoutingStrategy {
     const fees = [FeeAmount.LOWEST, FeeAmount.LOW, FeeAmount.MEDIUM, FeeAmount.HIGH];
 
     for (const fee of fees) {
-      const poolKey = this.createPoolKey(tokenIn, tokenOut, fee);
-      const zeroForOne = this.determineSwapDirection(tokenIn, poolKey);
+      const poolKey = createPoolKey(tokenIn, tokenOut, fee);
+      const zeroForOne = determineSwapDirection(tokenIn, poolKey);
       const hookData = "0x"; // No hooks for basic pools
 
-      const callData = this.uniswapV4Quoter.encodeQuoteExactInputSingle(
-        poolKey,
-        zeroForOne,
-        amountIn,
-        hookData,
-      );
+      const callData = this.uniswapV4Quoter.encodeQuoteExactInputSingle(poolKey, zeroForOne, amountIn, hookData);
 
       const request: Multicall3Request = {
         target: this.uniswapV4Quoter.getQuoterAddress(),
@@ -135,12 +135,12 @@ export class UniswapV4RoutingStrategy extends BaseRoutingStrategy {
       const twoHopFeeCombinations = this.getTwoHopFeeCombinations();
 
       for (const combo of twoHopFeeCombinations) {
-        const pathSegments = this.createPathSegments(pathInfo.path, combo.fees);
-        
+        const pathSegments = createPathSegments(pathInfo.path, combo.fees);
+
         const callData = this.uniswapV4Quoter.encodeQuoteExactInput(
           pathInfo.path[0], // exactCurrency
           pathSegments,
-          amountIn
+          amountIn,
         );
 
         const request: Multicall3Request = {
@@ -168,12 +168,12 @@ export class UniswapV4RoutingStrategy extends BaseRoutingStrategy {
       const threeHopFeeCombinations = this.getThreeHopFeeCombinations();
 
       for (const combo of threeHopFeeCombinations) {
-        const pathSegments = this.createPathSegments(pathInfo.path, combo.fees);
-        
+        const pathSegments = createPathSegments(pathInfo.path, combo.fees);
+
         const callData = this.uniswapV4Quoter.encodeQuoteExactInput(
           pathInfo.path[0], // exactCurrency
           pathSegments,
-          amountIn
+          amountIn,
         );
 
         const request: Multicall3Request = {
@@ -197,51 +197,6 @@ export class UniswapV4RoutingStrategy extends BaseRoutingStrategy {
     }
 
     return multicall3Contexts;
-  }
-
-  // Helper methods
-  private createPoolKey(tokenA: string, tokenB: string, fee: FeeAmount): PoolKey {
-    const [currency0, currency1] = tokenA.toLowerCase() < tokenB.toLowerCase() ? [tokenA, tokenB] : [tokenB, tokenA];
-    const tickSpacing = FeeToTickSpacing.get(fee);
-
-    if (!tickSpacing) {
-      throw new Error(`Invalid fee amount: ${fee}`);
-    }
-
-    return {
-      currency0,
-      currency1,
-      fee,
-      tickSpacing,
-      hooks: ethers.ZeroAddress, // No hooks for basic pools
-    };
-  }
-
-  private determineSwapDirection(tokenIn: string, poolKey: PoolKey): boolean {
-    return tokenIn.toLowerCase() === poolKey.currency0.toLowerCase();
-  }
-
-  private createPathSegments(path: string[], fees: FeeAmount[]): PathSegment[] {
-    const segments: PathSegment[] = [];
-    
-    for (let i = 0; i < path.length - 1; i++) {
-      const fee = fees[i];
-      const tickSpacing = FeeToTickSpacing.get(fee);
-      
-      if (!tickSpacing) {
-        throw new Error(`Invalid fee amount: ${fee}`);
-      }
-
-      segments.push({
-        intermediateCurrency: path[i + 1],
-        fee,
-        tickSpacing,
-        hooks: ethers.ZeroAddress,
-        hookData: "0x",
-      });
-    }
-
-    return segments;
   }
 
   private generateSingleIntermediaryPaths(
@@ -306,8 +261,6 @@ export class UniswapV4RoutingStrategy extends BaseRoutingStrategy {
 
     return paths;
   }
-
-
 
   private findBestRouteFromResults(
     multicall3Results: Multicall3Result[],
@@ -376,7 +329,9 @@ export class UniswapV4RoutingStrategy extends BaseRoutingStrategy {
       return this.createDefaultRoute();
     }
 
-    console.log(`Best route selected: ${bestRoute.path.join(" -> ")} with fees: ${bestRoute.fees.join(" -> ")} | output: ${bestAmountOut.toString()}`);
+    console.log(
+      `Best route selected: ${bestRoute.path.join(" -> ")} with fees: ${bestRoute.fees.join(" -> ")} | output: ${bestAmountOut.toString()}`,
+    );
     return bestRoute;
   }
 }
