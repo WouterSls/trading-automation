@@ -210,8 +210,8 @@ export class UniswapV3Strategy implements ITradingStrategy {
     }
 
     const route = await this.routeOptimizer.getBestUniV3Route(trade.inputToken, amountIn, trade.outputToken, wallet);
-    if (!route.encodedPath) throw new Error("Error during best Uniswap V3 encoded path generation")
-
+    // TODO: validate defensive check, default route?
+    if (!route.encodedPath && !route.path) throw new Error("Error during best Uniswap V3 route generation");
 
     // TODO: implemented expected output logic for price impact
     //const expectedOutput = await this.calculateExpectedOutput(amountInForSpotRate, amountIn, route.path, wallet);
@@ -230,13 +230,13 @@ export class UniswapV3Strategy implements ITradingStrategy {
 
     const sqrtPriceLimitX96 = 0n;
 
-    const isMultihop = route.path.length > 2;
+    const isMultihop = route.path.length > 2 && route.encodedPath;
 
     switch (tradeType) {
       case TradeType.ETHInputTOKENOutput:
       case TradeType.TOKENInputTOKENOutput:
         if (isMultihop) {
-          tx = this.router.createExactInputTransaction(route.encodedPath, to, amountIn, amountOutMin);
+          tx = this.router.createExactInputTransaction(route.encodedPath!, to, amountIn, amountOutMin);
         } else {
           tx = this.router.createExactInputSingleTransaction(
             route.path[0],
@@ -256,7 +256,7 @@ export class UniswapV3Strategy implements ITradingStrategy {
       case TradeType.TOKENInputETHOutput:
         let swapData;
         if (isMultihop) {
-          swapData = this.router.encodeExactInput(route.encodedPath, to, amountIn, amountOutMin);
+          swapData = this.router.encodeExactInput(route.encodedPath!, to, amountIn, amountOutMin);
         } else {
           swapData = this.router.encodeExactInputSingle(
             route.path[0],
