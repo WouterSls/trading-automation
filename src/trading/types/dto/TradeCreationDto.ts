@@ -7,5 +7,4 @@ export type TradeCreationDto = {
   inputToken: string;
   inputAmount: string;
   outputToken: string;
-  sellPrice?: string;
 };
