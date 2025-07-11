@@ -4,7 +4,6 @@ import { getEthWallet_1, getHardhatWallet_1 } from "../../src/hooks/useSetup";
 import { ChainType, getChainConfig } from "../../src/config/chain-config";
 import { createMinimalErc20 } from "../../src/smartcontracts/ERC/erc-utils";
 import { TraderFactory } from "../../src/trading/TraderFactory";
-import { decodeError, displayTrade } from "../../src/lib/utils";
 import { ITradingStrategy } from "../../src/trading/ITradingStrategy";
 import { TradeCreationDto } from "../../src/trading/types/dto/TradeCreationDto";
 
