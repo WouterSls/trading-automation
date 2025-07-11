@@ -15,7 +15,7 @@ import {
   SwapExactInputSingleParams,
   SettleAllParams,
   TakeAllParams,
-  SettleAllParamsOld,
+  SettleAllSingleParams,
 } from "../../smartcontracts/uniswap-v4/UniswapV4Router";
 import { UniversalRouter } from "../../smartcontracts/universal-router/UniversalRouter";
 import {
@@ -252,7 +252,9 @@ export class UniswapV4Strategy implements ITradingStrategy {
       case TradeType.TOKENInputTOKENOutput:
       case TradeType.TOKENInputETHOutput:
         if (isMultihop) {
-        } else {
+        }
+
+        if (isSinglehop) {
           const zeroForOne = determineSwapDirection(trade.inputToken, route.poolKey!);
           const inputCurrency = zeroForOne ? route.poolKey!.currency0 : route.poolKey!.currency1;
           const outputCurrency = zeroForOne ? route.poolKey!.currency1 : route.poolKey!.currency0;
@@ -263,7 +265,7 @@ export class UniswapV4Strategy implements ITradingStrategy {
           const swapParams: SwapExactInputSingleParams = [route.poolKey!, zeroForOne, amountIn, amountOutMin, hookData];
           const swapData = this.uniswapV4router.encodePoolAction(V4PoolAction.SWAP_EXACT_IN_SINGLE, swapParams);
 
-          const settleAllParams: SettleAllParamsOld = [inputCurrency, amountIn, zeroForOne];
+          const settleAllParams: SettleAllSingleParams = [inputCurrency, amountIn, zeroForOne];
           //const settleAllParams: SettleAllParams = [inputCurrency, amountIn];
           const settleAllData = this.uniswapV4router.encodePoolAction(V4PoolAction.SETTLE_ALL, settleAllParams);
 
@@ -284,8 +286,6 @@ export class UniswapV4Strategy implements ITradingStrategy {
         if (tradeType === TradeType.ETHInputTOKENOutput) {
           tx.value = amountIn;
         }
-
-        tx;
         break;
       default:
         throw new Error("Unknown trade type");

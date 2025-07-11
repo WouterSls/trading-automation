@@ -18,7 +18,7 @@ export type SwapExactInputSingleParams = [
   hookData: string,
 ];
 
-export type SettleAllParamsOld = [inputCurrency: string, amountIn: bigint, zeroForOne?: boolean];
+export type SettleAllSingleParams = [inputCurrency: string, amountIn: bigint, zeroForOne: boolean];
 export type SettleAllParams = [inputCurrency: string, amountIn: bigint];
 
 export type TakeAllParams = [outputCurrency: string, recipient: string, amount: number];
@@ -134,7 +134,7 @@ export class UniswapV4Router {
     return encodedData;
   }
 
-  public encodeSettleAllOld(inputCurrency: string, amountIn: bigint, zeroForOne: boolean) {
+  public encodeSettleAllSingle(inputCurrency: string, amountIn: bigint, zeroForOne: boolean) {
     const encodedParams = AbiCoder.defaultAbiCoder().encode(
       ["address", "uint128", "bool"],
       [inputCurrency, amountIn, zeroForOne],
@@ -162,7 +162,7 @@ export class UniswapV4Router {
    * @returns Encoded data string
    */
   public encodePoolAction(v4PoolAction: V4PoolAction.SWAP_EXACT_IN_SINGLE, params: SwapExactInputSingleParams): string;
-  public encodePoolAction(v4PoolAction: V4PoolAction.SETTLE_ALL, params: SettleAllParamsOld): string;
+  public encodePoolAction(v4PoolAction: V4PoolAction.SETTLE_ALL, params: SettleAllSingleParams): string;
   public encodePoolAction(v4PoolAction: V4PoolAction.TAKE_ALL, params: TakeAllParams): string;
   public encodePoolAction(v4PoolAction: V4PoolAction, params: any[]): string {
     switch (v4PoolAction) {
@@ -173,8 +173,8 @@ export class UniswapV4Router {
       case V4PoolAction.SETTLE_ALL:
         //const [inputCurrency, settlAmountIn] = params as SettleAllParams;
         //return this.encodeSettleAll(inputCurrency, settlAmountIn);
-        const [inputCurrency, settlAmountIn, settleZeroForOne] = params as SettleAllParamsOld;
-        return this.encodeSettleAllOld(inputCurrency, settlAmountIn, settleZeroForOne!);
+        const [inputCurrency, settlAmountIn, settleZeroForOne] = params as SettleAllSingleParams;
+        return this.encodeSettleAllSingle(inputCurrency, settlAmountIn, settleZeroForOne!);
 
       case V4PoolAction.TAKE_ALL:
         const [outputCurrency, recipient, amount] = params as TakeAllParams;
