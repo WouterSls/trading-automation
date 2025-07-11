@@ -1,5 +1,3 @@
-import { PoolKey } from "../uniswap-v4/uniswap-v4-types";
-
 /**
  * Enum for Universal Router commands (from Commands.sol)
  * @see https://github.com/Uniswap/universal-router/blob/main/contracts/libraries/Commands.sol
@@ -36,50 +34,7 @@ export enum CommandType {
   V4_POSITION_MANAGER_CALL = "0x14",
 }
 
-// ---------------------------- UNI V4 ----------------------------
-/**
- * Enum for V4 pool actions
- * @see https://github.com/Uniswap/v4-periphery/blob/main/src/libraries/Actions.sol
- */
-export enum V4PoolAction {
-  SWAP_EXACT_IN_SINGLE = "0x06",
-  SWAP_EXACT_IN = "0x07",
-  SWAP_EXACT_OUT_SINGLE = "0x08",
-  SWAP_EXACT_OUT = "0x09",
-  SETTLE = "0x0b",
-  SETTLE_ALL = "0x0c",
-  TAKE = "0x0e",
-  TAKE_ALL = "0x0f",
-}
 
-export enum V4PoolActionConstants {
-  OPEN_DELTA = 0,
-}
-
-/**
- * V4 Pool actions parameters
- */
-export interface IV4ExactInputSingleParams {
-  poolKey: PoolKey;
-  zeroForOne: boolean;
-  amountIn: bigint;
-  amountOutMinimum: bigint;
-  hookData: string;
-}
-
-export interface IV4ExactInputParams {}
-
-export interface IV4SettleParams {
-  inputCurrency: string;
-  amountIn: bigint;
-  bool: boolean;
-}
-
-export interface IV4TakeParams {
-  outputCurrency: string;
-  recipient: string;
-  amount: number;
-}
 
 // ---------------------------- UNI V3 ----------------------------
 export interface IV3SwapExactInput {

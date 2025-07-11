@@ -2,27 +2,11 @@ import { Contract, ethers, TransactionRequest, Wallet, AbiCoder } from "ethers";
 import { ChainType, getChainConfig } from "../../config/chain-config";
 import { UNIVERSAL_ROUTER_INTERFACE } from "../../lib/smartcontract-abis/_index";
 import { validateNetwork } from "../../lib/utils";
-import {
-  CommandType,
-  IV4ExactInputSingleParams,
-  IV4SettleParams,
-  IV4TakeParams,
-  V4PoolAction,
-  V4PoolActionConstants,
-} from "./universal-router-types";
-import { PoolKey } from "../uniswap-v4/uniswap-v4-types";
-import {
-  encodeExactInputSingleSwapParams,
-  encodeSettleParams,
-  encodeSwapCommandInput,
-  encodeTakeParams,
-} from "./universal-router-utils";
+import { TRADING_CONFIG } from "../../config/trading-config";
 
 export class UniversalRouter {
   private routerContract: Contract;
   private routerAddress: string;
-
-  // Contract
 
   constructor(private chain: ChainType) {
     const chainConfig = getChainConfig(chain);
@@ -62,7 +46,7 @@ export class UniversalRouter {
    * @returns Transaction request
    */
   createExecuteTransaction(commands: string, inputs: string[], deadline?: number): TransactionRequest {
-    const dl = deadline ?? Math.floor(Date.now() / 1000) + 1200;
+    const dl = deadline ?? TRADING_CONFIG.DEADLINE;
 
     const encodedData = this.routerContract.interface.encodeFunctionData("execute", [commands, inputs, dl]);
 
@@ -72,64 +56,6 @@ export class UniversalRouter {
     };
 
     return tx;
-  }
-
-  //TODO: turn into utils function and extract ecndoing to UniswapV4 router
-  /**
-   * Create a bytes input for a V4_SWAP command using SWAP_EXACT_INPUT_SINGLE
-   * @param poolKey The pool key for the swap
-   * @param zeroForOne trade first for second token | boolean
-   * @param rawInputAmount input amount parsed with tokens decimals
-   * @param minOutputAmount minimum output amount wanted for the trade
-   * @param recipient recipient of output tokens
-   * @returns The encoded bytes input
-   */
-  encodeV4SwapInput(
-    poolKey: PoolKey,
-    zeroForOne: boolean,
-    rawInputAmount: string,
-    minOutputAmount: bigint,
-    recipient: string,
-  ): string {
-    // Encode the 3 actions required to execute a V4 swap into a single input
-    // 1) swap -> SWAP_EXACT_INPUT_SINGLE (0x06)
-    // 2) settle -> SETTLE_ALL (0x0c)
-    // 3) take -> TAKE_ALL (0x0f)
-
-    const inputAmount = BigInt(rawInputAmount);
-    const inputCurrency = zeroForOne ? poolKey.currency0 : poolKey.currency1;
-    const outputCurrency = zeroForOne ? poolKey.currency1 : poolKey.currency0;
-
-    const swapAction = V4PoolAction.SWAP_EXACT_IN_SINGLE;
-    const swapParams = {
-      poolKey: poolKey,
-      zeroForOne: zeroForOne,
-      amountIn: inputAmount,
-      amountOutMinimum: minOutputAmount ?? 0n,
-      hookData: ethers.ZeroAddress,
-    };
-    const encodedSwapParams = encodeExactInputSingleSwapParams(swapParams);
-
-    const settleAction = V4PoolAction.SETTLE;
-    const settleParams = {
-      inputCurrency: inputCurrency,
-      amountIn: inputAmount,
-      bool: zeroForOne,
-    };
-    const encodedSettleParams = encodeSettleParams(settleParams);
-
-    const takeAction = V4PoolAction.TAKE;
-    const takeParams = {
-      outputCurrency: outputCurrency,
-      recipient: recipient,
-      amount: V4PoolActionConstants.OPEN_DELTA,
-    };
-    const encodedTakeParams = encodeTakeParams(takeParams);
-
-    const actions = ethers.concat([swapAction, settleAction, takeAction]);
-    const encodedInput = encodeSwapCommandInput(actions, encodedSwapParams, encodedSettleParams, encodedTakeParams);
-
-    return encodedInput;
   }
 
   /**

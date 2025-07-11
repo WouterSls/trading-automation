@@ -1,28 +1,18 @@
 import { ethers, TransactionRequest, Wallet } from "ethers";
 import { ChainType, getChainConfig } from "../../config/chain-config";
 
-import { FeeAmount, FeeToTickSpacing, PoolKey } from "../../smartcontracts/uniswap-v4/uniswap-v4-types";
+import { FeeAmount, FeeToTickSpacing, PoolKey, V4PoolAction, V4PoolActionConstants } from "../../smartcontracts/uniswap-v4/uniswap-v4-types";
 import { ensureInfiniteApproval, ensureStandardApproval, ensurePermit2Approval } from "../../lib/approval-strategies";
 
 import { ITradingStrategy } from "../ITradingStrategy";
-import { Quote, InputType, Route, TradeCreationDto, TradeType } from "../types/_index";
+import { Quote, InputType, TradeCreationDto, TradeType } from "../types/_index";
 import { createMinimalErc20 } from "../../smartcontracts/ERC/erc-utils";
 import { calculatePriceImpact, calculateSlippageAmount, determineTradeType, validateNetwork } from "../../lib/utils";
 import { TRADING_CONFIG } from "../../config/trading-config";
 import { UniswapV4Quoter } from "../../smartcontracts/uniswap-v4/UniswapV4Quoter";
-import {
-  UniswapV4Router,
-  SwapExactInputSingleParams,
-  SettleAllParams,
-  TakeAllParams,
-  SettleAllSingleParams,
-} from "../../smartcontracts/uniswap-v4/UniswapV4Router";
+import { UniswapV4Router } from "../../smartcontracts/uniswap-v4/UniswapV4Router";
 import { UniversalRouter } from "../../smartcontracts/universal-router/UniversalRouter";
-import {
-  CommandType,
-  V4PoolAction,
-  V4PoolActionConstants,
-} from "../../smartcontracts/universal-router/universal-router-types";
+import { CommandType } from "../../smartcontracts/universal-router/universal-router-types";
 import { RouteOptimizer } from "../../routing/RouteOptimizer";
 import { ERC20 } from "../../smartcontracts/ERC/ERC20";
 import { determineSwapDirection } from "../../smartcontracts/uniswap-v4/uniswap-v4-utils";
@@ -262,17 +252,23 @@ export class UniswapV4Strategy implements ITradingStrategy {
 
           const actions = ethers.concat([V4PoolAction.SWAP_EXACT_IN_SINGLE, V4PoolAction.SETTLE, V4PoolAction.TAKE]);
 
-          const swapParams: SwapExactInputSingleParams = [route.poolKey!, zeroForOne, amountIn, amountOutMin, hookData];
-          const swapData = this.uniswapV4router.encodePoolAction(V4PoolAction.SWAP_EXACT_IN_SINGLE, swapParams);
+          const swapData = UniswapV4Router.encodePoolActionSafe({
+            action: V4PoolAction.SWAP_EXACT_IN_SINGLE,
+            params: [route.poolKey!, zeroForOne, amountIn, amountOutMin, hookData],
+          });
 
-          const settleAllParams: SettleAllSingleParams = [inputCurrency, amountIn, zeroForOne];
+          const settleAllData = UniswapV4Router.encodePoolActionSafe({
+            action: V4PoolAction.SETTLE_ALL,
+            params: [inputCurrency, amountIn, zeroForOne],
+          });
           //const settleAllParams: SettleAllParams = [inputCurrency, amountIn];
-          const settleAllData = this.uniswapV4router.encodePoolAction(V4PoolAction.SETTLE_ALL, settleAllParams);
 
-          const takeAllParams: TakeAllParams = [outputCurrency, to, amount];
-          const takeAllData = this.uniswapV4router.encodePoolAction(V4PoolAction.TAKE_ALL, takeAllParams);
+          const takeAllData = UniswapV4Router.encodePoolActionSafe({
+            action: V4PoolAction.TAKE_ALL,
+            params: [outputCurrency, to, amount],
+          });
 
-          const v4SwapCommandInput = this.uniswapV4router.encodeV4SwapCommandInput(actions, [
+          const v4SwapCommandInput = UniswapV4Router.encodeV4SwapCommandInput(actions, [
             swapData,
             settleAllData,
             takeAllData,

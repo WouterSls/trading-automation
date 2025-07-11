@@ -45,3 +45,43 @@ export interface PathSegment {
   hooks: string;
   hookData: string;
 }
+
+/**
+ * Enum for V4 pool actions
+ * @see https://github.com/Uniswap/v4-periphery/blob/main/src/libraries/Actions.sol
+ */
+export enum V4PoolAction {
+  SWAP_EXACT_IN_SINGLE = "0x06",
+  SWAP_EXACT_IN = "0x07",
+  SWAP_EXACT_OUT_SINGLE = "0x08",
+  SWAP_EXACT_OUT = "0x09",
+  SETTLE = "0x0b",
+  SETTLE_ALL = "0x0c",
+  TAKE = "0x0e",
+  TAKE_ALL = "0x0f",
+}
+
+export enum V4PoolActionConstants {
+  OPEN_DELTA = 0,
+}
+
+// Type-safe parameter types for each pool action
+export type SwapExactInputSingleParams = [
+  poolKey: PoolKey,
+  zeroForOne: boolean,
+  amountIn: bigint,
+  amountOutMinimum: bigint,
+  hookData: string,
+];
+
+export type SettleAllSingleParams = [inputCurrency: string, amountIn: bigint, zeroForOne: boolean];
+export type SettleAllParams = [inputCurrency: string, amountIn: bigint];
+
+export type TakeAllParams = [outputCurrency: string, recipient: string, amount: number];
+
+// Discriminated union for type-safe pool action parameters
+export type PoolActionParams =
+  | { action: V4PoolAction.SWAP_EXACT_IN_SINGLE; params: SwapExactInputSingleParams }
+  | { action: V4PoolAction.SETTLE_ALL; params: SettleAllParams }
+  | { action: V4PoolAction.SETTLE_ALL; params: SettleAllSingleParams }
+  | { action: V4PoolAction.TAKE_ALL; params: TakeAllParams };

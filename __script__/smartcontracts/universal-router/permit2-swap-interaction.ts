@@ -10,13 +10,15 @@ import {
 import { InputType, TradeCreationDto } from "../../../src/trading/types/_index";
 import { decodeLogs } from "../../../src/lib/utils";
 import { UniswapV2RouterV2 } from "../../../src/smartcontracts/uniswap-v2/UniswapV2RouterV2";
-import { getLowPoolKey } from "../../../src/smartcontracts/uniswap-v4/uniswap-v4-utils";
+import { determineSwapDirection, getLowPoolKey } from "../../../src/smartcontracts/uniswap-v4/uniswap-v4-utils";
 import {
   encodePermitSingleInput,
   encodePermitTransferFromInput,
 } from "../../../src/smartcontracts/universal-router/universal-router-utils";
 import { Permit2 } from "../../../src/smartcontracts/permit2/Permit2";
 import { ERC20, createMinimalErc20 } from "../../../src/smartcontracts/ERC/_index";
+import { V4PoolAction, V4PoolActionConstants } from "../../../src/smartcontracts/uniswap-v4/uniswap-v4-types";
+import { UniswapV4Router } from "../../../src/smartcontracts/uniswap-v4/UniswapV4Router";
 
 async function verifyOrGrantMaxUnitAllowance(wallet: Wallet, token: ERC20, spender: string) {
   const permit2Allowance = await token.getRawAllowance(wallet.address, spender);
@@ -131,18 +133,34 @@ export async function v4SwapInteraction(wallet: Wallet, tradeCreationDto: TradeC
   const permit2TransferFromInput = encodePermitTransferFromInput(permitTransferFrom);
 
   // V4 Swap
+  const amountIn = ethers.parseEther(tradeCreationDto.inputAmount);
   const poolKey = getLowPoolKey(tradeCreationDto.inputToken, outputTokenAddress);
-  const isZeroForOne = poolKey.currency0 === tradeCreationDto.inputToken;
   const minOutputAmount = 0n;
 
   const swapCommand = CommandType.V4_SWAP;
-  const swapInput = router.encodeV4SwapInput(
-    poolKey,
-    isZeroForOne,
-    tradeCreationDto.inputAmount,
-    minOutputAmount,
-    wallet.address,
-  );
+
+  // ------------ Encode input ------------
+  const zeroForOne = determineSwapDirection(tradeCreationDto.inputToken, poolKey);
+  const inputCurrency = zeroForOne ? poolKey.currency0 : poolKey.currency1;
+  const outputCurrency = zeroForOne ? poolKey.currency1 : poolKey.currency0;
+  const amount = V4PoolActionConstants.OPEN_DELTA;
+
+  const actions = ethers.concat([V4PoolAction.SWAP_EXACT_IN_SINGLE, V4PoolAction.SETTLE, V4PoolAction.TAKE]);
+
+  const swapData = UniswapV4Router.encodePoolActionSafe({
+    action: V4PoolAction.SWAP_EXACT_IN_SINGLE,
+    params: [poolKey, zeroForOne, amountIn, minOutputAmount, ethers.ZeroAddress],
+  });
+  const settleAllData = UniswapV4Router.encodePoolActionSafe({
+    action: V4PoolAction.SETTLE_ALL,
+    params: [inputCurrency, amountIn, zeroForOne],
+  });
+  const takeAllData = UniswapV4Router.encodePoolActionSafe({
+    action: V4PoolAction.TAKE_ALL,
+    params: [outputCurrency, wallet.address, amount],
+  });
+
+  const swapInput = UniswapV4Router.encodeV4SwapCommandInput(actions, [swapData, settleAllData, takeAllData]);
 
   const commands = ethers.concat([permit2PermitCommand, permit2TransferFromCommand, swapCommand]);
   console.log("commands", commands);
