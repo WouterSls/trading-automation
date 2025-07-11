@@ -1,5 +1,5 @@
-import { AbiCoder} from "ethers";
-import { PoolActionParams, PoolKey, V4PoolAction} from "./uniswap-v4-types";
+import { AbiCoder } from "ethers";
+import { PathKey, PoolActionParams, PoolKey, V4PoolAction } from "./uniswap-v4-types";
 
 /**
  * @description UniswapV4Router is an abstract contract not meant to be deployed
@@ -43,13 +43,29 @@ export class UniswapV4Router {
     return encodedData;
   }
 
-  public static encodeSwapExactInput() {
-    const encodedData = AbiCoder.defaultAbiCoder().encode([], []);
+  public static encodeSwapExactInput(currencyIn: string, path: PathKey[], amountIn: bigint, amountOutMinimum: bigint) {
+    const pathKeyTuples = path.map(pathKey => [
+      pathKey.intermediateCurrency,
+      pathKey.fee,
+      pathKey.tickSpacing,
+      pathKey.hooks,
+      pathKey.hookData,
+    ] as const);
+
+    const encodedData = AbiCoder.defaultAbiCoder().encode(
+      [
+        "address", // currencyIn (Currency is just an address in ABI encoding)
+        "tuple(address,uint24,int24,address,bytes)[]", // PathKey array as tuples
+        "uint128", // amountIn
+        "uint128" // amountOutMinimum
+      ],
+      [currencyIn, pathKeyTuples, amountIn, amountOutMinimum]
+    );
 
     return encodedData;
   }
 
-  public static encodeSettleAllSingle(inputCurrency: string, amountIn: bigint, zeroForOne: boolean) {
+  public static encodeSettleAll(inputCurrency: string, amountIn: bigint, zeroForOne: boolean) {
     const encodedParams = AbiCoder.defaultAbiCoder().encode(
       ["address", "uint128", "bool"],
       [inputCurrency, amountIn, zeroForOne],
@@ -57,7 +73,7 @@ export class UniswapV4Router {
     return encodedParams;
   }
 
-  public static encodeSettleAll(inputCurrency: string, amountIn: bigint) {
+  public static encodeSettleAllWithoutBool(inputCurrency: string, amountIn: bigint) {
     const encodedParams = AbiCoder.defaultAbiCoder().encode(["address", "uint128"], [inputCurrency, amountIn]);
     return encodedParams;
   }
@@ -71,18 +87,29 @@ export class UniswapV4Router {
   }
 
   public static encodePoolActionSafe(actionParams: PoolActionParams): string {
-    switch (actionParams.action) {
-      case V4PoolAction.SWAP_EXACT_IN_SINGLE:
-        const [poolKey, zeroForOne, amountIn, amountOutMinimum, hookData] = actionParams.params;
-        return UniswapV4Router.encodeSwapExactInputSingle(poolKey, zeroForOne, amountIn, amountOutMinimum, hookData);
-
-      case V4PoolAction.SETTLE_ALL:
-        const [inputCurrency, settlAmountIn] = actionParams.params;
-        return UniswapV4Router.encodeSettleAll(inputCurrency, settlAmountIn);
-
-      case V4PoolAction.TAKE_ALL:
-        const [outputCurrency, recipient, amount] = actionParams.params;
-        return UniswapV4Router.encodeTakeAll(outputCurrency, recipient, amount);
+    if (actionParams.action === V4PoolAction.SWAP_EXACT_IN_SINGLE) {
+      const [poolKey, zeroForOne, amountIn, amountOutMinimum, hookData] = actionParams.params;
+      return UniswapV4Router.encodeSwapExactInputSingle(poolKey, zeroForOne, amountIn, amountOutMinimum, hookData);
     }
+
+    //TODO: double check -> all documentation is without bool, eth -> token transaction fails without bool
+    if (actionParams.action === V4PoolAction.SETTLE_ALL) {
+      if (actionParams.params.length === 2) {
+        console.log("ENCODING WITHOUT BOOL")
+        const [inputCurrency, settlAmountIn] = actionParams.params;
+        return UniswapV4Router.encodeSettleAllWithoutBool(inputCurrency, settlAmountIn);
+      } else if (actionParams.params.length === 3) {
+        console.log("ENCODING WITH BOOL")
+        const [inputCurrency, settlAmountIn, zeroForOne] = actionParams.params;
+        return UniswapV4Router.encodeSettleAll(inputCurrency, settlAmountIn, zeroForOne);
+      }
+    }
+
+    if (actionParams.action === V4PoolAction.TAKE_ALL) {
+      const [outputCurrency, recipient, amount] = actionParams.params;
+      return UniswapV4Router.encodeTakeAll(outputCurrency, recipient, amount);
+    }
+
+    throw new Error("Incorrect V4 Pool Action for encoding");
   }
 }

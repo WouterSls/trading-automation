@@ -1,7 +1,13 @@
 import { ethers, TransactionRequest, Wallet } from "ethers";
 import { ChainType, getChainConfig } from "../../config/chain-config";
 
-import { FeeAmount, FeeToTickSpacing, PoolKey, V4PoolAction, V4PoolActionConstants } from "../../smartcontracts/uniswap-v4/uniswap-v4-types";
+import {
+  FeeAmount,
+  FeeToTickSpacing,
+  PoolKey,
+  V4PoolAction,
+  V4PoolActionConstants,
+} from "../../smartcontracts/uniswap-v4/uniswap-v4-types";
 import { ensureInfiniteApproval, ensureStandardApproval, ensurePermit2Approval } from "../../lib/approval-strategies";
 
 import { ITradingStrategy } from "../ITradingStrategy";
@@ -170,6 +176,7 @@ export class UniswapV4Strategy implements ITradingStrategy {
   }
 
   async createTransaction(trade: TradeCreationDto, wallet: Wallet): Promise<TransactionRequest> {
+    console.log("CREATING TRANSACTION");
     await validateNetwork(wallet, this.chain);
 
     let tx: TransactionRequest = {};
@@ -206,6 +213,8 @@ export class UniswapV4Strategy implements ITradingStrategy {
         throw new Error("Unknown trade type");
     }
 
+    console.log("AMOUNT IN:");
+    console.log(amountIn);
     switch (tradeType) {
       case TradeType.ETHInputTOKENOutput:
       case TradeType.TOKENInputTOKENOutput:
@@ -239,6 +248,34 @@ export class UniswapV4Strategy implements ITradingStrategy {
 
     switch (tradeType) {
       case TradeType.ETHInputTOKENOutput:
+        if (isMultihop) {
+        }
+
+        if (isSinglehop) {
+          const zeroForOne = determineSwapDirection(trade.inputToken, route.poolKey!);
+          const inputCurrency = zeroForOne ? route.poolKey!.currency0 : route.poolKey!.currency1;
+          const outputCurrency = zeroForOne ? route.poolKey!.currency1 : route.poolKey!.currency0;
+          const amount = V4PoolActionConstants.OPEN_DELTA;
+
+          const v4SwapCommandInput = this.createV4SingleHopSwapInput(
+            route.poolKey!,
+            zeroForOne,
+            amountIn,
+            amountOutMin,
+            hookData,
+            inputCurrency,
+            outputCurrency,
+            to,
+            amount
+          );
+
+          const command: CommandType = CommandType.V4_SWAP;
+
+          tx = this.universalRouter.createExecuteTransaction(command, [v4SwapCommandInput], deadline);
+        }
+
+        tx.value = amountIn;
+        break;
       case TradeType.TOKENInputTOKENOutput:
       case TradeType.TOKENInputETHOutput:
         if (isMultihop) {
@@ -250,38 +287,34 @@ export class UniswapV4Strategy implements ITradingStrategy {
           const outputCurrency = zeroForOne ? route.poolKey!.currency1 : route.poolKey!.currency0;
           const amount = V4PoolActionConstants.OPEN_DELTA;
 
-          const actions = ethers.concat([V4PoolAction.SWAP_EXACT_IN_SINGLE, V4PoolAction.SETTLE, V4PoolAction.TAKE]);
+          const v4SwapCommandInput = this.createV4SingleHopSwapInput(
+            route.poolKey!,
+            zeroForOne,
+            amountIn,
+            amountOutMin,
+            hookData,
+            inputCurrency,
+            outputCurrency,
+            to,
+            amount
+          );
 
-          const swapData = UniswapV4Router.encodePoolActionSafe({
-            action: V4PoolAction.SWAP_EXACT_IN_SINGLE,
-            params: [route.poolKey!, zeroForOne, amountIn, amountOutMin, hookData],
-          });
-
-          const settleAllData = UniswapV4Router.encodePoolActionSafe({
-            action: V4PoolAction.SETTLE_ALL,
-            params: [inputCurrency, amountIn, zeroForOne],
-          });
-          //const settleAllParams: SettleAllParams = [inputCurrency, amountIn];
-
-          const takeAllData = UniswapV4Router.encodePoolActionSafe({
-            action: V4PoolAction.TAKE_ALL,
-            params: [outputCurrency, to, amount],
-          });
-
-          const v4SwapCommandInput = UniswapV4Router.encodeV4SwapCommandInput(actions, [
-            swapData,
-            settleAllData,
-            takeAllData,
+          const commands = ethers.concat([
+            CommandType.PERMIT2_PERMIT,
+            CommandType.PERMIT2_TRANSFER_FROM,
+            CommandType.V4_SWAP,
           ]);
 
-          const command: CommandType = CommandType.V4_SWAP;
+          const permit2PermitInput = "";
+          const permit2TransferFromInput = "";
 
-          tx = this.universalRouter.createExecuteTransaction(command, [v4SwapCommandInput], deadline);
+          tx = this.universalRouter.createExecuteTransaction(
+            commands,
+            [permit2PermitInput, permit2TransferFromInput, v4SwapCommandInput],
+            deadline,
+          );
         }
 
-        if (tradeType === TradeType.ETHInputTOKENOutput) {
-          tx.value = amountIn;
-        }
         break;
       default:
         throw new Error("Unknown trade type");
@@ -289,4 +322,43 @@ export class UniswapV4Strategy implements ITradingStrategy {
 
     return tx;
   }
+
+
+  private createV4SingleHopSwapInput(
+    poolKey: PoolKey,
+    zeroForOne: boolean,
+    amountIn: bigint,
+    amountOutMin: bigint,
+    hookData: string,
+    inputCurrency: string,
+    outputCurrency: string,
+    to: string,
+    amount: number
+  ): string {
+    const actions = ethers.concat([V4PoolAction.SWAP_EXACT_IN_SINGLE, V4PoolAction.SETTLE, V4PoolAction.TAKE]);
+
+    const swapData = UniswapV4Router.encodePoolActionSafe({
+      action: V4PoolAction.SWAP_EXACT_IN_SINGLE,
+      params: [poolKey, zeroForOne, amountIn, amountOutMin, hookData],
+    });
+
+    const settleAllData = UniswapV4Router.encodePoolActionSafe({
+      action: V4PoolAction.SETTLE_ALL,
+      params: [inputCurrency, amountIn, zeroForOne],
+    });
+
+    const takeAllData = UniswapV4Router.encodePoolActionSafe({
+      action: V4PoolAction.TAKE_ALL,
+      params: [outputCurrency, to, amount],
+    });
+
+    const v4SwapCommandInput = UniswapV4Router.encodeV4SwapCommandInput(actions, [
+      swapData,
+      settleAllData,
+      takeAllData,
+    ]);
+
+    return v4SwapCommandInput;
+  }
+
 }
