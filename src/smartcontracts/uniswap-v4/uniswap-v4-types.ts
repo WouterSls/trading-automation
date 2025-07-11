@@ -38,7 +38,7 @@ export interface PoolKey {
 /**
  * Type for Multi hop swaps
  */
-export interface PathSegment {
+export interface PathKey {
   intermediateCurrency: string;
   fee: number;
   tickSpacing: number;

@@ -1,7 +1,7 @@
 import { Contract, ethers, Wallet } from "ethers";
 import { ChainType, getChainConfig } from "../../config/chain-config";
 import { UNISWAP_V4_QUOTER_INTERFACE } from "../../lib/smartcontract-abis/_index";
-import { PoolKey, PathSegment } from "./uniswap-v4-types";
+import { PoolKey, PathKey } from "./uniswap-v4-types";
 import { validateNetwork } from "../../lib/utils";
 
 export class UniswapV4Quoter {
@@ -110,7 +110,7 @@ export class UniswapV4Quoter {
   async quoteExactInput(
     wallet: Wallet,
     exactCurrency: string,
-    path: PathSegment[],
+    path: PathKey[],
     exactAmount: bigint,
   ): Promise<{ amountOut: bigint; gasEstimate: bigint }> {
     this.quoterContract = this.quoterContract.connect(wallet) as Contract;
@@ -149,7 +149,7 @@ export class UniswapV4Quoter {
    * @param exactAmount - The exact input amount to swap
    * @return the encoded transaction data
    */
-  encodeQuoteExactInput(exactCurrency: string, path: PathSegment[], exactAmount: bigint) {
+encodeQuoteExactInput(exactCurrency: string, path: PathKey[], exactAmount: bigint) {
     const params = {
       exactCurrency,
       path,
@@ -228,7 +228,7 @@ export class UniswapV4Quoter {
   async quoteExactOutput(
     wallet: Wallet,
     exactCurrency: string,
-    path: PathSegment[],
+    path: PathKey[],
     exactAmount: bigint,
   ): Promise<{ amountIn: bigint; gasEstimate: bigint }> {
     this.quoterContract = this.quoterContract.connect(wallet) as Contract;

@@ -5,7 +5,7 @@ import { getChainConfig } from "../../../src/config/chain-config";
 import { getBaseWallet_1, getEthWallet_1, getHardhatWallet_1 } from "../../../src/hooks/useSetup";
 import { validateNetwork } from "../../../src/lib/utils";
 import { UniswapV4Quoter } from "../../../src/smartcontracts/uniswap-v4/UniswapV4Quoter";
-import { FeeAmount, FeeToTickSpacing, PathSegment } from "../../../src/smartcontracts/uniswap-v4/uniswap-v4-types";
+import { FeeAmount, FeeToTickSpacing, PathKey} from "../../../src/smartcontracts/uniswap-v4/uniswap-v4-types";
 import { getLowPoolKey } from "../../../src/smartcontracts/uniswap-v4/uniswap-v4-utils";
 
 export async function quoterInteraction(chain: ChainType, wallet: Wallet) {
@@ -108,7 +108,7 @@ async function demonstrateEthMultihopQuote(
     console.log(`\nTrying: ${option.name}`);
     
     try {
-      const path: PathSegment[] = [
+      const path: PathKey[] = [
         // First hop: USDC -> ETH
         {
           intermediateCurrency: ethAddress,

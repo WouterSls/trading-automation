@@ -1,4 +1,4 @@
-import { PoolKey, FeeAmount, FeeToTickSpacing, PathSegment } from "./uniswap-v4-types";
+import { PoolKey, FeeAmount, FeeToTickSpacing, PathKey } from "./uniswap-v4-types";
 import { keccak256, AbiCoder } from "ethers";
 import { ethers } from "ethers";
 
@@ -178,8 +178,8 @@ export function determineSwapDirection(tokenIn: string, poolKey: PoolKey): boole
  * @param fees Array of fee amounts for each hop
  * @returns Array of PathSegment objects for the swap path
  */
-export function createPathSegments(path: string[], fees: FeeAmount[]): PathSegment[] {
-  const segments: PathSegment[] = [];
+export function createPathSegments(path: string[], fees: FeeAmount[]): PathKey[] {
+  const segments: PathKey[] = [];
 
   for (let i = 0; i < path.length - 1; i++) {
     const fee = fees[i];

@@ -1,6 +1,6 @@
 import { AerodromeTradeRoute } from "../aerodrome/aerodrome-types";
 import { FeeAmount } from "../uniswap-v3";
-import { PoolKey, PathSegment } from "../uniswap-v4/uniswap-v4-types";
+import { PoolKey, PathKey } from "../uniswap-v4/uniswap-v4-types";
 
 // Ethers.js returns multicall results as tuples (arrays), not objects
 // So we define it as a tuple type that can be accessed by index
@@ -32,5 +32,5 @@ export interface Mutlicall3Metadata {
   encodedPath?: string;
   aeroRoutes?: AerodromeTradeRoute[];
   poolKey?: PoolKey;
-  pathSegments?: PathSegment[];
+  pathSegments?: PathKey[];
 }
