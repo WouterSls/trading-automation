@@ -119,6 +119,7 @@ export class UniswapV4Strategy implements ITradingStrategy {
     const outputToken: ERC20 | null = await createMinimalErc20(trade.outputToken, wallet.provider!);
 
     let quote: Quote = {
+      strategy: this.strategyName,
       outputAmount: "0",
       route: {
         amountOut: 0n,
@@ -257,7 +258,7 @@ export class UniswapV4Strategy implements ITradingStrategy {
           const outputCurrency = zeroForOne ? route.poolKey!.currency1 : route.poolKey!.currency0;
           const amount = V4PoolActionConstants.OPEN_DELTA;
 
-          const v4SwapCommandInput = this.createV4SingleHopSwapInput(
+          const v4SwapCommandInput = this.encodeSingleHopRouterActions(
             route.poolKey!,
             zeroForOne,
             amountIn,
@@ -266,7 +267,7 @@ export class UniswapV4Strategy implements ITradingStrategy {
             inputCurrency,
             outputCurrency,
             to,
-            amount
+            amount,
           );
 
           const command: CommandType = CommandType.V4_SWAP;
@@ -287,7 +288,7 @@ export class UniswapV4Strategy implements ITradingStrategy {
           const outputCurrency = zeroForOne ? route.poolKey!.currency1 : route.poolKey!.currency0;
           const amount = V4PoolActionConstants.OPEN_DELTA;
 
-          const v4SwapCommandInput = this.createV4SingleHopSwapInput(
+          const v4SwapCommandInput = this.encodeSingleHopRouterActions(
             route.poolKey!,
             zeroForOne,
             amountIn,
@@ -296,7 +297,7 @@ export class UniswapV4Strategy implements ITradingStrategy {
             inputCurrency,
             outputCurrency,
             to,
-            amount
+            amount,
           );
 
           const commands = ethers.concat([
@@ -323,8 +324,7 @@ export class UniswapV4Strategy implements ITradingStrategy {
     return tx;
   }
 
-
-  private createV4SingleHopSwapInput(
+  private encodeSingleHopRouterActions(
     poolKey: PoolKey,
     zeroForOne: boolean,
     amountIn: bigint,
@@ -333,7 +333,7 @@ export class UniswapV4Strategy implements ITradingStrategy {
     inputCurrency: string,
     outputCurrency: string,
     to: string,
-    amount: number
+    amount: number,
   ): string {
     const actions = ethers.concat([V4PoolAction.SWAP_EXACT_IN_SINGLE, V4PoolAction.SETTLE, V4PoolAction.TAKE]);
 
@@ -360,5 +360,4 @@ export class UniswapV4Strategy implements ITradingStrategy {
 
     return v4SwapCommandInput;
   }
-
 }

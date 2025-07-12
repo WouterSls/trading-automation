@@ -105,6 +105,7 @@ export class AerodromeStrategy implements ITradingStrategy {
     const outputToken: ERC20 | null = await createMinimalErc20(trade.outputToken, wallet.provider!);
 
     let quote: Quote = {
+      strategy: this.strategyName,
       outputAmount: "0",
       route: {
         amountOut: 0n,

@@ -3,6 +3,7 @@ import { FeeAmount } from "../../smartcontracts/uniswap-v3";
 import { PoolKey, PathKey } from "../../smartcontracts/uniswap-v4/uniswap-v4-types";
 
 export interface Quote {
+  strategy: string;
   outputAmount: string;
   route: Route;
   //gasEstimate: string;
