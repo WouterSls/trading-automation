@@ -23,6 +23,12 @@ import { RouteOptimizer } from "../../routing/RouteOptimizer";
 import { ERC20 } from "../../smartcontracts/ERC/ERC20";
 import { determineSwapDirection } from "../../smartcontracts/uniswap-v4/uniswap-v4-utils";
 
+
+/**
+ * 
+ * 
+ * WIP
+ */
 export class UniswapV4Strategy implements ITradingStrategy {
   private quoter: UniswapV4Quoter;
   private uniswapV4router: UniswapV4Router;
