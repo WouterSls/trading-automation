@@ -17,15 +17,12 @@ export class Trader {
   getChain = (): ChainType => this.chain;
   getStrategies = (): ITradingStrategy[] => this.strategies;
 
-  async quote(trade: TradeCreationDto): Promise<Quote[]> {
-    let allQuotes: Quote[] = [];
+  async quote(tradeRequest: TradeCreationDto): Promise<Quote> {
+    await this.validateTrade(tradeRequest);
 
-    for (const strat of this.strategies) {
-      const quote = await strat.getQuote(trade, this.wallet);
-      allQuotes.push(quote);
-    }
+    const bestStrategy: ITradingStrategy = await this.getBestStrategy(tradeRequest);
 
-    return allQuotes;
+    return await bestStrategy.getQuote(tradeRequest, this.wallet);
   }
 
   async trade(tradeRequest: TradeCreationDto): Promise<TradeConfirmation> {
@@ -52,7 +49,6 @@ export class Trader {
       await this.wallet.call(tx);
       console.log("Transaction passed!");
     } catch (error) {
-      //TODO: add transfer from failed check -> approval & insufficienct input check -> no tokens
       const errorMessage = error instanceof Error ? error.message : "An Unknown Error Occurred";
       console.log(errorMessage);
       throw error;
