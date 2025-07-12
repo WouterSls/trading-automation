@@ -243,11 +243,12 @@ export class UniswapV2RoutingStrategy extends BaseRoutingStrategy {
     }
 
     if (!bestRoute) {
-      console.warn("No valid routes found, returning default route");
+      console.warn("No valid uniswap v2 routes found, returning default route");
       return this.createDefaultRoute();
     }
 
-    console.log(`Best route selected: ${bestRoute.path.join(" -> ")} with output: ${bestAmountOut.toString()}`);
+    console.log("Uniswap V2 route found");
+    //console.log(`Best route selected: ${bestRoute.path.join(" -> ")} with output: ${bestAmountOut.toString()}`);
     return bestRoute;
   }
 

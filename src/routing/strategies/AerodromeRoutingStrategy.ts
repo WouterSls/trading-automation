@@ -389,11 +389,12 @@ export class AerodromeRoutingStrategy extends BaseRoutingStrategy {
     }
 
     if (!bestRoute) {
-      console.warn("No valid routes found, returning default route");
+      console.warn("No valid aerodrome routes found, returning default route");
       return this.createDefaultRoute();
     }
 
-    console.log(`Best route selected: ${bestRoute.path.join(" -> ")} | output: ${bestAmountOut.toString()}`);
+    //console.log(`Best route selected: ${bestRoute.path.join(" -> ")} | output: ${bestAmountOut.toString()}`);
+    console.log("Aerodrome route found");
     return bestRoute;
   }
 }

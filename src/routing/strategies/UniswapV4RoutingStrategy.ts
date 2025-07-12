@@ -325,13 +325,17 @@ export class UniswapV4RoutingStrategy extends BaseRoutingStrategy {
     }
 
     if (!bestRoute) {
-      console.warn("No valid routes found, returning default route");
+      console.warn("No valid uniswap v4 routes found, returning default route");
       return this.createDefaultRoute();
     }
 
+    /**
     console.log(
       `Best route selected: ${bestRoute.path.join(" -> ")} with fees: ${bestRoute.fees.join(" -> ")} | output: ${bestAmountOut.toString()}`,
     );
+    */
+    console.log("Uniswap V4 route found");
+
     return bestRoute;
   }
 }
