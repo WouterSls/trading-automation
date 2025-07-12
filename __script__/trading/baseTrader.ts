@@ -68,9 +68,9 @@ async function baseTraderInteraction(wallet: Wallet) {
   const singleHopTokenToTokenTrade: TradeCreationDto = {
     chain: chain,
     inputType: InputType.TOKEN,
-    inputToken: usdc.getTokenAddress(),
-    inputAmount: "200",
-    outputToken: aero.getTokenAddress(),
+    inputToken: aero.getTokenAddress(),
+    inputAmount: "400",
+    outputToken: usdc.getTokenAddress(),
   };
   const singleHopTokenToEthTrade: TradeCreationDto = {
     chain: chain,
@@ -84,37 +84,47 @@ async function baseTraderInteraction(wallet: Wallet) {
   const multiHopEthToTokenTrade = {};
   const multiHopTokenToEthTrade = {};
 
-  const strategies = trader.getStrategies();
-  const aeroStrat = strategies.filter((strat) => strat.getName().toLowerCase().includes("aero"))[0]!;
+  const gameTrade: TradeCreationDto = {
+    chain: ChainType.BASE,
+    inputToken: game.getTokenAddress(),
+    inputType: InputType.TOKEN,
+    inputAmount: "819.4863703951352",
+    outputToken: usdc.getTokenAddress(),
+  };
+
+  const convoTrade: TradeCreationDto = {
+    chain: ChainType.BASE,
+    inputToken: convo.getTokenAddress(),
+    inputType: InputType.TOKEN,
+    inputAmount: "4000",
+    outputToken: usdc.getTokenAddress(),
+  };
+
+  const arbTrade: TradeCreationDto = {
+    chain: ChainType.ARB,
+    inputToken: ethers.ZeroAddress,
+    inputType: InputType.TOKEN,
+    inputAmount: "0",
+    outputToken: ethers.ZeroAddress,
+  };
+
+  await displayTrade(gameTrade);
+  await displayLivePrice(chain, game);
+
+  const quotes = await trader.quote(gameTrade);
+
+  quotes.map((quote) => {
+    console.log(quote.strategy);
+    console.log("Expected Output:", quote.outputAmount);
+    console.log(quote.route.path);
+  });
 
   const singleHopTrades: TradeCreationDto[] = [
     singleHopEthToTokenTrade,
     singleHopTokenToTokenTrade,
     singleHopTokenToEthTrade,
   ];
-
-  //await aeroTesting(aeroStrat, singleHopTrades, wallet);
-
-  /**
-  const inputAmount = '1000'
-  const ethToTokenTrade: TradeCreationDto = {
-    chain: chain,
-    inputType: InputType.USD,
-    inputToken: ethers.ZeroAddress,
-    inputAmount: inputAmount,
-    outputToken: usdc.getTokenAddress(),
-  };
-
-  displayLivePriceAndExpectedOutput(chain, ethToTokenTrade, inputAmount)
-
- */
-  displayTrade(singleHopTokenToTokenTrade);
-  for (const strat of strategies) {
-    console.log(strat.getName());
-    const quote = await strat.getQuote(singleHopTokenToTokenTrade, wallet);
-    console.log(`\tQuoted output amount: ${quote.outputAmount}`);
-    console.log();
-  }
+  //await strategyTest(aeroStrat, singleHopTrades, wallet);
 }
 
 async function strategyTest(strat: ITradingStrategy | null, trades: TradeCreationDto[], wallet: Wallet) {
@@ -147,13 +157,12 @@ async function strategyTest(strat: ITradingStrategy | null, trades: TradeCreatio
   }
 }
 
-async function displayLivePriceAndExpectedOutput(chain: ChainType, token: ERC20, inputAmount: string) {
+async function displayLivePrice(chain: ChainType, token: ERC20) {
   const geckoTerminalApi = getCoingeckoApi();
 
   const liveUsdPrice = await geckoTerminalApi.getTokenUsdPrice(chain, token.getTokenAddress());
   console.log(`${token.getName()} | ${token.getTokenAddress()}`);
   console.log(`$${liveUsdPrice}`);
-  console.log(`amount received for ${inputAmount} = ${Number(inputAmount) / Number(liveUsdPrice)}`);
   console.log();
 }
 

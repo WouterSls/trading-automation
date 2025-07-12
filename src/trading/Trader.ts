@@ -17,6 +17,17 @@ export class Trader {
   getChain = (): ChainType => this.chain;
   getStrategies = (): ITradingStrategy[] => this.strategies;
 
+  async quote(trade: TradeCreationDto): Promise<Quote[]> {
+    let allQuotes: Quote[] = [];
+
+    for (const strat of this.strategies) {
+      const quote = await strat.getQuote(trade, this.wallet);
+      allQuotes.push(quote);
+    }
+
+    return allQuotes;
+  }
+
   async trade(tradeRequest: TradeCreationDto): Promise<TradeConfirmation> {
     await this.validateTrade(tradeRequest);
 
