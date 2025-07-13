@@ -1,3 +1,5 @@
+import { Quote } from "./quoting-types";
+
 export enum InputType {
   ETH = "ETH",
   USD = "USD",
@@ -11,11 +13,10 @@ export enum TradeType {
 }
 
 export interface TradeConfirmation {
-  strategy: string;
+  quote: Quote;
   transactionHash: string;
   confirmedBlock: number;
   gasCost: string;
-  tokenPriceUsd: string;
   ethPriceUsd: string;
   ethSpent: string;
   ethReceived: string;
