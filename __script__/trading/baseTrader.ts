@@ -111,13 +111,9 @@ async function baseTraderInteraction(wallet: Wallet) {
   await displayTrade(gameTrade);
   await displayLivePrice(chain, game);
 
-  const quotes = await trader.quote(gameTrade);
+  const quote = await trader.quote(gameTrade);
 
-  quotes.map((quote) => {
-    console.log(quote.strategy);
-    console.log("Expected Output:", quote.outputAmount);
-    console.log(quote.route.path);
-  });
+  console.log(quote);
 
   const singleHopTrades: TradeCreationDto[] = [
     singleHopEthToTokenTrade,

@@ -6,6 +6,7 @@ import { createMinimalErc20 } from "../../src/smartcontracts/ERC/erc-utils";
 import { TraderFactory } from "../../src/trading/TraderFactory";
 import { ITradingStrategy } from "../../src/trading/ITradingStrategy";
 import { TradeCreationDto } from "../../src/trading/types/dto/TradeCreationDto";
+import { displayTrade } from "../../src/lib/utils";
 
 const PEPE_ADDRESS = "0x6982508145454Ce325dDbE47a25d4ec3d2311933";
 
@@ -14,23 +15,21 @@ async function ethTraderTesting(chain: ChainType, wallet: Wallet) {
 
   const blockNumber = await wallet.provider!.getBlockNumber();
 
-  const usdcAddress = chainConfig.tokenAddresses.usdc;
-  const wethAddress = chainConfig.tokenAddresses.weth;
-  const usdtAddress = chainConfig.tokenAddresses.usdt;
-  const wbtcAddress = chainConfig.tokenAddresses.wbtc;
-  const usdc = await createMinimalErc20(usdcAddress, wallet.provider!);
-  const weth = await createMinimalErc20(wethAddress, wallet.provider!);
+  const usdc = await createMinimalErc20(chainConfig.tokenAddresses.usdc, wallet.provider!);
+  const weth = await createMinimalErc20(chainConfig.tokenAddresses.weth, wallet.provider!);
   const pepe = await createMinimalErc20(PEPE_ADDRESS, wallet.provider!);
-  const usdt = await createMinimalErc20(usdtAddress, wallet.provider!);
-  const wbtc = await createMinimalErc20(wbtcAddress, wallet.provider!);
+  const usdt = await createMinimalErc20(chainConfig.tokenAddresses.usdt, wallet.provider!);
+  const wbtc = await createMinimalErc20(chainConfig.tokenAddresses.wbtc, wallet.provider!);
+  const arb = await createMinimalErc20(chainConfig.tokenAddresses.arb, wallet.provider!);
 
-  if (!usdc || !weth || !pepe || !usdt || !wbtc) throw new Error("Error in ERC20 token setup");
+  if (!usdc || !weth || !pepe || !usdt || !wbtc || !arb) throw new Error("Error in ERC20 token setup");
 
   const usdcBalance = await usdc.getFormattedTokenBalance(wallet.address);
   const wethBalance = await weth.getFormattedTokenBalance(wallet.address);
   const pepeBalance = await pepe.getFormattedTokenBalance(wallet.address);
   const usdtBalance = await usdt.getFormattedTokenBalance(wallet.address);
   const wbtcBalance = await wbtc.getFormattedTokenBalance(wallet.address);
+  const arbBalance = await arb.getFormattedTokenBalance(wallet.address);
   const ethBalance = await wallet.provider!.getBalance(wallet.address);
 
   const trader = await TraderFactory.createTrader(wallet);
@@ -47,74 +46,67 @@ async function ethTraderTesting(chain: ChainType, wallet: Wallet) {
   console.log(`\t${pepe.getSymbol()} (${pepe.getTokenAddress()}) balance: ${pepeBalance}`);
   console.log(`\t${usdt.getSymbol()} (${usdt.getTokenAddress()}) balance: ${usdtBalance}`);
   console.log(`\t${wbtc.getSymbol()} (${wbtc.getTokenAddress()}) balance: ${wbtcBalance}`);
+  console.log(`\t${arb.getSymbol()} (${arb.getTokenAddress()}) balance: ${arbBalance}`);
   console.log();
 
-  const singleHopEthToTokenTrade: TradeCreationDto = {
+  const multiHopTrade: TradeCreationDto = {
+    chain: chain,
+    inputType: InputType.TOKEN,
+    inputToken: pepe.getTokenAddress(),
+    inputAmount: "1000",
+    outputToken: arb.getTokenAddress(),
+  };
+
+  const singleHopTrade = {
+    chain: chain,
+    inputType: InputType.TOKEN,
+    inputToken: pepe.getTokenAddress(),
+    inputAmount: "20000",
+    outputToken: wbtc.getTokenAddress(),
+  };
+
+  const buyPepe = {
     chain: chain,
     inputType: InputType.USD,
     inputToken: ethers.ZeroAddress,
-    inputAmount: "1000",
-    outputToken: usdc.getTokenAddress(),
+    inputAmount: "500",
+    outputToken: pepe.getTokenAddress(),
   };
-  const singleHopTokenToEthTrade: TradeCreationDto = {
+
+  const sellPepeToEth: TradeCreationDto = {
     chain: chain,
     inputType: InputType.TOKEN,
-    inputToken: usdc.getTokenAddress(),
-    inputAmount: "200",
+    inputToken: pepe.getTokenAddress(),
+    inputAmount: "5000000",
     outputToken: ethers.ZeroAddress,
   };
 
-  //TRANSACTION FAILURE WITH NORMAL APPROVE ->
   /**
-   *    if (command == Commands.V4_SWAP) {
-                    // pass the calldata provided to V4SwapRouter._executeActions (defined in BaseActionsRouter)
-                    _executeActions(inputs);
-                    // This contract MUST be approved to spend the token since its going to be doing the call on the position manager
-   * 
-   * 
-   */
-  const singleHopTokenToTokenTrade: TradeCreationDto = {
-    chain: chain,
-    inputType: InputType.TOKEN,
-    inputToken: usdc.getTokenAddress(),
-    inputAmount: "200",
-    outputToken: wbtc.getTokenAddress(),
-  };
-  const singlehopTrades = [singleHopEthToTokenTrade, singleHopTokenToEthTrade, singleHopTokenToTokenTrade];
+  const quote = await trader.quote(multiHopTrade);
+  console.log("QUOTE:");
+  console.log(quote);
+ */
 
-  const multiHopEthToTokenTrade = {};
-  const multiHopTokenToEthTrade = {};
-  const multiHopTokenToTokenTrade = {
-    chain: chain,
-    inputType: InputType.TOKEN,
-    inputToken: usdc.getTokenAddress(),
-    inputAmount: "200",
-    outputToken: pepe.getTokenAddress(),
-  };
-  const multihopTrades = [multiHopEthToTokenTrade, multiHopTokenToEthTrade, multiHopTokenToTokenTrade];
-
-  const tradesToTest = [singleHopTokenToTokenTrade];
-
-  const strategies = trader.getStrategies();
-
-  const uniV2 = strategies.filter((strat) => strat.getName().toLowerCase().includes("uniswapv2"))[0];
-  const uniV3 = strategies.filter((strat) => strat.getName().toLowerCase().includes("uniswapv3"))[0];
-  const uniV4 = strategies.filter((strat) => strat.getName().toLowerCase().includes("uniswapv4"))[0];
-
-  await strategyTest(tradesToTest, uniV4, wallet);
-
-  return;
-  const tradeConfirmation: TradeConfirmation = await trader.trade(singleHopEthToTokenTrade);
+  await displayTrade(singleHopTrade);
+  const tradeConfirmation: TradeConfirmation = await trader.trade(multiHopTrade);
   console.log("--------------------------------");
   console.log("Trade Confirmation");
   console.log("--------------------------------");
-  console.log("\tStrategy", tradeConfirmation.strategy);
-  console.log("\tETH Spent:", tradeConfirmation.ethSpentFormatted);
+  console.log("\tStrategy", tradeConfirmation.quote.strategy);
+  console.log("\tRoute: ", tradeConfirmation.quote.route.path);
   console.log("\tGas Spent:", tradeConfirmation.gasCost);
+  console.log("\tETH Spent:", tradeConfirmation.ethSpentFormatted);
+  console.log("\tETH Received:", tradeConfirmation.ethReceivedFormatted);
   console.log("\tTokens Spent:", tradeConfirmation.tokensSpentFormatted);
   console.log("\tTokens Received:", tradeConfirmation.tokensReceivedFormatted);
   console.log("\tTransaction Hash:", tradeConfirmation.transactionHash);
   console.log();
+
+  //const strategies = trader.getStrategies();
+  //const uniV2 = strategies.filter((strat) => strat.getName().toLowerCase().includes("uniswapv2"))[0];
+  //const uniV3 = strategies.filter((strat) => strat.getName().toLowerCase().includes("uniswapv3"))[0];
+  //const uniV4 = strategies.filter((strat) => strat.getName().toLowerCase().includes("uniswapv4"))[0];
+  //await strategyTest([singleHopTrade], uniV3, wallet);
 }
 
 async function strategyTest(trades: TradeCreationDto[], strat: ITradingStrategy, wallet: Wallet) {
