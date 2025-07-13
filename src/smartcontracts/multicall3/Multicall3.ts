@@ -31,13 +31,16 @@ export class Multicall3 {
   async aggregate3StaticCall(wallet: Wallet, multicall3Request: Multicall3Request[]): Promise<Multicall3Result[]> {
     this.multicall3Contract = this.multicall3Contract.connect(wallet) as Contract;
 
+    console.log(`MULTICALL3 | ${multicall3Request.length} REQUEST`);
+
     const multicall3Results: Multicall3Result[] = [];
 
     const REQUEST_LIMIT = 15;
 
+    console.log(`BATCH SIZE: ${15}`);
     //console.log("DOING BATCH REQUEST");
     for (let i = 0; i < multicall3Request.length; i += REQUEST_LIMIT) {
-      //console.log(`REQUESTS DONE: ${i}`);
+      console.log(`REQUESTS DONE: ${i}`);
       const batch = multicall3Request.slice(i, i + REQUEST_LIMIT);
 
       try {
