@@ -1,4 +1,4 @@
-import { ethers, Wallet } from "ethers";
+import { ethers, TransactionRequest, Wallet } from "ethers";
 
 import { ERC20_INTERFACE, WETH_INTERFACE } from "./smartcontract-abis/erc20";
 import { ChainType, mapNetworkNameToChainType } from "../config/chain-config";
@@ -258,7 +258,7 @@ export function calculatePriceImpact(expectedOutput: bigint, actualOutput: bigin
   if (expectedOutput === 0n) {
     return 0n;
   }
-  
+
   return ((expectedOutput - actualOutput) / expectedOutput) * 100n;
 }
 
@@ -275,4 +275,16 @@ export function displayTrade(trade: TradeCreationDto) {
   console.log("\tInput amount:", trade.inputAmount);
   console.log("\tOutput token:", trade.outputToken);
   console.log();
+}
+
+export async function displayTokenBalance(tokenAddress: string, wallet: Wallet) {
+  const balanceOfTxData = await ERC20_INTERFACE.encodeFunctionData("balanceOf", [wallet.address]);
+  const balanceOfTx: TransactionRequest = {
+    to: tokenAddress,
+    data: balanceOfTxData,
+  };
+  const result = await wallet.call(balanceOfTx);
+
+  const rawResult = ERC20_INTERFACE.decodeFunctionResult("balanceOf", result);
+  console.log(`\t${tokenAddress} | ${rawResult}`);
 }
