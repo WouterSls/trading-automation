@@ -20,6 +20,29 @@ import {
 import { RouteOptimizer } from "../../routing/RouteOptimizer";
 import { TradeCreationDto } from "../types/dto/TradeCreationDto";
 
+/**
+ * Uniswap V2 trading strategy implementation
+ *
+ * This strategy implements the ITradingStrategy interface for Uniswap V2 protocol,
+ * providing functionality for token swaps, quote generation, and transaction creation.
+ * It supports ETH-to-token, token-to-ETH, and token-to-token swaps with price impact
+ * protection and slippage control.
+ *
+ * Key differences from V3:
+ * - Uses constant product formula (x * y = k)
+ * - No concentrated liquidity or fee tiers
+ * - Simpler routing with direct path arrays
+ * - Lower gas costs for simple swaps
+ *
+ * Features:
+ * - Multi-hop routing optimization
+ * - Price impact calculation and validation
+ * - Slippage protection
+ * - Token approval management
+ * - Support for direct token pair swaps
+ *
+ * @implements {ITradingStrategy}
+ */
 export class UniswapV2Strategy implements ITradingStrategy {
   private router: UniswapV2RouterV2;
 
@@ -31,6 +54,16 @@ export class UniswapV2Strategy implements ITradingStrategy {
   private WETH_DECIMALS = 18;
   private USDC_DECIMALS = 6;
 
+  /**
+   * Creates a new UniswapV2Strategy instance
+   *
+   * Initializes the strategy with the specified chain configuration and sets up
+   * the necessary smart contract instances for router operations.
+   * Also configures the route optimizer for finding optimal swap paths.
+   *
+   * @param strategyName - Human-readable name for this strategy instance
+   * @param chain - The blockchain network this strategy will operate on
+   */
   constructor(
     private strategyName: string,
     private chain: ChainType,
@@ -88,11 +121,17 @@ export class UniswapV2Strategy implements ITradingStrategy {
   }
 
   /**
-   * Gets a comprehensive quote for a trade by calling on chain quoting functions
+   * Gets a quote for a potential trade
    *
-   * @param trade trade creation parameters
-   * @param wallet Connected wallet to query the price
-   * @returns TradeQuote with all execution details
+   * Calculates the expected output amount for a given trade without executing it.
+   * This method determines the trade type, calculates the appropriate input amount,
+   * finds the optimal route through Uniswap V2 pools, and returns a quote with
+   * the expected output amount.
+   *
+   * @param trade - The trade configuration containing input/output tokens and amounts
+   * @param wallet - Connected wallet to use for the quote calculation
+   * @returns A quote object containing the expected output amount and route information
+   * @throws Error if the trade type is unsupported or tokens are invalid
    */
   async getQuote(trade: TradeCreationDto, wallet: Wallet): Promise<Quote> {
     await validateNetwork(wallet, this.chain);

@@ -2,34 +2,57 @@ import { ethers, TransactionRequest, Wallet } from "ethers";
 import { ChainType, getChainConfig } from "../../config/chain-config";
 
 import { UniswapV3QuoterV2 } from "../../smartcontracts/uniswap-v3/UniswapV3QuoterV2";
-import { UniswapV3Factory } from "../../smartcontracts/uniswap-v3/UniswapV3Factory";
 import { UniswapV3SwapRouterV2 } from "../../smartcontracts/uniswap-v3/UniswapV3SwapRouterV2";
 
 import { ITradingStrategy } from "../ITradingStrategy";
 import { FeeAmount } from "../../smartcontracts/uniswap-v3/uniswap-v3-types";
-import { InputType, Quote, TradeCreationDto, TradeType } from "../types/_index";
+import { InputType, Quote, Route, TradeCreationDto, TradeType } from "../types/_index";
 import { calculatePriceImpact, calculateSlippageAmount, determineTradeType, validateNetwork } from "../../lib/utils";
 import { TRADING_CONFIG } from "../../config/trading-config";
-import { ensureInfiniteApproval, ensurePermit2Approval, ensureStandardApproval } from "../../lib/approval-strategies";
+import { ensureInfiniteApproval, ensureStandardApproval } from "../../lib/approval-strategies";
 import { createMinimalErc20 } from "../../smartcontracts/ERC/erc-utils";
 import { RouteOptimizer } from "../../routing/RouteOptimizer";
 import { Permit2 } from "../../smartcontracts/permit2/Permit2";
 import { ERC20 } from "../../smartcontracts/ERC/ERC20";
 
-// TODO: implement Test Suite
+/**
+ * Uniswap V3 trading strategy implementation
+ *
+ * This strategy implements the ITradingStrategy interface for Uniswap V3 protocol,
+ * providing functionality for token swaps, quote generation, and transaction creation.
+ * It supports ETH-to-token, token-to-ETH, and token-to-token swaps with price impact
+ * protection and slippage control.
+ *
+ * Features:
+ * - Multi-hop routing optimization
+ * - Price impact calculation and validation
+ * - Slippage protection
+ * - Token approval management
+ * - Support for both single and multi-hop swaps
+ *
+ * @implements {ITradingStrategy}
+ */
 export class UniswapV3Strategy implements ITradingStrategy {
   private quoter: UniswapV3QuoterV2;
   private router: UniswapV3SwapRouterV2;
-  private permit2: Permit2;
 
   private routeOptimizer: RouteOptimizer;
 
   private WETH_ADDRESS: string;
   private USDC_ADDRESS: string;
 
-  private WETH_DECIMALS = 18;
   private USDC_DECIMALS = 6;
 
+  /**
+   * Creates a new UniswapV3Strategy instance
+   *
+   * Initializes the strategy with the specified chain configuration and sets up
+   * the necessary smart contract instances for quoter, router, and permit2.
+   * Also configures the route optimizer for finding optimal swap paths.
+   *
+   * @param strategyName - Human-readable name for this strategy instance
+   * @param chain - The blockchain network this strategy will operate on
+   */
   constructor(
     private strategyName: string,
     private chain: ChainType,
@@ -41,7 +64,6 @@ export class UniswapV3Strategy implements ITradingStrategy {
 
     this.quoter = new UniswapV3QuoterV2(chain);
     this.router = new UniswapV3SwapRouterV2(chain);
-    this.permit2 = new Permit2(chain);
 
     this.routeOptimizer = new RouteOptimizer(chain);
   }
@@ -52,7 +74,6 @@ export class UniswapV3Strategy implements ITradingStrategy {
    */
   getName = (): string => this.strategyName;
 
-  // TODO: Implement Permit2 (If supported)
   /**
    * Ensures token approval for trading operations
    * @param wallet Connected wallet to use for approval
@@ -66,8 +87,7 @@ export class UniswapV3Strategy implements ITradingStrategy {
     if (TRADING_CONFIG.INFINITE_APPROVAL) {
       return await ensureInfiniteApproval(tokenAddress, amount, spender, wallet);
     } else {
-      return null;
-      //return await ensurePermit2Approval(wallet, tokenAddress, amount, this.permit2.getPermit2Address(), spender);
+      return await ensureStandardApproval(tokenAddress, amount, spender, wallet);
     }
   }
 
@@ -102,6 +122,18 @@ export class UniswapV3Strategy implements ITradingStrategy {
     return formattedAmountOut.toString();
   }
 
+  /**
+   * Gets a quote for a potential trade
+   *
+   * Calculates the expected output amount for a given trade without executing it.
+   * This method determines the trade type, calculates the appropriate input amount,
+   * finds the optimal route, and returns a quote with the expected output.
+   *
+   * @param trade - The trade configuration containing input/output tokens and amounts
+   * @param wallet - Connected wallet to use for the quote calculation
+   * @returns A quote object containing the expected output amount and route information
+   * @throws Error if the trade type is unsupported or tokens are invalid
+   */
   async getQuote(trade: TradeCreationDto, wallet: Wallet): Promise<Quote> {
     await validateNetwork(wallet, this.chain);
 
@@ -166,6 +198,18 @@ export class UniswapV3Strategy implements ITradingStrategy {
     return quote;
   }
 
+  /**
+   * Creates a transaction for executing a trade
+   *
+   * Builds a complete transaction object that can be submitted to execute the specified trade.
+   * This method handles price impact validation, slippage protection, and creates the appropriate
+   * transaction based on the trade type (single-hop vs multi-hop, ETH vs token trades).
+   *
+   * @param trade - The trade configuration containing input/output tokens and amounts
+   * @param wallet - Connected wallet that will execute the transaction
+   * @returns A transaction request object ready for execution
+   * @throws Error if price impact exceeds configured limits or route generation fails
+   */
   async createTransaction(trade: TradeCreationDto, wallet: Wallet): Promise<TransactionRequest> {
     await validateNetwork(wallet, this.chain);
 
@@ -211,12 +255,9 @@ export class UniswapV3Strategy implements ITradingStrategy {
     }
 
     const route = await this.routeOptimizer.getBestUniV3Route(trade.inputToken, amountIn, trade.outputToken, wallet);
-    // TODO: validate defensive check, default route?
     if (!route.encodedPath && !route.path) throw new Error("Error during best Uniswap V3 route generation");
 
-    // TODO: implemented expected output logic for price impact
-    //const expectedOutput = await this.calculateExpectedOutput(amountInForSpotRate, amountIn, route.path, wallet);
-    const expectedOutput = 0n;
+    const expectedOutput = await this.calculateExpectedOutput(amountInForSpotRate, amountIn, route, wallet);
     const actualOutput = route.amountOut;
 
     const priceImpact = calculatePriceImpact(expectedOutput, actualOutput);
@@ -277,5 +318,72 @@ export class UniswapV3Strategy implements ITradingStrategy {
     }
 
     return tx;
+  }
+
+  /**
+   * Calculates expected output for price impact calculation using multiple fallback spot rates
+   *
+   * This method attempts to get an accurate spot rate by trying multiple smaller amounts
+   * if the configured spot rate amount fails or returns zero. It uses a fallback mechanism
+   * with progressively larger amounts (1%, 2%, 5% of trade amount) to ensure accurate
+   * price impact calculations even for large trades or low-liquidity pools.
+   *
+   * @param amountInForSpotRate - Original configured spot rate amount
+   * @param amountIn - Actual trade amount
+   * @param route - Trading route information including path and fees
+   * @param wallet - Connected wallet for making the quote calls
+   * @returns Expected output amount scaled to actual trade size
+   * @private
+   */
+  private async calculateExpectedOutput(
+    amountInForSpotRate: bigint,
+    amountIn: bigint,
+    route: Route,
+    wallet: Wallet,
+  ): Promise<bigint> {
+    const spotRateAmounts = [
+      amountInForSpotRate, // Original configured amount
+      amountIn / 100n, // 1% of trade amount
+      amountIn / 50n, // 2% of trade amount
+      amountIn / 20n, // 5% of trade amount
+    ];
+
+    const recipient = ethers.ZeroAddress;
+    const amountOutMin = 0n;
+    const sqrtPriceLimitX96 = 0n;
+
+    const isMultihop = route.path.length > 2 && route.encodedPath;
+
+    for (const spotAmount of spotRateAmounts) {
+      if (spotAmount > 0n) {
+        try {
+          let spotOutput;
+          if (isMultihop) {
+            const { amountOut } = await this.quoter.quoteExactInput(wallet, route.encodedPath!, spotAmount);
+            spotOutput = amountOut;
+          } else {
+            const { amountOut } = await this.quoter.quoteExactInputSingle(
+              wallet,
+              route.path[0],
+              route.path[1],
+              route.fees[0],
+              recipient,
+              spotAmount,
+              amountOutMin,
+              sqrtPriceLimitX96,
+            );
+            spotOutput = amountOut;
+          }
+
+          if (spotOutput > 0n) {
+            return (spotOutput * amountIn) / spotAmount;
+          }
+        } catch (error) {
+          continue;
+        }
+      }
+    }
+
+    return 0n;
   }
 }
