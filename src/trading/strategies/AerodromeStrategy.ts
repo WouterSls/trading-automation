@@ -11,14 +11,8 @@ import { AerodromeTradeRoute } from "../../smartcontracts/aerodrome/aerodrome-ty
 import { ITradingStrategy } from "../ITradingStrategy";
 import { InputType, Quote, TradeCreationDto, TradeType } from "../types/_index";
 
-import {
-  calculatePriceImpact,
-  calculateSlippageAmount,
-  determineTradeType,
-  ensureInfiniteApproval,
-  ensureStandardApproval,
-  validateNetwork,
-} from "../../lib/_index";
+import { ensureInfiniteApproval, ensureStandardApproval, validateNetwork } from "../../lib/_index";
+import { calculatePriceImpact, calculateSlippageAmount, determineTradeType } from "../trading-utils";
 import { RouteOptimizer } from "../../routing/RouteOptimizer";
 
 /**
@@ -303,86 +297,6 @@ export class AerodromeStrategy implements ITradingStrategy {
         break;
       default:
         throw new Error("Unknown trade type");
-    }
-
-    return tx;
-  }
-
-  /**
-   * Creates a buy transaction based on the provided trade parameters
-   * @param wallet Connected wallet to create transaction for
-   * @param trade Buy trade creation parameters
-   * @returns Transaction request object ready to be sent
-   */
-  async createBuyTransaction(wallet: Wallet, trade: TradeCreationDto): Promise<TransactionRequest> {
-    await validateNetwork(wallet, this.chain);
-    const to = wallet.address;
-    const deadline = TRADING_CONFIG.DEADLINE;
-
-    let tx: TransactionRequest = {};
-
-    if (trade.inputType === InputType.ETH && trade.inputToken === ethers.ZeroAddress) {
-      const routes: AerodromeTradeRoute[] = [
-        {
-          from: this.WETH_ADDRESS,
-          to: trade.outputToken,
-          stable: false,
-          factory: this.factory.getFactoryAddress(),
-        },
-      ];
-
-      const amountIn = ethers.parseEther(trade.inputAmount);
-      const amountOut = await this.router.getAmountsOut(wallet, amountIn, routes);
-      const amountOutMin = (amountOut * 95n) / 100n;
-
-      tx = await this.router.createSwapExactETHForTokensTransaction(amountOutMin, routes, to, deadline);
-      tx.value = amountIn;
-    } else if (trade.inputType === InputType.USD && trade.inputToken === ethers.ZeroAddress) {
-      const routes: AerodromeTradeRoute[] = [
-        {
-          from: this.WETH_ADDRESS,
-          to: trade.outputToken,
-          stable: false,
-          factory: this.factory.getFactoryAddress(),
-        },
-      ];
-
-      const ethUsdcPrice = await this.getEthUsdcPrice(wallet);
-      const ethValue = parseFloat(trade.inputAmount) / parseFloat(ethUsdcPrice);
-      const ethValueFixed = ethValue.toFixed(18);
-      const amountIn = ethers.parseEther(ethValueFixed);
-
-      const amountOut = await this.router.getAmountsOut(wallet, amountIn, routes);
-      const amountOutMin = (amountOut * 95n) / 100n;
-
-      tx = await this.router.createSwapExactETHForTokensTransaction(amountOutMin, routes, to, deadline);
-      tx.value = amountIn;
-    } else if (trade.inputType === InputType.TOKEN && trade.inputToken != ethers.ZeroAddress) {
-      const tokenIn = await createMinimalErc20(trade.inputToken, wallet.provider!);
-      const tokenOut = await createMinimalErc20(trade.outputToken, wallet.provider!);
-
-      if (!tokenIn || !tokenOut) throw new Error("Token error");
-
-      const routes: AerodromeTradeRoute[] = [
-        {
-          from: tokenIn.getTokenAddress(),
-          to: this.WETH_ADDRESS,
-          stable: false,
-          factory: this.factory.getFactoryAddress(),
-        },
-        {
-          from: this.WETH_ADDRESS,
-          to: tokenOut.getTokenAddress(),
-          stable: false,
-          factory: this.factory.getFactoryAddress(),
-        },
-      ];
-
-      const amountIn = ethers.parseUnits(trade.inputAmount, tokenIn.getDecimals());
-      const amountOut = await this.router.getAmountsOut(wallet, amountIn, routes);
-      const amountOutMin = (amountOut * 95n) / 100n;
-
-      tx = await this.router.createSwapExactTokensForTokensTransaction(amountIn, amountOutMin, routes, to, deadline);
     }
 
     return tx;
