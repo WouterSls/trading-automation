@@ -50,7 +50,7 @@ async function traderTest() {
     console.log("--------------------------------");
     console.log("Trade Confirmation");
     console.log("--------------------------------");
-    console.log("\tStrategy", tradeConfirmation.strategy);
+    console.log("\tStrategy", tradeConfirmation.quote.strategy);
     console.log("\tETH Spent:", tradeConfirmation.ethSpentFormatted);
     console.log("\tGas Spent:", tradeConfirmation.gasCost);
     console.log("\tTokens Spent:", tradeConfirmation.tokensSpentFormatted);
