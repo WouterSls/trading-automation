@@ -66,7 +66,7 @@ for interaction with the trading engine check the (`__script__/`) directory for 
 ## Features
 
 - **Multi-Chain Support**: Ethereum, Arbitrum, and Base networks
-- **Protocol Integrations**: Uniswap V2, Uniswap V3, Uniswap V4 and Aerodrome
+- **Protocol Integrations**: Uniswap V2, Uniswap V3, and Aerodrome
 - **Price Data**: Integration with GeckoTerminal, Alchemy and TheGraph for token pricing and price info
 - **Trading**: Token swapping and trading functionality
 - **Type Safety**: Full TypeScript typing for a safer development experience
@@ -81,7 +81,6 @@ for interaction with the trading engine check the (`__script__/`) directory for 
 
 - Uniswap V2
 - Uniswap V3
-- Uniswap V4 (via Universal Router)
 - Aerodrome
 
 ## Contributing
