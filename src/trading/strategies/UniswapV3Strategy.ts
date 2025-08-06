@@ -7,7 +7,8 @@ import { UniswapV3SwapRouterV2 } from "../../smartcontracts/uniswap-v3/UniswapV3
 import { ITradingStrategy } from "../ITradingStrategy";
 import { FeeAmount } from "../../smartcontracts/uniswap-v3/uniswap-v3-types";
 import { InputType, Quote, Route, TradeCreationDto, TradeType } from "../types/_index";
-import { calculatePriceImpact, calculateSlippageAmount, determineTradeType, validateNetwork } from "../../lib/utils";
+import { validateNetwork } from "../../lib/utils";
+import { calculatePriceImpact, calculateSlippageAmount, determineTradeType } from "../trading-utils";
 import { TRADING_CONFIG } from "../../config/trading-config";
 import { ensureInfiniteApproval, ensureStandardApproval } from "../../lib/approval-strategies";
 import { createMinimalErc20 } from "../../smartcontracts/ERC/erc-utils";

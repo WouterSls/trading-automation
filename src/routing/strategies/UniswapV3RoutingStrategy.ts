@@ -283,7 +283,7 @@ export class UniswapV3RoutingStrategy extends BaseRoutingStrategy {
       const context = multicall3Contexts[i];
 
       if (!result.success || !result.returnData) {
-        //console.log(`Route failed: ${context.metadata.description}`);
+        console.log(`Route failed: ${context.metadata.description}`);
         continue;
       }
 
@@ -301,7 +301,7 @@ export class UniswapV3RoutingStrategy extends BaseRoutingStrategy {
           amountOut = decoded;
         }
 
-        //console.log(`Route: ${context.metadata.description} | AmountOut: ${amountOut.toString()}`);
+        console.log(`Route: ${context.metadata.description} | AmountOut: ${amountOut.toString()}`);
 
         if (amountOut > bestAmountOut) {
           bestAmountOut = amountOut;

@@ -10,13 +10,11 @@ import { ITradingStrategy } from "../ITradingStrategy";
 import { InputType, Quote, TradeType } from "../types/_index";
 
 import {
-  calculatePriceImpact,
-  calculateSlippageAmount,
-  determineTradeType,
   ensureInfiniteApproval,
   ensureStandardApproval,
   validateNetwork,
 } from "../../lib/_index";
+import { calculatePriceImpact, calculateSlippageAmount, determineTradeType } from "../trading-utils";
 import { RouteOptimizer } from "../../routing/RouteOptimizer";
 import { TradeCreationDto } from "../types/dto/TradeCreationDto";
 

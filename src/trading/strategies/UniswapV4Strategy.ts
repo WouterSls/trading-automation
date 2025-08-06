@@ -13,7 +13,8 @@ import { ensureInfiniteApproval, ensureStandardApproval, ensurePermit2Approval }
 import { ITradingStrategy } from "../ITradingStrategy";
 import { Quote, InputType, TradeCreationDto, TradeType } from "../types/_index";
 import { createMinimalErc20 } from "../../smartcontracts/ERC/erc-utils";
-import { calculatePriceImpact, calculateSlippageAmount, determineTradeType, validateNetwork } from "../../lib/utils";
+import { calculatePriceImpact, calculateSlippageAmount, determineTradeType } from "../trading-utils";
+import { validateNetwork } from "../../lib/utils";
 import { TRADING_CONFIG } from "../../config/trading-config";
 import { UniswapV4Quoter } from "../../smartcontracts/uniswap-v4/UniswapV4Quoter";
 import { UniswapV4Router } from "../../smartcontracts/uniswap-v4/UniswapV4Router";

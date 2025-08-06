@@ -26,13 +26,23 @@ async function traderTest() {
   console.log();
 
   const wamgiAddress = "0x92cc36d66e9d739d50673d1f27929a371fb83a67";
-  const trade: TradeCreationDto = {
-    chain: ChainType.BASE,
+  const tradeToUsdc: TradeCreationDto = {
+    chain: ChainType.ETH,  // Fixed: Use ETH instead of BASE
     inputToken: wamgiAddress,
     inputType: InputType.TOKEN,
-    inputAmount: "1450.56",
+    inputAmount: "1702000",  // Increased amount for better liquidity
     outputToken: chainConfig.tokenAddresses.usdc,
   };
+
+  const tradeToEth: TradeCreationDto = {
+    chain: ChainType.ETH,  // Fixed: Use ETH instead of BASE
+    inputToken: wamgiAddress,
+    inputType: InputType.TOKEN,
+    inputAmount: "1702000",  // Increased amount for better liquidity
+    outputToken: ethers.ZeroAddress,
+  };
+
+  const trade = tradeToUsdc;  // Switch to test USDC routing
 
   const liveUsdPrice = await geckoTerminalApi.getTokenUsdPrice(chain, trade.inputToken);
   console.log("Live USD Price:");
@@ -41,23 +51,28 @@ async function traderTest() {
   const numberLivePrice = Number(liveUsdPrice);
   if (isNaN(numberLivePrice)) throw new Error("Live usd price is not a number");
 
-  const sellPrice = 0.11;
-  console.log("Sell Price:");
-  console.log(`$${sellPrice}`);
-  if (numberLivePrice > sellPrice) {
-    const tradeConfirmation: TradeConfirmation = await trader.trade(trade);
-    console.log("--------------------------------");
-    console.log("Trade Confirmation");
-    console.log("--------------------------------");
-    console.log("\tStrategy", tradeConfirmation.quote.strategy);
-    console.log("\tETH Spent:", tradeConfirmation.ethSpentFormatted);
-    console.log("\tGas Spent:", tradeConfirmation.gasCost);
-    console.log("\tTokens Spent:", tradeConfirmation.tokensSpentFormatted);
-    console.log("\tTokens Received:", tradeConfirmation.tokensReceivedFormatted);
-    console.log("\tTransaction Hash:", tradeConfirmation.transactionHash);
-    console.log();
-  }
+  console.log("INPUT TOKEN:")
+  console.log("------------------")
+  console.log(trade.inputToken)
+  console.log()
+
+  console.log("OUPUT TOKEN:")
+  console.log("------------------")
+  console.log(trade.outputToken)
+  console.log()
+
+  console.log("TRADE AMOUNT:")
+  console.log("------------------")
+  console.log(trade.inputAmount);
+  console.log()
+
+  const quote = await trader.quote(trade);
+  console.log("QUOTE")
+  console.log("------------------")
+  console.log(quote);
+  console.log()
 }
+
 
 if (require.main === module) {
   traderTest().catch(console.error);
