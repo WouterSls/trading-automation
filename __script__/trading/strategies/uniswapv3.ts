@@ -48,7 +48,7 @@ async function uniswapV3StrategyInteraction() {
   };
 
   return;
-  const strategy = new UniswapV3Strategy(`Uniswap V3 - ${chain}`, chain);
+  const strategy = new UniswapV3Strategy(chain);
 
   console.log("TRADE:");
   console.log("--------------------");
