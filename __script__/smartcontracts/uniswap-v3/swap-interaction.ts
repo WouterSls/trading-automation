@@ -1,7 +1,8 @@
 import { ChainType, getChainConfig } from "../../../src/config/chain-config";
 import { getHardhatWallet_1 } from "../../../src/hooks/useSetup";
 import { ethers, Wallet } from "ethers";
-import { calculateSlippageAmount, decodeLogs, validateNetwork } from "../../../src/lib/utils";
+import {  decodeLogs, validateNetwork } from "../../../src/lib/utils";
+import { calculateSlippageAmount } from "../../../src/trading/trading-utils";
 import {
   UniswapV3QuoterV2,
   UniswapV3Factory,

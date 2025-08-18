@@ -28,8 +28,22 @@ export class UniswapV2RoutingStrategy extends BaseRoutingStrategy {
   }
 
   async getBestRoute(tokenIn: string, amountIn: bigint, tokenOut: string, wallet: Wallet): Promise<Route> {
+    console.log(`\n=== UniswapV2 ROUTE DEBUGGING ===`);
+    console.log(`Original tokenIn: ${tokenIn}`);
+    console.log(`Original tokenOut: ${tokenOut}`);
+    console.log(`AmountIn: ${amountIn.toString()}`);
+    
     tokenIn = tokenIn === ethers.ZeroAddress ? this.chainConfig.tokenAddresses.weth : tokenIn;
     tokenOut = tokenOut === ethers.ZeroAddress ? this.chainConfig.tokenAddresses.weth : tokenOut;
+    
+    console.log(`Converted tokenIn: ${tokenIn}`);
+    console.log(`Converted tokenOut: ${tokenOut}`);
+    console.log(`Same token check: ${tokenIn.toLowerCase() === tokenOut.toLowerCase()}`);
+    
+    if (tokenIn.toLowerCase() === tokenOut.toLowerCase()) {
+      console.log(`⚠️  Same token detected, returning default route`);
+      return this.createDefaultRoute();
+    }
 
     const multicall3Contexts: Multicall3Context[] = [];
     let requestIndex = 0;
@@ -62,6 +76,7 @@ export class UniswapV2RoutingStrategy extends BaseRoutingStrategy {
       wallet,
       multicall3Requests,
     );
+
 
     const bestRoute = this.findBestRouteFromResults(multicall3Results, multicall3Contexts);
 
@@ -215,7 +230,7 @@ export class UniswapV2RoutingStrategy extends BaseRoutingStrategy {
       const context = multicall3Contexts[i];
 
       if (!result.success || !result.returnData) {
-        //console.log(`Route failed: ${context.metadata.description}`);
+        console.log(`Route failed: ${context.metadata.description}`);
         continue;
       }
 
@@ -223,9 +238,34 @@ export class UniswapV2RoutingStrategy extends BaseRoutingStrategy {
         const decoded = this.uniswapV2RouterV2.decodeGetAmountsOutResult(result.returnData);
         const amountOut = decoded[decoded.length - 1];
 
-        //console.log(`Route: ${context.metadata.description} | AmountOut: ${amountOut.toString()}`);
+        console.log(`Route: ${context.metadata.description} | AmountOut: ${amountOut.toString()}`);
+        console.log(`  - Decoded amounts: [${decoded.map(a => a.toString()).join(', ')}]`);
+        console.log(`  - AmountOut > 0: ${amountOut > 0n}`);
+        console.log(`  - AmountOut > bestAmountOut (${bestAmountOut.toString()}): ${amountOut > bestAmountOut}`);
+
+        // Check for zero amounts in any step of the route
+        const hasZeroAmount = decoded.some((amount, index) => {
+          if (index > 0 && amount === 0n) {
+            console.log(`  - ⚠️  Zero amount detected at step ${index}: ${amount.toString()}`);
+            return true;
+          }
+          return false;
+        });
+
+        if (hasZeroAmount) {
+          console.log(`  - ❌ Skipping route with zero intermediate amounts`);
+          continue;
+        }
+
+        // Skip dust amounts (less than 1 unit of the output token)
+        const minimumOutput = 1n;
+        if (amountOut < minimumOutput) {
+          console.log(`  - ⚠️  Skipping dust amount: ${amountOut.toString()} < ${minimumOutput.toString()}`);
+          continue;
+        }
 
         if (amountOut > bestAmountOut) {
+          console.log(`  - 🏆 NEW BEST ROUTE!`);
           bestAmountOut = amountOut;
           bestRoute = {
             amountOut: bestAmountOut,
@@ -239,6 +279,7 @@ export class UniswapV2RoutingStrategy extends BaseRoutingStrategy {
         }
       } catch (error) {
         console.error(`Failed to decode route result for: ${context.metadata.description}`, error);
+        console.error(`Raw return data: ${result.returnData}`);
       }
     }
 

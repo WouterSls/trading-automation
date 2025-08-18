@@ -47,7 +47,6 @@ async function traderTest() {
   };
 
   const quote = await trader.quote(virtToEth);
-  console.log(quote);
 }
 
 if (require.main === module) {

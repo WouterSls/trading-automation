@@ -1,6 +1,6 @@
 import { ethers } from "ethers";
 
-import { GetAbiResponseData, GetAbiResult, GetContractCreationResponseData } from "./types/basescan-api.types";
+import { GetAbiResponseData, GetAbiResult, GetContractCreationResponseData } from "./basescan-api.types";
 
 export class BasescanApi {
   // API
