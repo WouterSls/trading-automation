@@ -46,6 +46,8 @@ import { RouteOptimizer } from "../../routing/RouteOptimizer";
  * @implements {ITradingStrategy}
  */
 export class AerodromeStrategy implements ITradingStrategy {
+  private readonly strategyName = "Aerodrome";
+
   private router: AerodromeRouter;
   private factory: AerodromePoolFactory;
 
@@ -65,14 +67,10 @@ export class AerodromeStrategy implements ITradingStrategy {
    * This strategy is specifically designed for Base chain and will throw an error
    * if used on other chains.
    *
-   * @param strategyName - Human-readable name for this strategy instance
    * @param chain - The blockchain network this strategy will operate on (must be Base)
    * @throws Error if the chain is not Base, as Aerodrome only supports Base chain
    */
-  constructor(
-    private strategyName: string,
-    private chain: ChainType,
-  ) {
+  constructor(private chain: ChainType) {
     if (chain !== ChainType.BASE) {
       throw new Error("AerodromeStrategy is only supported on Base chain");
     }

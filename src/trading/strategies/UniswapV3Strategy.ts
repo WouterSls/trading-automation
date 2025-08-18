@@ -14,6 +14,7 @@ import { createMinimalErc20 } from "../../smartcontracts/ERC/erc-utils";
 import { RouteOptimizer } from "../../routing/RouteOptimizer";
 import { Permit2 } from "../../smartcontracts/permit2/Permit2";
 import { ERC20 } from "../../smartcontracts/ERC/ERC20";
+import { CreateTransactionError, QuoteError } from "../../lib/errors";
 
 /**
  * Uniswap V3 trading strategy implementation
@@ -33,6 +34,8 @@ import { ERC20 } from "../../smartcontracts/ERC/ERC20";
  * @implements {ITradingStrategy}
  */
 export class UniswapV3Strategy implements ITradingStrategy {
+  private readonly strategyName = "UniswapV3";
+
   private quoter: UniswapV3QuoterV2;
   private router: UniswapV3SwapRouterV2;
 
@@ -50,13 +53,9 @@ export class UniswapV3Strategy implements ITradingStrategy {
    * the necessary smart contract instances for quoter, router, and permit2.
    * Also configures the route optimizer for finding optimal swap paths.
    *
-   * @param strategyName - Human-readable name for this strategy instance
    * @param chain - The blockchain network this strategy will operate on
    */
-  constructor(
-    private strategyName: string,
-    private chain: ChainType,
-  ) {
+  constructor(private chain: ChainType) {
     const chainConfig = getChainConfig(chain);
 
     this.WETH_ADDRESS = chainConfig.tokenAddresses.weth;
@@ -170,11 +169,13 @@ export class UniswapV3Strategy implements ITradingStrategy {
         break;
       case TradeType.TOKENInputETHOutput:
       case TradeType.TOKENInputTOKENOutput:
-        if (!inputToken) throw new Error("Invalid input token for trade with token input");
-        amountIn = ethers.parseUnits(trade.inputAmount, inputToken.getDecimals());
+        if (!inputToken) throw new QuoteError("Invalid input token for trade with token input");
+        trade.inputAmount === "0"
+          ? (amountIn = BigInt(await inputToken.getRawTokenBalance(wallet.address)))
+          : (amountIn = ethers.parseUnits(trade.inputAmount, inputToken.getDecimals()));
         break;
       default:
-        throw new Error("Unknown trade type");
+        throw new QuoteError("Unknown trade type");
     }
 
     let outputDecimals;
@@ -184,11 +185,11 @@ export class UniswapV3Strategy implements ITradingStrategy {
         break;
       case TradeType.ETHInputTOKENOutput:
       case TradeType.TOKENInputTOKENOutput:
-        if (!outputToken) throw new Error("Invalid output token for trade with token output");
+        if (!outputToken) throw new QuoteError("Invalid output token for trade with token output");
         outputDecimals = outputToken.getDecimals();
         break;
       default:
-        throw new Error("Unknown trade type");
+        throw new QuoteError("Unknown trade type");
     }
 
     quote.route = await this.routeOptimizer.getBestUniV3Route(trade.inputToken, amountIn, trade.outputToken, wallet);
@@ -239,30 +240,42 @@ export class UniswapV3Strategy implements ITradingStrategy {
         break;
       case TradeType.TOKENInputETHOutput:
       case TradeType.TOKENInputTOKENOutput:
-        if (!inputToken) throw new Error("Invalid input token for trade with token input");
-        amountIn = ethers.parseUnits(trade.inputAmount, inputToken.getDecimals());
+        if (!inputToken) throw new CreateTransactionError("Invalid input token for trade with token input");
+        console.log("TOTAL AMOUNT:");
+        console.log(inputToken);
+        console.log();
+
+        trade.inputAmount === "0"
+          ? (amountIn = BigInt(await inputToken.getRawTokenBalance(wallet.address)))
+          : (amountIn = ethers.parseUnits(trade.inputAmount, inputToken.getDecimals()));
+        //amountIn = ethers.parseUnits(trade.inputAmount, inputToken.getDecimals());
         amountInForSpotRate = ethers.parseUnits(TRADING_CONFIG.PRICE_IMPACT_AMOUNT_IN, inputToken.getDecimals());
         break;
       default:
-        throw new Error("Unknown trade type");
+        throw new CreateTransactionError("Unknown trade type");
     }
+
+    console.log("AMOUNT IN TRADE");
+    console.log(amountIn);
 
     switch (tradeType) {
       case TradeType.ETHInputTOKENOutput:
       case TradeType.TOKENInputTOKENOutput:
-        if (!outputToken) throw new Error("Invalid output token for trade with token output");
+        if (!outputToken) throw new CreateTransactionError("Invalid output token for trade with token output");
         break;
     }
 
     const route = await this.routeOptimizer.getBestUniV3Route(trade.inputToken, amountIn, trade.outputToken, wallet);
-    if (!route.encodedPath && !route.path) throw new Error("Error during best Uniswap V3 route generation");
+    if (!route.encodedPath && !route.path) {
+      throw new CreateTransactionError("Error during best Uniswap V3 route generation");
+    }
 
     const expectedOutput = await this.calculateExpectedOutput(amountInForSpotRate, amountIn, route, wallet);
     const actualOutput = route.amountOut;
 
     const priceImpact = calculatePriceImpact(expectedOutput, actualOutput);
     if (priceImpact > TRADING_CONFIG.MAX_PRICE_IMPACT_PERCENTAGE) {
-      throw new Error(
+      throw new CreateTransactionError(
         `Price impact too high: ${priceImpact}%, max allowed: ${TRADING_CONFIG.MAX_PRICE_IMPACT_PERCENTAGE}%`,
       );
     }
@@ -314,7 +327,7 @@ export class UniswapV3Strategy implements ITradingStrategy {
         tx = await this.router.createMulticallTransaction(deadline, [swapData, unwrapWethData]);
         break;
       default:
-        throw new Error("Unknown trade type");
+        throw new CreateTransactionError("Unknown trade type");
     }
 
     return tx;

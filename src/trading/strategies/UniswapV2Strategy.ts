@@ -44,6 +44,8 @@ import { TradeCreationDto } from "../types/dto/TradeCreationDto";
  * @implements {ITradingStrategy}
  */
 export class UniswapV2Strategy implements ITradingStrategy {
+  private readonly strategyName = "UniswapV2";
+
   private router: UniswapV2RouterV2;
 
   private routeOptimizer: RouteOptimizer;
@@ -61,13 +63,9 @@ export class UniswapV2Strategy implements ITradingStrategy {
    * the necessary smart contract instances for router operations.
    * Also configures the route optimizer for finding optimal swap paths.
    *
-   * @param strategyName - Human-readable name for this strategy instance
    * @param chain - The blockchain network this strategy will operate on
    */
-  constructor(
-    private strategyName: string,
-    private chain: ChainType,
-  ) {
+  constructor(private chain: ChainType) {
     const chainConfig = getChainConfig(chain);
 
     this.WETH_ADDRESS = chainConfig.tokenAddresses.weth;

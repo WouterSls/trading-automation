@@ -6,6 +6,7 @@ import { decodeLogs, determineTradeType } from "../lib/utils";
 import { ERC20_INTERFACE } from "../lib/smartcontract-abis/erc20";
 import { TRADING_CONFIG } from "../config/trading-config";
 import { TradeCreationDto } from "./types/dto/TradeCreationDto";
+import { validateTrade } from "../lib/validation";
 
 export class Trader {
   constructor(
@@ -18,7 +19,7 @@ export class Trader {
   getStrategies = (): ITradingStrategy[] => this.strategies;
 
   async quote(tradeRequest: TradeCreationDto): Promise<Quote> {
-    await this.validateTrade(tradeRequest);
+    await validateTrade(tradeRequest);
 
     const bestStrategy: ITradingStrategy = await this.getBestStrategy(tradeRequest);
 
@@ -26,7 +27,7 @@ export class Trader {
   }
 
   async trade(tradeRequest: TradeCreationDto): Promise<TradeConfirmation> {
-    await this.validateTrade(tradeRequest);
+    await validateTrade(tradeRequest);
 
     const bestStrategy: ITradingStrategy = await this.getBestStrategy(tradeRequest);
 
@@ -39,7 +40,9 @@ export class Trader {
     console.log("Approval checked!");
 
     const ethUsdPriceSnapshot = await bestStrategy.getEthUsdcPrice(this.wallet);
+
     const quote = await bestStrategy.getQuote(tradeRequest, this.wallet);
+    console.log(quote);
 
     console.log("Creating transaction...");
     const tx = await bestStrategy.createTransaction(tradeRequest, this.wallet);
@@ -71,18 +74,6 @@ export class Trader {
     );
 
     return tradeConfirmation;
-  }
-
-  private validateTrade(tradeRequest: TradeCreationDto) {
-    const inputAmountNumber = Number(tradeRequest.inputAmount);
-
-    if (isNaN(inputAmountNumber)) {
-      throw new Error("Input Amount is not a valid number");
-    }
-
-    if (inputAmountNumber <= 0) {
-      throw new Error("Input Amount must be greater than zero");
-    }
   }
 
   /**
