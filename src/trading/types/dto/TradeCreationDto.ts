@@ -5,6 +5,6 @@ export type TradeCreationDto = {
   chain: ChainType;
   inputType: InputType;
   inputToken: string;
-  inputAmount: string;
+  inputAmount: string | "ALL";
   outputToken: string;
 };
