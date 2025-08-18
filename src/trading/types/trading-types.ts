@@ -1,5 +1,9 @@
 import { Quote } from "./quoting-types";
 
+export enum InputAmountConstants {
+  ALL = "0",
+}
+
 export enum InputType {
   ETH = "ETH",
   USD = "USD",
