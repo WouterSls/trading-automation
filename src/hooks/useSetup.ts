@@ -11,9 +11,9 @@ dotenv.config({ path: envPath });
 import { ethers, JsonRpcProvider, Wallet } from "ethers";
 import { ChainConfig, getChainConfig, ChainType } from "../config/chain-config";
 
-import { AlchemyApi } from "../external-apis/AlchemyApi";
-import { GeckoTerminalApi } from "../external-apis/GeckoTerminalApi";
-import { TheGraphApi } from "../external-apis/TheGraphApi";
+import { AlchemyApi } from "../external-apis/alchemy/AlchemyApi";
+import { GeckoTerminalApi } from "../external-apis/coingecko/GeckoTerminalApi";
+import { TheGraphApi } from "../external-apis/thegraph/TheGraphApi";
 
 //BASE
 export const getBaseProvider = async (): Promise<JsonRpcProvider> => {
@@ -29,9 +29,10 @@ export const getBaseProvider = async (): Promise<JsonRpcProvider> => {
 export const getBaseChainConfig = (): ChainConfig => {
   return getChainConfig(ChainType.BASE);
 };
+
 export const getBaseWallet_1 = (): Wallet => {
   const rpcUrl = process.env.BASE_RPC_URL;
-  const privateKey = process.env.PRIVATE_KEY;
+  const privateKey = process.env.MS_PRIVATE_KEY;
 
   if (!rpcUrl || !privateKey) {
     throw new Error("RPC_URL and PRIVATE_KEY must be set");
@@ -45,7 +46,7 @@ export const getBaseWallet_1 = (): Wallet => {
 //ARB
 export const getArbitrumWallet_1 = (): Wallet => {
   const rpcUrl = process.env.ARB_RPC_URL;
-  const privateKey = process.env.PRIVATE_KEY;
+  const privateKey = process.env.MS_PRIVATE_KEY;
 
   if (!rpcUrl || !privateKey) {
     throw new Error("RPC_URL and PRIVATE_KEY must be set");
@@ -59,7 +60,7 @@ export const getArbitrumWallet_1 = (): Wallet => {
 //ETH
 export const getEthWallet_1 = (): Wallet => {
   const rpcUrl = process.env.ETH_RPC_URL;
-  const privateKey = process.env.PRIVATE_KEY;
+  const privateKey = process.env.MS_PRIVATE_KEY;
 
   if (!rpcUrl || !privateKey) {
     throw new Error("RPC_URL and PRIVATE_KEY must be set");
