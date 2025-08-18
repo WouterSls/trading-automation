@@ -1,5 +1,5 @@
 import { ChainType } from "../../src/config/chain-config";
-import { GeckoTerminalApi } from "../../src/external-apis/GeckoTerminalApi";
+import { GeckoTerminalApi } from "../../src/external-apis/coingecko/GeckoTerminalApi";
 
 export async function getPrice(chain: ChainType, tokenAddress: string) {
   const api = new GeckoTerminalApi();

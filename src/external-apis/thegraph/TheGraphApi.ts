@@ -1,6 +1,6 @@
-import { ChainType } from "../config/chain-config";
-import { PoolKey } from "../smartcontracts/uniswap-v4/uniswap-v4-types";
-import { UniV2PoolData, UniV3PoolData, UniV3PoolDataWithInputAmount } from "./types/thegraph-api.types";
+import { ChainType } from "../../config/chain-config";
+import { PoolKey } from "../../smartcontracts/uniswap-v4/uniswap-v4-types";
+import { UniV2PoolData, UniV3PoolData, UniV3PoolDataWithInputAmount } from "./thegraph-api.types";
 
 export class TheGraphApi {
   constructor(private readonly apiKey: string) {}

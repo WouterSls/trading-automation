@@ -6,7 +6,7 @@ import {
   AddressPriceData,
   SymbolPriceData,
   PriceRequest,
-} from "./types/alchemy-api.types";
+} from "./alchemy-api.types";
 
 export class AlchemyApi {
   private readonly PRICES_API_URL: string = "https://api.g.alchemy.com/prices/v1";

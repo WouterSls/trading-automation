@@ -1,5 +1,5 @@
 import { getTheGraphApi } from "../../src/hooks/useSetup";
-import { TheGraphApi } from "../../src/external-apis/TheGraphApi";
+import { TheGraphApi } from "../../src/external-apis/thegraph/TheGraphApi";
 import { ChainType } from "../../src/config/chain-config";
 
 async function getPoolInfo() {
