@@ -3,6 +3,7 @@ import { ChainType, getChainConfig } from "../../config/chain-config";
 import { PERMIT2_INTERFACE } from "../../lib/smartcontract-abis/_index";
 import { IPermitSingle } from "../universal-router/universal-router-types";
 
+//TODO: extract to singature creation to use in no-custodial bot
 export class Permit2 {
   private permit2Address: string;
   private chainId: number;
