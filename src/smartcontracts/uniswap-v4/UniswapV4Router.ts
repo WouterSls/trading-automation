@@ -43,23 +43,25 @@ export class UniswapV4Router {
     return encodedData;
   }
 
-  public static encodeSwapExactInput(currencyIn: string, path: PathKey[], amountIn: bigint, amountOutMinimum: bigint) {
-    const pathKeyTuples = path.map(pathKey => [
-      pathKey.intermediateCurrency,
-      pathKey.fee,
-      pathKey.tickSpacing,
-      pathKey.hooks,
-      pathKey.hookData,
-    ] as const);
+  public static encodeSwapExactInput(
+    currencyIn: string,
+    pathKeys: PathKey[],
+    amountIn: bigint,
+    amountOutMinimum: bigint,
+  ) {
+    const pathKeyTuples = pathKeys.map(
+      (pathKey) =>
+        [pathKey.intermediateCurrency, pathKey.fee, pathKey.tickSpacing, pathKey.hooks, pathKey.hookData] as const,
+    );
 
     const encodedData = AbiCoder.defaultAbiCoder().encode(
       [
         "address", // currencyIn (Currency is just an address in ABI encoding)
         "tuple(address,uint24,int24,address,bytes)[]", // PathKey array as tuples
         "uint128", // amountIn
-        "uint128" // amountOutMinimum
+        "uint128", // amountOutMinimum
       ],
-      [currencyIn, pathKeyTuples, amountIn, amountOutMinimum]
+      [currencyIn, pathKeyTuples, amountIn, amountOutMinimum],
     );
 
     return encodedData;
@@ -95,11 +97,11 @@ export class UniswapV4Router {
     //TODO: double check -> all documentation is without bool, eth -> token transaction fails without bool
     if (actionParams.action === V4PoolAction.SETTLE_ALL) {
       if (actionParams.params.length === 2) {
-        console.log("ENCODING WITHOUT BOOL")
+        console.log("ENCODING WITHOUT BOOL");
         const [inputCurrency, settlAmountIn] = actionParams.params;
         return UniswapV4Router.encodeSettleAllWithoutBool(inputCurrency, settlAmountIn);
       } else if (actionParams.params.length === 3) {
-        console.log("ENCODING WITH BOOL")
+        console.log("ENCODING WITH BOOL");
         const [inputCurrency, settlAmountIn, zeroForOne] = actionParams.params;
         return UniswapV4Router.encodeSettleAll(inputCurrency, settlAmountIn, zeroForOne);
       }
