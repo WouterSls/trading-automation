@@ -50,6 +50,7 @@ export interface ChainConfig {
     routerAddress: string;
   };
   multicall3Address: string;
+  orderExecutorAddress: string;
 }
 
 export const supportedChains: Record<ChainType, ChainConfig> = {
@@ -97,6 +98,7 @@ export const supportedChains: Record<ChainType, ChainConfig> = {
       routerAddress: ethers.ZeroAddress,
     },
     multicall3Address: "0xcA11bde05977b3631167028862bE2a173976CA11",
+    orderExecutorAddress: ethers.ZeroAddress
   },
   [ChainType.ARB]: {
     id: 42161n,
@@ -142,6 +144,7 @@ export const supportedChains: Record<ChainType, ChainConfig> = {
       routerAddress: ethers.ZeroAddress,
     },
     multicall3Address: "0xcA11bde05977b3631167028862bE2a173976CA11",
+    orderExecutorAddress: ethers.ZeroAddress
   },
   [ChainType.BASE]: {
     id: 8453n,
@@ -187,6 +190,7 @@ export const supportedChains: Record<ChainType, ChainConfig> = {
       routerAddress: "0xcF77a3Ba9A5CA399B7c97c74d54e5b1Beb874E43",
     },
     multicall3Address: "0xcA11bde05977b3631167028862bE2a173976CA11",
+    orderExecutorAddress: ethers.ZeroAddress
   },
 };
 
