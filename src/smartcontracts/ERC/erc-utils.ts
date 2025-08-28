@@ -1,6 +1,7 @@
 import { ethers, Provider } from "ethers";
 import { ERC20 } from "./ERC20";
 import { ERC20_INTERFACE } from "../../lib/smartcontract-abis/_index";
+
 export async function createMinimalErc20(address: string, provider: Provider): Promise<ERC20 | null> {
   const contract = new ethers.Contract(address, ERC20_INTERFACE, provider);
 
