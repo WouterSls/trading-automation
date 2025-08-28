@@ -89,14 +89,17 @@ export class UniswapV4Quoter {
 
   /**
    * Decode the quoteExactInputSingle result data to the returned values
-   * 
+   *
    * @param data the hex result data from transaction with quoteExactInputSingle function data
    * @return amountOut The output quote for the exactIn swap
    * @return gasEstimate Estimated gas units used for the swap
    */
-  decodeQuoteExactInputSingleResultData(data: ethers.BytesLike): {amountOut:bigint, gasEstimate: bigint} {
-    const {amountOut, gasEstimate} = this.quoterContract.interface.decodeFunctionResult("quoteExactInputSingle",data);
-    return {amountOut, gasEstimate}
+  decodeQuoteExactInputSingleResultData(data: ethers.BytesLike): { amountOut: bigint; gasEstimate: bigint } {
+    const { amountOut, gasEstimate } = this.quoterContract.interface.decodeFunctionResult(
+      "quoteExactInputSingle",
+      data,
+    );
+    return { amountOut, gasEstimate };
   }
 
   /**
@@ -149,7 +152,7 @@ export class UniswapV4Quoter {
    * @param exactAmount - The exact input amount to swap
    * @return the encoded transaction data
    */
-encodeQuoteExactInput(exactCurrency: string, path: PathKey[], exactAmount: bigint) {
+  encodeQuoteExactInput(exactCurrency: string, path: PathKey[], exactAmount: bigint) {
     const params = {
       exactCurrency,
       path,
@@ -162,14 +165,14 @@ encodeQuoteExactInput(exactCurrency: string, path: PathKey[], exactAmount: bigin
 
   /**
    * Decode the quoteExactInputresult data to the returned values
-   * 
+   *
    * @param data the hex result data from transaction with quoteExactInputSingle function data
    * @return amountOut The output quote for the exactIn swap
    * @return gasEstimate Estimated gas units used for the swap
    */
-  decodeQuoteExactInputResultData(data: ethers.BytesLike): {amountOut:bigint, gasEstimate: bigint} {
-    const {amountOut, gasEstimate} = this.quoterContract.interface.decodeFunctionResult("quoteExactInput", data);
-    return {amountOut, gasEstimate};
+  decodeQuoteExactInputResultData(data: ethers.BytesLike): { amountOut: bigint; gasEstimate: bigint } {
+    const { amountOut, gasEstimate } = this.quoterContract.interface.decodeFunctionResult("quoteExactInput", data);
+    return { amountOut, gasEstimate };
   }
 
   /**
