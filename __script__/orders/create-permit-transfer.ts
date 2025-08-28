@@ -239,7 +239,9 @@ export async function createPermitTransfer(): Promise<SignedPermit2Transfer> {
       signature,
       owner: wallet.address,
     };
+    console.log(result);
 
+    throw new Error("STOP");
 
    await permit2.executeSignedPermit2Transfer(wallet,result)
 

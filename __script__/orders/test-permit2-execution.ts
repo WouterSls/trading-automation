@@ -1,12 +1,12 @@
 /**
  * Complete Permit2 Transfer Test
- * 
+ *
  * This script demonstrates the complete flow:
  * 1. Check Permit2 approval
  * 2. Approve Permit2 if needed
  * 3. Create signed Permit2 transfer
  * 4. Execute the transfer on-chain
- * 
+ *
  * Usage: npx ts-node __script__/orders/test-permit2-execution.ts
  */
 
@@ -16,6 +16,7 @@ import { getHardhatWallet_1, getHardhatWallet_2 } from "../../src/hooks/useSetup
 import { createMinimalErc20 } from "../../src/smartcontracts/ERC/erc-utils";
 import { Permit2 } from "../../src/smartcontracts/permit2/Permit2";
 import { Permit2Transfer, Permit2TransferDetails, SignedPermit2Transfer } from "../../src/orders";
+import { ERC20 } from "../../src/smartcontracts/ERC/ERC20";
 
 async function testPermit2Execution() {
   console.log("\n🧪 Complete Permit2 Transfer Test");
@@ -27,7 +28,7 @@ async function testPermit2Execution() {
   // Setup wallets
   const userWallet = getHardhatWallet_1(); // Token owner
   const executorWallet = getHardhatWallet_2(); // Backend/executor
-  
+
   console.log("👤 User wallet:", userWallet.address);
   console.log("🏢 Executor wallet:", executorWallet.address);
   console.log();
@@ -35,7 +36,7 @@ async function testPermit2Execution() {
   // Setup token and Permit2
   const tokenAddress = chainConfig.tokenAddresses.usdc;
   const permit2 = new Permit2(chain);
-  
+
   const usdc = await createMinimalErc20(tokenAddress, userWallet.provider!);
   if (!usdc) {
     throw new Error(`Could not create ERC20 for ${tokenAddress}`);
@@ -45,53 +46,50 @@ async function testPermit2Execution() {
   console.log("📊 Initial Token Balances:");
   const userBalance = await usdc.getFormattedTokenBalance(userWallet.address);
   const executorBalance = await usdc.getFormattedTokenBalance(executorWallet.address);
-  
+
   console.log(`  User: ${userBalance} USDC`);
   console.log(`  Executor: ${executorBalance} USDC`);
   console.log();
 
   // Transfer amount
-  const transferAmount = ethers.parseUnits("100", 6).toString(); // 100 USDC
+  const transferAmount = ethers.parseUnits("100", 6); // 100 USDC
   console.log("💰 Transfer Amount:", ethers.formatUnits(transferAmount, 6), "USDC");
   console.log();
 
   // STEP 1: Check and handle Permit2 approval
   console.log("🔍 Step 1: Checking Permit2 Approval");
   console.log("------------------------------------");
-  
-  const { hasAllowance, currentAllowance } = await permit2.checkPermit2Allowance(
-    userWallet,
-    userWallet.address,
-    tokenAddress,
-    transferAmount
-  );
-  
+
+  const allowanceTxData = ERC20.encodeAllowance(userWallet.address, permit2.getAddress());
+  const allowanceResultData = await userWallet.call({ to: tokenAddress, data: allowanceTxData });
+  const currentAllowance = ERC20.decodeAllowance(allowanceResultData);
+
+  const hasAllowance = currentAllowance >= transferAmount;
+
   console.log("Current allowance:", ethers.formatUnits(currentAllowance, 6), "USDC");
   console.log("Sufficient allowance:", hasAllowance ? "✅" : "❌");
   console.log();
 
   if (!hasAllowance) {
     console.log("🔓 Approving Permit2...");
-    await permit2.approvePermit2(userWallet, tokenAddress);
+    const approveTx = await usdc.createApproveTransaction(permit2.getAddress(), transferAmount);
+    const txResponse = await userWallet.sendTransaction(approveTx);
+    const txReceipt = await txResponse.wait();
+    if (!txReceipt) {
+      throw new Error("No receipt received from approve tx");
+    }
+    console.log("Permit2 approved!")
   }
 
-  // STEP 2: Create Permit2 transfer signature
   console.log("✍️  Step 2: Creating Permit2 Transfer Signature");
   console.log("----------------------------------------------");
 
-  // Get nonce
-  const nonce = await permit2.getPermit2Nonce(
-    userWallet,
-    userWallet.address,
-    tokenAddress,
-    executorWallet.address
-  );
+  const nonce = await permit2.getPermit2Nonce(userWallet, userWallet.address, tokenAddress, executorWallet.address);
 
-  // Create permit data
   const permit: Permit2Transfer = {
     permitted: {
       token: tokenAddress,
-      amount: transferAmount,
+      amount: transferAmount.toString(),
     },
     nonce: nonce.toString(),
     deadline: Math.floor(Date.now() / 1000) + 3600, // 1 hour
@@ -99,7 +97,7 @@ async function testPermit2Execution() {
 
   const transferDetails: Permit2TransferDetails = {
     to: executorWallet.address,
-    requestedAmount: transferAmount,
+    requestedAmount: transferAmount.toString(),
   };
 
   console.log("📋 Permit Details:");
@@ -110,35 +108,9 @@ async function testPermit2Execution() {
   console.log("  To:", transferDetails.to);
   console.log();
 
-  // Create EIP-712 signature
-  const permit2Domain = {
-    name: "Permit2",
-    chainId: Number(chainConfig.id),
-    verifyingContract: permit2.getPermit2Address(),
-  };
-
-  const permit2Types = {
-    PermitTransferFrom: [
-      { name: "permitted", type: "TokenPermissions" },
-      { name: "spender", type: "address" },
-      { name: "nonce", type: "uint256" },
-      { name: "deadline", type: "uint256" },
-    ],
-    TokenPermissions: [
-      { name: "token", type: "address" },
-      { name: "amount", type: "uint256" },
-    ],
-  };
-
-  const permit2Values = {
-    permitted: permit.permitted,
-    spender: executorWallet.address,
-    nonce: permit.nonce,
-    deadline: permit.deadline,
-  };
 
   console.log("✍️  User signing Permit2 transfer...");
-  const signature = await userWallet.signTypedData(permit2Domain, permit2Types, permit2Values);
+  const signature = await permit2.signPermitTransferFrom(userWallet, permit, executorWallet.address);
   console.log("✅ Signature created:", signature.substring(0, 20) + "...");
   console.log();
 
@@ -153,11 +125,11 @@ async function testPermit2Execution() {
   // STEP 3: Execute the transfer on-chain
   console.log("⚡ Step 3: Executing Transfer On-Chain");
   console.log("-------------------------------------");
-  
+
   try {
     const txReceipt = await permit2.executeSignedPermit2Transfer(
       executorWallet, // Executor pays gas
-      signedPermit2Transfer
+      signedPermit2Transfer,
     );
 
     console.log("🎉 Transfer executed successfully!");
@@ -167,21 +139,21 @@ async function testPermit2Execution() {
     // STEP 4: Verify final balances
     console.log("📊 Final Token Balances:");
     console.log("------------------------");
-    
+
     const finalUserBalance = await usdc.getFormattedTokenBalance(userWallet.address);
     const finalExecutorBalance = await usdc.getFormattedTokenBalance(executorWallet.address);
-    
+
     console.log(`  User: ${finalUserBalance} USDC (was ${userBalance})`);
     console.log(`  Executor: ${finalExecutorBalance} USDC (was ${executorBalance})`);
     console.log();
 
     // Calculate changes
-    const userChange = parseFloat(finalUserBalance) - parseFloat(userBalance);
-    const executorChange = parseFloat(finalExecutorBalance) - parseFloat(executorBalance);
-    
+    const userChange = parseFloat(finalUserBalance.toString()) - parseFloat(userBalance.toString());
+    const executorChange = parseFloat(finalExecutorBalance.toString()) - parseFloat(executorBalance.toString());
+
     console.log("💱 Balance Changes:");
-    console.log(`  User: ${userChange > 0 ? '+' : ''}${userChange} USDC`);
-    console.log(`  Executor: ${executorChange > 0 ? '+' : ''}${executorChange} USDC`);
+    console.log(`  User: ${userChange > 0 ? "+" : ""}${userChange} USDC`);
+    console.log(`  Executor: ${executorChange > 0 ? "+" : ""}${executorChange} USDC`);
     console.log();
 
     console.log("✅ Test completed successfully!");
@@ -191,10 +163,9 @@ async function testPermit2Execution() {
     console.log("  • Tokens transferred directly from user to executor");
     console.log("  • No additional approvals needed for future transfers");
     console.log();
-
   } catch (error) {
     console.error("❌ Transfer execution failed:", error);
-    
+
     // Provide debugging help
     console.log("\n🔧 Debugging Tips:");
     console.log("- Make sure you have USDC balance in the user wallet");
@@ -202,7 +173,7 @@ async function testPermit2Execution() {
     console.log("- Check that the signature hasn't expired");
     console.log("- Verify nonce hasn't been used already");
     console.log();
-    
+
     throw error;
   }
 }
