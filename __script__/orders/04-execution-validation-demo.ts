@@ -11,7 +11,7 @@
 import { ethers } from "ethers";
 import { ChainType, getChainConfig } from "../../src/config/chain-config";
 import { OrderValidator } from "../../src/orders/OrderValidator";
-import { LimitOrder, ExecutionParams } from "../../src/orders/types/OrderTypes";
+import { TradeOrder, ExecutionParams } from "../../src/orders/types/OrderTypes";
 
 async function demonstrateExecutionValidation() {
   console.log("\n⚡ Order Execution Validation Demo");
@@ -21,7 +21,7 @@ async function demonstrateExecutionValidation() {
   const orderValidator = new OrderValidator();
 
   // Mock user's signed order with constraints
-  const userOrder: LimitOrder = {
+  const userOrder: TradeOrder = {
     maker: "0x742d35Cc6634C0532925a3b8D86c9Ec4e5FBa3E7",
     inputToken: chainConfig.tokenAddresses.usdc, // USDC
     outputToken: chainConfig.tokenAddresses.weth, // WETH
