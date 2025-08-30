@@ -5,14 +5,15 @@
   "license": "ISC",
   "author": "",
   "type": "commonjs",
-  "main": "src/server.ts",
+  "main": "trading-engine/src/server.ts",
   "scripts": {
     "test": "jest",
     "test:watch": "jest --watch",
-    "generate": "npx openapi-typescript ./src/api/static/openapi.yaml -o ./src/api/generated/openapi.ts",
-    "dev": "rm -rf js-build/src/api/static && cp -r src/api/static js-build/src/api/static && npx nodemon js-build/src/server.js"
+    "generate": "npx openapi-typescript ./trading-engine/src/api/static/openapi.yaml -o ./trading-engine/src/api/generated/openapi.ts",
+    "dev": "rm -rf js-build/trading-engine/src/api/static && cp -r trading-engine/src/api/static js-build/trading-engine/src/api/static && npx nodemon js-build/trading-engine/src/server.js"
   },
   "dependencies": {
+    "@openzeppelin/contracts": "^5.4.0",
     "dotenv": "^16.4.7",
     "ethers": "^6.13.5",
     "node-cache": "^5.1.2",
