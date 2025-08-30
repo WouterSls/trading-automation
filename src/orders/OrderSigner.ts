@@ -1,19 +1,19 @@
 import { Wallet, ethers } from "ethers";
 import { ChainType, getChainConfig } from "../config/chain-config";
-import { 
-  EIP712Domain, 
-  TradeOrder, 
-  Permit2Data, 
-  SignedLimitOrder, 
+import {
+  EIP712Domain,
+  TradeOrder,
+  Permit2Data,
+  SignedLimitOrder,
   EIP712_TYPES,
   createDomain,
-  generateOrderNonce
+  generateOrderNonce,
 } from "./types/OrderTypes";
 import { Permit2 } from "../smartcontracts/permit2/Permit2";
 
 /**
  * OrderSigner handles EIP-712 signing for limit orders
- * 
+ *
  * This class creates and signs structured data that users can understand
  * when prompted by their wallet. It handles both order signing and Permit2
  * authorization in a non-custodial way.
@@ -21,14 +21,14 @@ import { Permit2 } from "../smartcontracts/permit2/Permit2";
 export class OrderSigner {
   private domain: EIP712Domain;
   private permit2: Permit2;
-  
+
   constructor(
     private chain: ChainType,
-    private orderExecutorAddress: string // Contract address that will verify signatures
+    private orderExecutorAddress: string, // Contract address that will verify signatures
   ) {
     const chainConfig = getChainConfig(chain);
     const chainId = Number(chainConfig.id);
-    
+
     // Create the domain separator for EIP-712 signing
     this.domain = createDomain(chain, chainId, orderExecutorAddress);
     this.permit2 = new Permit2(chain);
@@ -36,10 +36,10 @@ export class OrderSigner {
 
   /**
    * Creates and signs a complete limit order
-   * 
+   *
    * This is the main function that users will call to create signed orders.
    * It handles both the order signature and Permit2 authorization.
-   * 
+   *
    * @param wallet - User's wallet for signing
    * @param orderParams - The order parameters
    * @returns Complete signed order ready for backend storage/execution
@@ -54,21 +54,20 @@ export class OrderSigner {
       maxSlippageBps: number;
       allowedRouters: string[];
       expiryMinutes: number; // How many minutes from now should this expire
-    }
+    },
   ): Promise<SignedLimitOrder> {
-    
     console.log("🔏 Creating signed limit order...");
-    
+
     // 1. Create the order structure
     const order: TradeOrder = {
       maker: wallet.address,
       inputToken: orderParams.inputToken,
-      outputToken: orderParams.outputToken, 
+      outputToken: orderParams.outputToken,
       inputAmount: orderParams.inputAmount,
       minAmountOut: orderParams.minAmountOut,
       maxSlippageBps: orderParams.maxSlippageBps,
       allowedRouters: orderParams.allowedRouters,
-      expiry: Math.floor(Date.now() / 1000) + (orderParams.expiryMinutes * 60),
+      expiry: Math.floor(Date.now() / 1000) + orderParams.expiryMinutes * 60,
       nonce: generateOrderNonce(),
     };
 
@@ -90,12 +89,9 @@ export class OrderSigner {
         token: orderParams.inputToken,
         amount: orderParams.inputAmount,
       },
-      nonce: await this.permit2.getPermit2Nonce(
-        wallet,
-        wallet.address,
-        orderParams.inputToken,
-        this.orderExecutorAddress
-      ).then(n => n.toString()),
+      nonce: await this.permit2
+        .getPermit2Nonce(wallet, wallet.address, orderParams.inputToken, this.orderExecutorAddress)
+        .then((n) => n.toString()),
       deadline: order.expiry, // Use same deadline as order
     };
 
@@ -109,8 +105,8 @@ export class OrderSigner {
     // 3. Sign the order using EIP-712
     console.log("✍️  Signing order with EIP-712...");
     const orderSignature = await this.signOrder(wallet, order);
-    
-    // 4. Sign the Permit2 data using EIP-712  
+
+    // 4. Sign the Permit2 data using EIP-712
     console.log("✍️  Signing Permit2 authorization...");
     const permit2Signature = await this.signPermit2(wallet, permit2Data);
 
@@ -124,13 +120,13 @@ export class OrderSigner {
     console.log("✅ Signed order created successfully!");
     console.log("📝 Order signature:", orderSignature.substring(0, 20) + "...");
     console.log("📝 Permit2 signature:", permit2Signature.substring(0, 20) + "...");
-    
+
     return signedOrder;
   }
 
   /**
    * Signs the limit order using EIP-712
-   * 
+   *
    * This creates a signature that proves the user authorized this specific order
    * with all its constraints. The signature is bound to our domain to prevent
    * replay attacks.
@@ -138,13 +134,9 @@ export class OrderSigner {
   async signOrder(wallet: Wallet, order: TradeOrder): Promise<string> {
     console.log("🔐 Signing order data...");
     console.log("🏷️  Domain:", this.domain);
-    
+
     // Sign the structured order data
-    const signature = await wallet.signTypedData(
-      this.domain,
-      { LimitOrder: EIP712_TYPES.TradeOrder },
-      order
-    );
+    const signature = await wallet.signTypedData(this.domain, { LimitOrder: EIP712_TYPES.TradeOrder }, order);
 
     console.log("✅ Order signature created");
     return signature;
@@ -152,18 +144,18 @@ export class OrderSigner {
 
   /**
    * Signs Permit2 authorization using EIP-712
-   * 
+   *
    * This creates a signature that allows the OrderExecutor contract to pull
    * tokens from the user's wallet when the order is executed.
    */
   async signPermit2(wallet: Wallet, permit2Data: Permit2Data): Promise<string> {
     console.log("🔐 Signing Permit2 authorization...");
-    
+
     // Create Permit2 domain (different from our order domain)
     const permit2Domain = {
       name: "Permit2",
       chainId: this.domain.chainId,
-      verifyingContract: this.permit2.getPermit2Address(),
+      verifyingContract: this.permit2.getAddress(),
     };
 
     // Structure the permit data for signing
@@ -184,7 +176,7 @@ export class OrderSigner {
         PermitDetails: EIP712_TYPES.PermitDetails,
         PermitSingle: EIP712_TYPES.PermitSingle,
       },
-      permitSingle
+      permitSingle,
     );
 
     console.log("✅ Permit2 signature created");
@@ -193,7 +185,7 @@ export class OrderSigner {
 
   /**
    * Verifies that a signed order has valid signatures
-   * 
+   *
    * This can be used to validate orders before storing them or executing them.
    * Note: This only verifies the signatures, not whether the order is executable.
    */
@@ -203,16 +195,16 @@ export class OrderSigner {
     isValid: boolean;
   }> {
     console.log("🔍 Verifying signed order...");
-    
+
     try {
       // Verify order signature
       const orderSigner = ethers.verifyTypedData(
         this.domain,
         { LimitOrder: EIP712_TYPES.TradeOrder },
         signedOrder.order,
-        signedOrder.orderSignature
+        signedOrder.orderSignature,
       );
-      
+
       const orderSignatureValid = orderSigner.toLowerCase() === signedOrder.order.maker.toLowerCase();
       console.log("📝 Order signature valid:", orderSignatureValid);
 
@@ -220,7 +212,7 @@ export class OrderSigner {
       const permit2Domain = {
         name: "Permit2",
         chainId: this.domain.chainId,
-        verifyingContract: this.permit2.getPermit2Address(),
+        verifyingContract: this.permit2.getAddress(),
       };
 
       const permitSingle = {
@@ -237,7 +229,7 @@ export class OrderSigner {
           PermitSingle: EIP712_TYPES.PermitSingle,
         },
         permitSingle,
-        signedOrder.permit2Signature
+        signedOrder.permit2Signature,
       );
 
       const permit2SignatureValid = permit2Signer.toLowerCase() === signedOrder.order.maker.toLowerCase();
@@ -274,11 +266,6 @@ export class OrderSigner {
    * This is what actually gets signed (useful for debugging)
    */
   getOrderHash(order: TradeOrder): string {
-    return ethers.TypedDataEncoder.hash(
-      this.domain,
-      { LimitOrder: EIP712_TYPES.TradeOrder },
-      order
-    );
+    return ethers.TypedDataEncoder.hash(this.domain, { LimitOrder: EIP712_TYPES.TradeOrder }, order);
   }
 }
-

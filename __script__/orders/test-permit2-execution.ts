@@ -17,6 +17,7 @@ import { createMinimalErc20 } from "../../src/smartcontracts/ERC/erc-utils";
 import { Permit2 } from "../../src/smartcontracts/permit2/Permit2";
 import { Permit2Transfer, Permit2TransferDetails, SignedPermit2Transfer } from "../../src/orders";
 import { ERC20 } from "../../src/smartcontracts/ERC/ERC20";
+import { buyUsdcWithETH } from "../trading/tokens/buy-usdc";
 
 async function testPermit2Execution() {
   console.log("\n🧪 Complete Permit2 Transfer Test");
@@ -32,6 +33,8 @@ async function testPermit2Execution() {
   console.log("👤 User wallet:", userWallet.address);
   console.log("🏢 Executor wallet:", executorWallet.address);
   console.log();
+
+  await buyUsdcWithETH(userWallet, 1);
 
   // Setup token and Permit2
   const tokenAddress = chainConfig.tokenAddresses.usdc;
@@ -78,7 +81,7 @@ async function testPermit2Execution() {
     if (!txReceipt) {
       throw new Error("No receipt received from approve tx");
     }
-    console.log("Permit2 approved!")
+    console.log("Permit2 approved!");
   }
 
   console.log("✍️  Step 2: Creating Permit2 Transfer Signature");
@@ -107,7 +110,6 @@ async function testPermit2Execution() {
   console.log("  Deadline:", new Date(permit.deadline * 1000).toISOString());
   console.log("  To:", transferDetails.to);
   console.log();
-
 
   console.log("✍️  User signing Permit2 transfer...");
   const signature = await permit2.signPermitTransferFrom(userWallet, permit, executorWallet.address);

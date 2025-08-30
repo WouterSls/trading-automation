@@ -1,4 +1,4 @@
-import {  ethers, Wallet } from "ethers";
+import { ethers, Wallet } from "ethers";
 import { getHardhatWallet_1 } from "../../../src/hooks/useSetup";
 import { ChainConfig, ChainType, getChainConfig } from "../../../src/config/chain-config";
 import { UniversalRouter } from "../../../src/smartcontracts/universal-router/UniversalRouter";
@@ -73,7 +73,7 @@ export async function v4SwapInteraction(wallet: Wallet, tradeCreationDto: TradeC
   const wethAddress = chainConfig.tokenAddresses.weth;
   const usdc = await createMinimalErc20(usdcAddress, wallet.provider!);
   const weth = await createMinimalErc20(wethAddress, wallet.provider!);
-  
+
   if (!usdc || !weth) throw new Error("Error during ERC20 token creation");
 
   //console.log("Swapping ETH for USDC...");
@@ -96,7 +96,7 @@ export async function v4SwapInteraction(wallet: Wallet, tradeCreationDto: TradeC
   // Preconditions
   const deadline = Math.floor(Date.now() / 1000) + 1200;
 
-  await verifyOrGrantMaxUnitAllowance(wallet, usdc, permit2.getPermit2Address());
+  await verifyOrGrantMaxUnitAllowance(wallet, usdc, permit2.getAddress());
 
   //await testPermit2TransferFrom(wallet, chain);
 
@@ -117,7 +117,7 @@ export async function v4SwapInteraction(wallet: Wallet, tradeCreationDto: TradeC
     spender: router.getRouterAddress(),
     sigDeadline: deadline,
   };
-  const signature = await permit2.getPermitSingleSignature(wallet, permitSingle);
+  const signature = await permit2.signPermitSingle(wallet, permitSingle);
 
   const permit2PermitCommand = CommandType.PERMIT2_PERMIT;
   const permit2Input = encodePermitSingleInput(permitSingle, signature);

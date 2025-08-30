@@ -1,8 +1,7 @@
 import { ethers } from "ethers";
 import { ChainType, getChainConfig } from "../../src/config/chain-config";
 import { getBaseWallet_1 } from "../../src/hooks/useSetup";
-import { OrderValidator, ExecutionParams, SignedLimitOrder, SignedPermit2Transfer,  } from "../../src/orders";
-import { createPermitTransfer } from "./create-permit-transfer";
+import { OrderValidator, ExecutionParams, SignedLimitOrder, SignedPermit2Transfer } from "../../src/orders";
 
 /**
  * Simulates backend order execution
@@ -24,10 +23,10 @@ async function executeOrder(signedPermitTransfer: SignedPermit2Transfer, signedO
   // 1. VALIDATE THE SIGNED ORDER
   console.log("🔍 Step 1: Backend Validates Stored Order");
   console.log("-----------------------------------------");
-  
+
   const orderValidation = await orderValidator.validateSignedOrder(signedOrder);
   console.log("Order Valid:", orderValidation.isValid ? "✅" : "❌");
-  
+
   if (!orderValidation.isValid) {
     console.log("❌ Order validation failed:", orderValidation.errors);
     return;
@@ -36,7 +35,7 @@ async function executeOrder(signedPermitTransfer: SignedPermit2Transfer, signedO
   // Check if order is expired
   const isExpired = orderValidator.isOrderExpired(signedOrder.order);
   console.log("Order Expired:", isExpired ? "❌ YES" : "✅ NO");
-  
+
   if (isExpired) {
     console.log("❌ Order has expired, cannot execute");
     return;
@@ -49,7 +48,7 @@ async function executeOrder(signedPermitTransfer: SignedPermit2Transfer, signedO
   // 2. SIMULATE MARKET MONITORING
   console.log("📈 Step 2: Market Analysis");
   console.log("--------------------------");
-  
+
   console.log("🔍 Monitoring market prices...");
   console.log("💰 Current USDC/ETH rate: ~0.00025 ETH per USDC");
   console.log("🎯 User wants min 0.025 ETH for 100 USDC");
@@ -85,11 +84,11 @@ async function executeOrder(signedPermitTransfer: SignedPermit2Transfer, signedO
   console.log("--------------------------------------------------------");
 
   const executionValidation = orderValidator.validateExecution(signedOrder.order, executionParams);
-  
+
   console.log("Execution Valid:", executionValidation.isValid ? "✅" : "❌");
   console.log("Estimated Slippage:", executionValidation.estimatedSlippageBps, "bp");
   console.log("Max Allowed Slippage:", signedOrder.order.maxSlippageBps, "bp");
-  
+
   if (executionValidation.errors.length > 0) {
     console.log("❌ Execution Errors:", executionValidation.errors);
     return;
@@ -103,7 +102,7 @@ async function executeOrder(signedPermitTransfer: SignedPermit2Transfer, signedO
 
   console.log("📤 Backend calls: OrderExecutor.executeOrder(signedOrder, executionParams)");
   console.log();
-  
+
   console.log("🔐 Smart Contract Verification:");
   console.log("  ✅ Verify order EIP-712 signature");
   console.log("  ✅ Verify Permit2 EIP-712 signature");
@@ -148,23 +147,22 @@ async function executeOrder(signedPermitTransfer: SignedPermit2Transfer, signedO
 async function fullDemo() {
   console.log("🚀 Complete Non-Custodial Trading Demo");
   console.log("=====================================");
-  
+
   // Import the create order function
-  const { createOrder } = await import('./create-order');
-  
+  const { createOrder } = await import("./create-order");
+
   try {
     // 1. User creates and signs order
     console.log("👤 USER SIDE: Creating signed order...");
     //const permitOrder = await createPermitTransfer(ChainType.BASE);
     const signedOrder = await createOrder(ChainType.BASE);
-    
+
     console.log("\n⏳ [Time passes... market conditions change...]");
     console.log("⏳ [Backend monitoring detects execution opportunity...]");
-    
+
     // 2. Backend executes the order
     console.log("\n🏢 BACKEND SIDE: Executing order...");
     //await executeOrder(permitOrder,signedOrder);
-    
   } catch (error) {
     console.error("❌ Demo failed:", error);
   }
@@ -172,8 +170,8 @@ async function fullDemo() {
 
 if (require.main === module) {
   // Run just the execution simulation with a mock order, or full demo
-  const runFullDemo = process.argv.includes('--full');
-  
+  const runFullDemo = process.argv.includes("--full");
+
   if (runFullDemo) {
     fullDemo().catch(console.error);
   } else {
