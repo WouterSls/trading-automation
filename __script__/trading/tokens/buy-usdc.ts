@@ -15,6 +15,7 @@ async function buyUsdcWithETH(wallet: Wallet, ethInput: number) {
   if (!chain) {
     throw new Error("No chain config for network: " + network!.name);
   }
+
   console.log("Buying usdc on chain:", chain);
   console.log("address:", wallet.address);
 
