@@ -1,11 +1,11 @@
 module.exports = {
   preset: "ts-jest",
   testEnvironment: "node",
-  roots: ["<rootDir>/__test__"],
+  roots: ["<rootDir>/trading-engine/tests"],
   transform: {
     "^.+\\.tsx?$": "ts-jest",
   },
-  testRegex: "(/__test__/.*\\.(test|spec))\\.tsx?$",
+  testRegex: "(/trading-engine/tests/.*\\.(test|spec))\\.tsx?$",
   moduleFileExtensions: ["ts", "tsx", "js", "jsx", "json", "node"],
   testTimeout: 10000,
 };
