@@ -61,7 +61,6 @@ export interface Permit2Data {
   deadline: number; // When this permit expires
 }
 
-
 export interface SignedTradeOrder {
   order: TradeOrder;
   orderSignature: string;
@@ -80,10 +79,10 @@ export interface SingedPermit2Transfer {
  * This is what gets stored by the backend and used for execution.
  */
 export interface SignedLimitOrder {
-  order: TradeOrder; // The actual order data
   permit2Data: Permit2Data; // Permit2 authorization data
-  orderSignature: string; // EIP-712 signature of the order
   permit2Signature: string; // EIP-712 signature of the permit2 data
+  order: TradeOrder; // The actual order data
+  orderSignature: string; // EIP-712 signature of the order
 }
 
 /**
