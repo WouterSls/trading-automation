@@ -1,28 +1,57 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.17;
+pragma solidity ^0.8.20;
 
 import {EIP712} from "../lib/openzeppelin-contracts/contracts/utils/cryptography/EIP712.sol";
-import {ECDSA} from "../lib/openzeppelin-contracts/contracts/utils/cryptography/ECDSA.sol";
 import {SafeERC20} from "../lib/openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol";
 import {ReentrancyGuard} from "../lib/openzeppelin-contracts/contracts/utils/ReentrancyGuard.sol";
 import {IERC20} from "../lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
+import {IPermit2} from "./interfaces/IPermit2.sol";
+import {IUniswapV3Router} from "./interfaces/IUniswapV3Router.sol";
 
+// Import validation libraries
+import {ExecutorValidation} from "./libraries/ExecutorValidation.sol";
+
+/**
+ * @title Executor
+ * @notice Executes signed off-chain orders with validation libraries
+ * @dev Clean separation of concerns with modular validation
+ */
 contract Executor is EIP712, ReentrancyGuard {
-    using ECDSA for bytes32;
     using SafeERC20 for IERC20;
 
     string private constant NAME = "Executor";
     string private constant VERSION = "1";
 
-    address private constant UNIV3_ADDRESS = 0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45;
+    // UniswapV3 SwapRouter02 address (same across chains)
+    address private constant UNIV3_ROUTER = 0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45;
+    // Permit2 contract address (same across chains)
+    address private constant PERMIT2 = 0x000000000022D473030F116dDEE9F6B43aC78BA3;
 
     address public owner;
-    //TODO: add chain to address mapping
-    mapping(address => bool) public allowedTarget; // allowlist for router/target addresses
+    mapping(address => bool) public allowedRouter;
     mapping(address => mapping(uint256 => bool)) public usedNonce;
 
-    event TargetAllowed(address indexed target, bool allowed);
-    event OrderExecuted(address indexed maker, address indexed target, uint256 amountIn);
+    // Re-export library errors for ABI
+    error OrderExpired();
+    error RouterNotAllowed();
+    error NonceAlreadyUsed();
+    error InvalidSignature();
+    error CallFailed();
+    error InvalidRouter();
+    error InsufficientOutput();
+    error ZeroAddress();
+    error ZeroAmount();
+    error InvalidArrayLength();
+    error InvalidRouteData();
+    error TokenMismatch();
+    error InvalidFee();
+    error InvalidPath();
+    error PermitExpired();
+    error InvalidPermitSignature();
+    error PermitAmountMismatch();
+
+    event RouterAllowed(address indexed router, bool allowed);
+    event OrderExecuted(address indexed maker, address indexed router, uint256 amountIn, uint256 amountOut);
 
     constructor() EIP712(NAME, VERSION) {
         owner = msg.sender;
@@ -33,117 +62,56 @@ contract Executor is EIP712, ReentrancyGuard {
         _;
     }
 
-    // Admin
-    function setAllowedTarget(address target, bool allowed) external onlyOwner {
-        allowedTarget[target] = allowed;
-        emit TargetAllowed(target, allowed);
-    }
-
-    // Order structure. 
-    struct LimitCallOrder {
-        address maker;         // signer
-        address tokenIn;       // token the maker is selling. address(0) for ETH
-        uint256 amountIn;      // amount of tokenIn to pull or expect in msg.value if ETH
-        address target;        // allowlisted address to call (router / aggregator)
-        address tokenOut;      // expected output token (address(0) for ETH)
-        uint256 minAmountOut;  // minimum acceptable output across executor+recipient
-        // TODO:
-        // add encodedPath parmateres for v3 multihop transactions
-        address recipient;     // who ultimately gets tokenOut
-        uint256 deadline;      // unix timestamp
-        uint256 nonce;         // maker nonce
-    }
-
-    // The EIP-712 type string must match the TypeScript typed data EXACTLY
-    bytes32 public constant LIMITCALL_ORDER_TYPEHASH = keccak256(
-        "LimitCallOrder(address maker,address tokenIn,uint256 amountIn,address target,address tokenOut,uint256 minAmountOut,address recipient,uint256 deadline,uint256 nonce)"
-    );
-
     /**
-     * @notice Execute a signed off-chain order that contains an allow-listed target and calldata.
-     * @param order The signed order fields (must match the signed typed data).
-     * @param orderSignature EIP-712 signature by order.maker.
-     *
-     * Notes:
-     * TODO: implement relayer that takes signer eth
-     * - If tokenIn == address(0): caller must include msg.value == amountIn (taker/relayer pays ETH).
-     * - If tokenIn != address(0): maker must have approved this executor for amountIn.
+     * @notice Execute a signed off-chain order using modular validation
+     * @param order The signed order fields
+     * @param routeData Route information for trade execution
+     * @param orderSignature EIP-712 signature by order.maker
+     * @param permit2Data Permit2 authorization data
+     * @param permit2Signature EIP-712 signature for Permit2
      */
     function executeOrder(
-        LimitCallOrder calldata order,
-        bytes calldata orderSignature
-        // Permit2 calldata permit2,
-        // bytes calldata permit2Signature
-    ) external payable nonReentrant {
-        require(block.timestamp <= order.deadline, "order expired");
-        require(allowedTarget[order.target], "target not allowed");
-        require(!usedNonce[order.maker][order.nonce], "nonce used");
+        ExecutorValidation.LimitOrder calldata order,
+        ExecutorValidation.RouteData calldata routeData,
+        bytes calldata orderSignature,
+        ExecutorValidation.PermitSingle calldata permit2Data,
+        bytes calldata permit2Signature
+    ) external nonReentrant {
+        // Use validation libraries
+        ExecutorValidation.validateInputs(order, routeData, permit2Data);
+        ExecutorValidation.validateBusinessLogic(order, usedNonce, allowedRouter);
+        ExecutorValidation.validateOrderSignature(order, orderSignature, _domainSeparatorV4());
+        ExecutorValidation.validatePermit2Signature(permit2Data, permit2Signature);
+        ExecutorValidation.validateRouteData(routeData);
 
-        // Recreate EIP-712 digest
-        bytes32 structHash = keccak256(abi.encode(
-            LIMITCALL_ORDER_TYPEHASH,
-            order.maker,
-            order.tokenIn,
-            order.amountIn,
-            order.target,
-            order.tokenOut,
-            order.minAmountOut,
-            order.recipient,
-            order.deadline,
-            order.nonce
-        ));
-
-        bytes32 digest = _hashTypedDataV4(structHash);
-        address recovered = ECDSA.recover(digest, orderSignature);
-        require(recovered == order.maker, "invalid signature");
-
-        // mark nonce BEFORE external effects
+        // Mark nonce as used BEFORE external calls
         usedNonce[order.maker][order.nonce] = true;
 
-        // TODO: replace by either uniswap permit2 or permit on token
-        // ERC20 case: pull from maker (maker must have approved)
-        IERC20(order.tokenIn).safeTransferFrom(order.maker, address(this), order.amountIn);
+        // Execute Permit2 transfer
+        _executePermit2Transfer(order, permit2Data, permit2Signature);
 
-        // TODO: check: does this work?
-        // approve the target for tokenIn; set to zero first for safety on some tokens
-        IERC20(order.tokenIn).approve(order.target, 0);
-        IERC20(order.tokenIn).approve(order.target, order.amountIn);
+        // Execute the trade
+        uint256 amountOut = _executeUniswapV3Trade(order, routeData);
 
-        bool ok = false;
+        // Verify minimum output
+        if (amountOut < order.minAmountOut) revert InsufficientOutput();
 
-        if (order.target == UNIV3_ADDRESS) {
-            require(order.tokenIn == address(0), 'No input address provided');
-            IUniswapV3Router.ExactInputSingleParams memory input = IUniswapV3Router.ExactInputSingleParams({
-                tokenIn: order.tokenIn,
-                tokenOut: order.tokenOut,
-                fee: 3000, // You'll need to determine the appropriate fee tier
-                recipient: order.recipient, // or order.recipient depending on your logic
-                deadline: order.deadline,
-                amountIn: order.amountIn,
-                amountOutMinimum: order.minAmountOut,
-                sqrtPriceLimitX96: 0 // 0 means no price limit
-            });
-
-            IUniswapV3Router(UNIV3_ADDRESS).exactInputSingle(input);
-            ok = true;
-        }
-
-        require(ok, "target call failed");
-
-        // cleanup approval if ERC20
-        if (order.tokenIn != address(0)) {
-            IERC20(order.tokenIn).approve(order.target, 0);
-        }
-
-        emit OrderExecuted(order.maker, order.target, order.amountIn);
+        emit OrderExecuted(order.maker, UNIV3_ROUTER, order.inputAmount, amountOut);
     }
 
-    // allow maker to cancel their own nonce on-chain
+    // ========================================
+    // ADMIN FUNCTIONS
+    // ========================================
+
+    function setAllowedRouter(address router, bool allowed) external onlyOwner {
+        allowedRouter[router] = allowed;
+        emit RouterAllowed(router, allowed);
+    }
+
     function cancelNonce(uint256 nonce) external {
         usedNonce[msg.sender][nonce] = true;
     }
 
-    // Admin emergency withdraw (owner)
     function emergencyWithdrawToken(address token, address to) external onlyOwner {
         if (token == address(0)) {
             uint256 bal = address(this).balance;
@@ -154,20 +122,67 @@ contract Executor is EIP712, ReentrancyGuard {
         }
     }
 
-    receive() external payable {}
-}
+    // ========================================
+    // INTERNAL FUNCTIONS
+    // ========================================
 
-interface IUniswapV3Router {
-    struct ExactInputSingleParams {
-        address tokenIn;
-        address tokenOut;
-        uint24 fee;
-        address recipient;
-        uint256 deadline;
-        uint256 amountIn;
-        uint256 amountOutMinimum;
-        uint160 sqrtPriceLimitX96;
+    function _executePermit2Transfer(
+        ExecutorValidation.LimitOrder calldata order,
+        ExecutorValidation.PermitSingle calldata permit2Data,
+        bytes calldata permit2Signature
+    ) internal {
+        IPermit2.PermitSingle memory permit2Transfer = IPermit2.PermitSingle({
+            details: IPermit2.PermitDetails({token: permit2Data.details.token, amount: permit2Data.details.amount}),
+            spender: permit2Data.spender,
+            sigDeadline: permit2Data.sigDeadline,
+            nonce: permit2Data.nonce
+        });
+
+        IPermit2(PERMIT2).permitTransferFrom(
+            permit2Transfer,
+            IPermit2.SignatureTransferDetails({to: address(this), requestedAmount: order.inputAmount}),
+            order.maker,
+            permit2Signature
+        );
     }
 
-    function exactInputSingle(ExactInputSingleParams calldata params) external payable returns (uint256 amountOut);
+    function _executeUniswapV3Trade(
+        ExecutorValidation.LimitOrder calldata order,
+        ExecutorValidation.RouteData calldata routeData
+    ) internal returns (uint256 amountOut) {
+        if (!allowedRouter[UNIV3_ROUTER]) revert InvalidRouter();
+
+        // Approve router to spend tokens
+        IERC20(order.inputToken).approve(UNIV3_ROUTER, order.inputAmount);
+
+        if (routeData.isMultiHop) {
+            IUniswapV3Router.ExactInputParams memory params = IUniswapV3Router.ExactInputParams({
+                path: routeData.encodedPath,
+                recipient: order.maker,
+                deadline: order.expiry,
+                amountIn: order.inputAmount,
+                amountOutMinimum: order.minAmountOut
+            });
+
+            amountOut = IUniswapV3Router(UNIV3_ROUTER).exactInput(params);
+        } else {
+            IUniswapV3Router.ExactInputSingleParams memory params = IUniswapV3Router.ExactInputSingleParams({
+                tokenIn: order.inputToken,
+                tokenOut: order.outputToken,
+                fee: routeData.fee,
+                recipient: order.maker,
+                deadline: order.expiry,
+                amountIn: order.inputAmount,
+                amountOutMinimum: order.minAmountOut,
+                sqrtPriceLimitX96: 0
+            });
+
+            amountOut = IUniswapV3Router(UNIV3_ROUTER).exactInputSingle(params);
+        }
+
+        // Reset approval for security
+        IERC20(order.inputToken).approve(UNIV3_ROUTER, 0);
+    }
+
+    receive() external payable {}
 }
