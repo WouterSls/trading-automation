@@ -11,4 +11,8 @@ deploy-token:
 
 test-token:
 	forge test --match-contract SimpleTokenTest -vvvv
-	
+
+source:
+	set -a
+	. ./.env
+	set +a
