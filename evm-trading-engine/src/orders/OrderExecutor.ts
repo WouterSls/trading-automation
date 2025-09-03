@@ -1,114 +1,138 @@
-import { Wallet, ethers } from "ethers";
+import { ethers, Wallet, TransactionRequest } from "ethers";
 import { ChainType, getChainConfig } from "../config/chain-config";
-import {
-  EIP712Domain,
-  TradeOrder,
-  Permit2Data,
-  SignedLimitOrder,
-  EIP712_TYPES,
-  createDomain,
-  generateOrderNonce,
-} from "./types/OrderTypes";
-import { Permit2 } from "../smartcontracts/permit2/Permit2";
+import { SignedLimitOrder } from "./types/OrderTypes";
+import { RouteOptimizer } from "../routing/RouteOptimizer";
 
 /**
- * OrderSigner handles EIP-712 signing for limit orders
+ * OrderExecutor handles the execution of signed limit orders through the Executor contract
  *
- * This class creates and signs structured data that users can understand
- * when prompted by their wallet. It handles both order signing and Permit2
- * authorization in a non-custodial way.
+ * This class bridges the gap between the TypeScript trading strategies and the
+ * on-chain Executor contract by preparing route data and executing orders.
  */
 export class OrderExecutor {
-  private domain: EIP712Domain;
-  private permit2: Permit2;
+  private executorAddress: string;
+  private routeOptimizer: RouteOptimizer;
 
   constructor(
     private chain: ChainType,
-    private orderExecutorAddress: string, // Contract address that will verify signatures
+    executorAddress: string,
   ) {
-    const chainConfig = getChainConfig(chain);
-    const chainId = Number(chainConfig.id);
-
-    // Create the domain separator for EIP-712 signing
-    this.domain = createDomain(chain, chainId, orderExecutorAddress);
-    this.permit2 = new Permit2(chain);
-  }
-
-  async executeOrder(signedOrder: SignedLimitOrder) {
-    const { isValid } = await this.verifySignedOrder(signedOrder);
-
-    if (!isValid) {
-      throw new Error("Invalid SignedLimitOrder");
-    }
+    this.executorAddress = executorAddress;
+    this.routeOptimizer = new RouteOptimizer(chain);
   }
 
   /**
-   * Verifies that a signed order has valid signatures
+   * Execute a signed limit order through the Executor contract
    *
-   * This can be used to validate orders before storing them or executing them.
-   * Note: This only verifies the signatures, not whether the order is executable.
+   * @param signedOrder - Complete signed order from OrderSigner
+   * @param wallet - Wallet to execute the transaction (relayer)
+   * @returns Transaction hash
    */
-  async verifySignedOrder(signedOrder: SignedLimitOrder): Promise<{
-    orderSignatureValid: boolean;
-    permit2SignatureValid: boolean;
-    isValid: boolean;
-  }> {
-    console.log("🔍 Verifying signed order...");
+  async executeSignedOrder(signedOrder: SignedLimitOrder, wallet: Wallet): Promise<string> {
+    console.log("🚀 Executing signed limit order...");
 
+    // Get the optimal route for this trade
+    const route = await this.routeOptimizer.getBestUniV3Route(
+      signedOrder.order.inputToken,
+      BigInt(signedOrder.order.inputAmount),
+      signedOrder.order.outputToken,
+      wallet,
+    );
+
+    // Prepare route data for the contract
+    const routeData = this.prepareRouteData(route);
+
+    // Create the transaction
+    const tx = await this.createExecuteOrderTransaction(signedOrder, routeData);
+
+    // Execute the transaction
+    console.log("📡 Sending transaction to network...");
+    const txResponse = await wallet.sendTransaction(tx);
+    await txResponse.wait();
+
+    console.log("✅ Order executed successfully!");
+    console.log("📄 Transaction hash:", txResponse.hash);
+
+    return txResponse.hash;
+  }
+
+  /**
+   * Create transaction for executing an order
+   */
+  private async createExecuteOrderTransaction(
+    signedOrder: SignedLimitOrder,
+    routeData: {
+      encodedPath: string;
+      fee: number;
+      isMultiHop: boolean;
+    },
+  ): Promise<TransactionRequest> {
+    const executorAbi = [
+      `function executeOrder(
+        (address maker, address inputToken, address outputToken, uint256 inputAmount, uint256 minAmountOut, uint256 maxSlippageBps, address[] allowedRouters, uint256 expiry, uint256 nonce) order,
+        (bytes encodedPath, uint24 fee, bool isMultiHop) routeData,
+        bytes orderSignature,
+        (address token, uint256 amount, address spender, uint256 sigDeadline, uint256 nonce) permit2Data,
+        bytes permit2Signature
+      )`,
+    ];
+
+    const executorContract = new ethers.Contract(this.executorAddress, executorAbi);
+
+    // Prepare permit2 data structure for contract call
+    const permit2DataForContract = {
+      token: signedOrder.permit2Data.permitted.token,
+      amount: signedOrder.permit2Data.permitted.amount,
+      spender: this.executorAddress,
+      sigDeadline: signedOrder.permit2Data.deadline,
+      nonce: signedOrder.permit2Data.nonce,
+    };
+
+    const calldata = executorContract.interface.encodeFunctionData("executeOrder", [
+      signedOrder.order,
+      routeData,
+      signedOrder.orderSignature,
+      permit2DataForContract,
+      signedOrder.permit2Signature,
+    ]);
+
+    return {
+      to: this.executorAddress,
+      data: calldata,
+      gasLimit: 500000n, // Adjust based on testing
+    };
+  }
+
+  /**
+   * Convert route from RouteOptimizer to contract format
+   */
+  private prepareRouteData(route: any) {
+    const isMultiHop = route.path.length > 2 && route.encodedPath;
+
+    return {
+      encodedPath: isMultiHop ? route.encodedPath : "0x",
+      fee: isMultiHop ? 0 : route.fees[0], // Use first fee for single-hop
+      isMultiHop,
+    };
+  }
+
+  /**
+   * Check if an order can be executed (has valid route)
+   */
+  async canExecuteOrder(order: SignedLimitOrder, wallet: Wallet): Promise<boolean> {
     try {
-      // Verify order signature
-      const orderSigner = ethers.verifyTypedData(
-        this.domain,
-        { LimitOrder: EIP712_TYPES.TradeOrder },
-        signedOrder.order,
-        signedOrder.orderSignature,
+      const route = await this.routeOptimizer.getBestUniV3Route(
+        order.order.inputToken,
+        BigInt(order.order.inputAmount),
+        order.order.outputToken,
+        wallet,
       );
 
-      const orderSignatureValid = orderSigner.toLowerCase() === signedOrder.order.maker.toLowerCase();
-      console.log("📝 Order signature valid:", orderSignatureValid);
-
-      // Verify Permit2 signature
-      const permit2Domain = {
-        name: "Permit2",
-        chainId: this.domain.chainId,
-        verifyingContract: this.permit2.getAddress(),
-      };
-
-      const permitSingle = {
-        details: signedOrder.permit2Data.permitted,
-        spender: this.orderExecutorAddress,
-        sigDeadline: signedOrder.permit2Data.deadline,
-        nonce: signedOrder.permit2Data.nonce,
-      };
-
-      const permit2Signer = ethers.verifyTypedData(
-        permit2Domain,
-        {
-          PermitDetails: EIP712_TYPES.PermitDetails,
-          PermitSingle: EIP712_TYPES.PermitSingle,
-        },
-        permitSingle,
-        signedOrder.permit2Signature,
-      );
-
-      const permit2SignatureValid = permit2Signer.toLowerCase() === signedOrder.order.maker.toLowerCase();
-      console.log("🎫 Permit2 signature valid:", permit2SignatureValid);
-
-      const isValid = orderSignatureValid && permit2SignatureValid;
-      console.log("✅ Overall validity:", isValid);
-
-      return {
-        orderSignatureValid,
-        permit2SignatureValid,
-        isValid,
-      };
+      // Check if we have a valid route and sufficient output
+      return route.amountOut >= BigInt(order.order.minAmountOut);
     } catch (error) {
-      console.error("❌ Error verifying signatures:", error);
-      return {
-        orderSignatureValid: false,
-        permit2SignatureValid: false,
-        isValid: false,
-      };
+      console.error("❌ Cannot execute order:", error);
+      return false;
     }
   }
 }
