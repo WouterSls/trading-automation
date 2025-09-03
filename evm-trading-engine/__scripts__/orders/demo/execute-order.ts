@@ -1,7 +1,7 @@
 import { ethers } from "ethers";
-import { ChainType, getChainConfig } from "../../src/config/chain-config";
-import { getBaseWallet_1 } from "../../src/hooks/useSetup";
-import { OrderValidator, ExecutionParams, SignedLimitOrder, SignedPermit2Transfer } from "../../src/orders";
+import { ChainType, getChainConfig } from "../../../src/config/chain-config";
+import { getBaseWallet_1 } from "../../../src/hooks/useSetup";
+import { OrderValidator, ExecutionParams, SignedLimitOrder, SignedPermit2Transfer } from "../../../src/orders";
 
 /**
  * Simulates backend order execution

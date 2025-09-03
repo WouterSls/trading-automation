@@ -7,9 +7,9 @@
  */
 
 import { ethers, Wallet } from "ethers";
-import { ChainType } from "../../src/config/chain-config";
-import { OrderSigner } from "../../src/orders/OrderSigner";
-import { OrderExecutor } from "../../src/orders/OrderExecutor";
+import { ChainType } from "../../../src/config/chain-config";
+import { OrderSigner } from "../../../src/orders/OrderSigner";
+import { OrderExecutor } from "../../../src/orders/OrderExecutor";
 
 // Example configuration
 const CHAIN = ChainType.ETH;

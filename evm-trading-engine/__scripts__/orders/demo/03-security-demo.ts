@@ -1,20 +1,20 @@
 /**
  * EIP-712 Security Features Demonstration
- * 
+ *
  * This script demonstrates the security features of EIP-712 including:
  * - Domain separation (prevents replay attacks)
  * - Chain binding (prevents cross-chain replay)
  * - Contract binding (prevents contract substitution)
  * - Nonce protection (prevents duplicate execution)
- * 
+ *
  * Usage: npx ts-node __script__/orders/03-security-demo.ts
  */
 
 import { ethers } from "ethers";
-import { getBaseWallet_1 } from "../../src/hooks/useSetup";
-import { ChainType, getChainConfig } from "../../src/config/chain-config";
-import { OrderSigner } from "../../src/orders/OrderSigner";
-import { TradeOrder, EIP712_TYPES } from "../../src/orders/types/OrderTypes";
+import { getBaseWallet_1 } from "../../../src/hooks/useSetup";
+import { ChainType, getChainConfig } from "../../../src/config/chain-config";
+import { OrderSigner } from "../../../src/orders/OrderSigner";
+import { TradeOrder, EIP712_TYPES } from "../../../src/orders/types/OrderTypes";
 
 async function demonstrateSecurityFeatures() {
   console.log("\n🛡️  EIP-712 Security Features Demonstration");
@@ -23,7 +23,7 @@ async function demonstrateSecurityFeatures() {
   // Setup
   const wallet = getBaseWallet_1();
   const chainConfig = getChainConfig(ChainType.BASE);
-  
+
   console.log("👤 Test wallet:", wallet.address);
   console.log("🌍 Base chain ID:", Number(chainConfig.id));
   console.log();
@@ -37,7 +37,7 @@ async function demonstrateSecurityFeatures() {
   const maliciousSigner = new OrderSigner(ChainType.BASE, maliciousContract);
 
   // Sample order data
-  const orderData: TradeOrder= {
+  const orderData: TradeOrder = {
     maker: wallet.address,
     inputToken: chainConfig.tokenAddresses.usdc,
     outputToken: chainConfig.tokenAddresses.weth,
@@ -65,16 +65,16 @@ async function demonstrateSecurityFeatures() {
   console.log("✅ Signed order with legitimate contract:", legitimateContract);
   console.log("   Signature:", legitimateSignature.substring(0, 20) + "...");
 
-  // Try to verify with malicious contract domain  
+  // Try to verify with malicious contract domain
   try {
     const maliciousDomain = maliciousSigner.getDomain();
     const recoveredSigner = ethers.verifyTypedData(
       maliciousDomain,
       { LimitOrder: EIP712_TYPES.TradeOrder },
       orderData,
-      legitimateSignature
+      legitimateSignature,
     );
-    
+
     console.log("❌ SECURITY BREACH: Signature verified with wrong domain!");
   } catch (error) {
     console.log("✅ PROTECTED: Signature rejected with different contract address");
@@ -83,7 +83,7 @@ async function demonstrateSecurityFeatures() {
   console.log();
 
   // 2. CHAIN BINDING DEMO
-  console.log("🔗 Test 2: Chain Binding Protection");  
+  console.log("🔗 Test 2: Chain Binding Protection");
   console.log("-----------------------------------");
 
   // Create domains for different chains
@@ -95,7 +95,7 @@ async function demonstrateSecurityFeatures() {
   };
 
   const ethereumDomain = {
-    name: "EVM Trading Engine", 
+    name: "EVM Trading Engine",
     version: "1.0.0",
     chainId: 1, // Ethereum
     verifyingContract: legitimateContract,
@@ -105,19 +105,15 @@ async function demonstrateSecurityFeatures() {
   console.log("🏷️  Ethereum Domain (Chain ID 1):", ethereumDomain.chainId);
 
   // Sign order for Base
-  const baseSignature = await wallet.signTypedData(
-    baseDomain,
-    { LimitOrder: EIP712_TYPES.TradeOrder },
-    orderData
-  );
+  const baseSignature = await wallet.signTypedData(baseDomain, { LimitOrder: EIP712_TYPES.TradeOrder }, orderData);
 
-  // Try to verify on Ethereum  
+  // Try to verify on Ethereum
   try {
     const recoveredSigner = ethers.verifyTypedData(
       ethereumDomain,
       { LimitOrder: EIP712_TYPES.TradeOrder },
       orderData,
-      baseSignature
+      baseSignature,
     );
     console.log("❌ SECURITY BREACH: Cross-chain replay possible!");
   } catch (error) {
@@ -149,7 +145,7 @@ async function demonstrateSecurityFeatures() {
       legitimateDomain,
       { LimitOrder: EIP712_TYPES.TradeOrder },
       order2, // Different order
-      signature1 // Wrong signature
+      signature1, // Wrong signature
     );
     console.log("❌ SECURITY BREACH: Wrong signature accepted!");
   } catch (error) {
@@ -163,9 +159,9 @@ async function demonstrateSecurityFeatures() {
   console.log("-------------------------------------------");
 
   const originalOrder = { ...orderData };
-  const tamperedOrder = { 
-    ...orderData, 
-    minAmountOut: ethers.parseEther("0.001").toString() // Much worse rate!
+  const tamperedOrder = {
+    ...orderData,
+    minAmountOut: ethers.parseEther("0.001").toString(), // Much worse rate!
   };
 
   const originalSignature = await legitimateSigner.signOrder(wallet, originalOrder);
@@ -179,7 +175,7 @@ async function demonstrateSecurityFeatures() {
       legitimateDomain,
       { LimitOrder: EIP712_TYPES.TradeOrder },
       tamperedOrder, // Tampered data
-      originalSignature // Original signature
+      originalSignature, // Original signature
     );
     console.log("❌ SECURITY BREACH: Tampered parameters accepted!");
   } catch (error) {
@@ -196,15 +192,15 @@ async function demonstrateSecurityFeatures() {
   const expiredOrder = {
     ...orderData,
     expiry: currentTime - 3600, // 1 hour ago
-    nonce: "999999"
+    nonce: "999999",
   };
 
   const expiredSignature = await legitimateSigner.signOrder(wallet, expiredOrder);
-  
+
   console.log("📅 Current Time:", new Date(currentTime * 1000).toISOString());
   console.log("📅 Order Expiry:", new Date(expiredOrder.expiry * 1000).toISOString());
   console.log("✅ Signature is valid (cryptographically)");
-  
+
   // Check if expired (this would be done by smart contract)
   const isExpired = expiredOrder.expiry <= currentTime;
   console.log("⏰ Order Expired:", isExpired ? "YES ❌" : "NO ✅");
@@ -215,7 +211,7 @@ async function demonstrateSecurityFeatures() {
   console.log("🎯 Security Summary");
   console.log("==================");
   console.log("✅ Domain Separation: Prevents cross-app replay attacks");
-  console.log("✅ Chain Binding: Prevents cross-chain replay attacks");  
+  console.log("✅ Chain Binding: Prevents cross-chain replay attacks");
   console.log("✅ Contract Binding: Prevents malicious contract substitution");
   console.log("✅ Nonce Protection: Prevents order replay and double-execution");
   console.log("✅ Parameter Integrity: Prevents tampering with signed data");
@@ -234,4 +230,3 @@ async function demonstrateSecurityFeatures() {
 
 // Run the security demonstration
 demonstrateSecurityFeatures().catch(console.error);
-

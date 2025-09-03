@@ -143,22 +143,7 @@ contract ExecutorBase is Test {
         console.log("Amount mismatch validation test passed");
     }
 
-    function test_InputValidation_EmptyRouterArray() public {
-        console.log("Testing empty router array validation...");
-
-        (ExecutorValidation.LimitOrder memory order, bytes memory orderSignature) = _createValidOrderInput();
-        ExecutorValidation.RouteData memory routeData =
-            ExecutorValidation.RouteData({encodedPath: "", fee: 3000, isMultiHop: false});
-        (ExecutorValidation.PermitSingle memory permit2Data, bytes memory permit2Signature) = _createValidPermit2();
-
-        // Empty router array
-        order.allowedRouters = new address[](0);
-
-        vm.expectRevert(Executor.InvalidArrayLength.selector);
-        executor.executeOrder(order, routeData, orderSignature, permit2Data, permit2Signature);
-
-        console.log("Empty router array validation test passed");
-    }
+    // Router array validation test removed - no longer needed with simplified validation
 
     function test_InputValidation_RouteData() public {
         console.log("Testing route data validation...");
@@ -231,22 +216,21 @@ contract ExecutorBase is Test {
     }
 
     function test_BusinessLogic_RouterNotAllowed() public {
-        console.log("Testing router not allowed validation...");
+        console.log("Testing contract-level router not allowed validation...");
 
         (ExecutorValidation.LimitOrder memory order, bytes memory orderSignature) = _createValidOrderInput();
         ExecutorValidation.RouteData memory routeData =
             ExecutorValidation.RouteData({encodedPath: "", fee: 3000, isMultiHop: false});
         (ExecutorValidation.PermitSingle memory permit2Data, bytes memory permit2Signature) = _createValidPermit2();
 
-        // Add a non-allowed router to the order
-        address[] memory badRouters = new address[](1);
-        badRouters[0] = makeAddr("badRouter");
-        order.allowedRouters = badRouters;
+        // Remove the router from contract allowlist
+        vm.prank(owner);
+        executor.setAllowedRouter(UNIV3_ROUTER, false);
 
         vm.expectRevert(Executor.RouterNotAllowed.selector);
         executor.executeOrder(order, routeData, orderSignature, permit2Data, permit2Signature);
 
-        console.log("Router not allowed validation test passed");
+        console.log("Contract-level router validation test passed");
     }
 
     // ========================================
@@ -281,8 +265,7 @@ contract ExecutorBase is Test {
         view
         returns (ExecutorValidation.LimitOrder memory order, bytes memory orderSignature)
     {
-        address[] memory routers = new address[](1);
-        routers[0] = UNIV3_ROUTER;
+        // No longer need routers array
 
         order = ExecutorValidation.LimitOrder({
             maker: maker,
@@ -291,7 +274,6 @@ contract ExecutorBase is Test {
             inputAmount: 1000e18,
             minAmountOut: 900e18,
             maxSlippageBps: 1000,
-            allowedRouters: routers,
             expiry: block.timestamp,
             nonce: 1
         });

@@ -34,7 +34,6 @@ library ExecutorValidation {
         uint256 inputAmount;
         uint256 minAmountOut;
         uint256 maxSlippageBps;
-        address[] allowedRouters;
         uint256 expiry;
         uint256 nonce;
     }
@@ -59,7 +58,7 @@ library ExecutorValidation {
 
     // Type hashes
     bytes32 internal constant LIMIT_ORDER_TYPEHASH = keccak256(
-        "LimitOrder(address maker,address inputToken,address outputToken,uint256 inputAmount,uint256 minAmountOut,uint256 maxSlippageBps,address[] allowedRouters,uint256 expiry,uint256 nonce)"
+        "LimitOrder(address maker,address inputToken,address outputToken,uint256 inputAmount,uint256 minAmountOut,uint256 maxSlippageBps,uint256 expiry,uint256 nonce)"
     );
 
     /**
@@ -72,7 +71,6 @@ library ExecutorValidation {
     {
         _validateAddresses(order, permit2Data);
         _validateAmounts(order, permit2Data);
-        _validateArrays(order);
         _validateConsistency(order, permit2Data);
         _validateRouteStructure(routeData);
     }
@@ -83,12 +81,18 @@ library ExecutorValidation {
      */
     function validateBusinessLogic(
         LimitOrder calldata order,
-        mapping(address => mapping(uint256 => bool)) storage usedNonces,
-        mapping(address => bool) storage allowedRouters
+        mapping(address => mapping(uint256 => bool)) storage usedNonces
     ) internal view {
         _validateExpiry(order);
         _validateNonce(order, usedNonces);
-        _validateRouterAllowlist(order.allowedRouters, allowedRouters);
+    }
+
+    /**
+     * @notice Validates that a specific router is allowed
+     * @dev Called by main contract before execution
+     */
+    function validateRouter(address router, mapping(address => bool) storage allowedRouters) internal view {
+        if (!allowedRouters[router]) revert RouterNotAllowed();
     }
 
     /**
@@ -108,7 +112,6 @@ library ExecutorValidation {
                 order.inputAmount,
                 order.minAmountOut,
                 order.maxSlippageBps,
-                keccak256(abi.encodePacked(order.allowedRouters)),
                 order.expiry,
                 order.nonce
             )
@@ -164,9 +167,7 @@ library ExecutorValidation {
         if (permit2Data.details.amount == 0) revert ZeroAmount();
     }
 
-    function _validateArrays(LimitOrder calldata order) private pure {
-        if (order.allowedRouters.length == 0) revert InvalidArrayLength();
-    }
+    // Arrays validation removed - no longer needed
 
     function _validateConsistency(LimitOrder calldata order, PermitSingle calldata permit2Data) private pure {
         if (order.inputToken != permit2Data.details.token) revert TokenMismatch();
@@ -187,21 +188,5 @@ library ExecutorValidation {
         view
     {
         if (usedNonces[order.maker][order.nonce]) revert NonceAlreadyUsed();
-    }
-
-    function _validateRouterAllowlist(address[] calldata allowedRouters, mapping(address => bool) storage allowedRouter)
-        private
-        view
-    {
-        uint256 length = allowedRouters.length;
-        for (uint256 i; i < length;) {
-            if (allowedRouter[allowedRouters[i]]) {
-                return; // Early exit on first valid router
-            }
-            unchecked {
-                ++i;
-            }
-        }
-        revert RouterNotAllowed();
     }
 }

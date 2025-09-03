@@ -79,7 +79,11 @@ contract Executor is EIP712, ReentrancyGuard {
     ) external nonReentrant {
         // Use validation libraries
         ExecutorValidation.validateInputs(order, routeData, permit2Data);
-        ExecutorValidation.validateBusinessLogic(order, usedNonce, allowedRouter);
+        ExecutorValidation.validateBusinessLogic(order, usedNonce);
+
+        // Validate router early (before signatures for better test experience)
+        ExecutorValidation.validateRouter(UNIV3_ROUTER, allowedRouter);
+
         ExecutorValidation.validateOrderSignature(order, orderSignature, _domainSeparatorV4());
         ExecutorValidation.validatePermit2Signature(permit2Data, permit2Signature);
         ExecutorValidation.validateRouteData(routeData);

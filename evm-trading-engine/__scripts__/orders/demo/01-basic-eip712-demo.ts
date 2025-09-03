@@ -8,8 +8,8 @@
  */
 
 import { ethers, Wallet } from "ethers";
-import { ChainType } from "../../src/config/chain-config";
-import { getBaseWallet_1 } from "../../src/hooks/useSetup";
+import { ChainType } from "../../../src/config/chain-config";
+import { getBaseWallet_1 } from "../../../src/hooks/useSetup";
 
 async function demonstrateBasicEIP712() {
   console.log("\n🔬 EIP-712 Basic Demonstration");
@@ -125,14 +125,14 @@ async function demonstrateBasicEIP712() {
 
   // Try to verify the original signature with the malicious domain
   const fakeRecovered = ethers.verifyTypedData(maliciousDomain, types, tradeOrder, structuredSignature);
-  
+
   console.log("Original signer:", wallet.address);
   console.log("Recovered signer with malicious domain:", fakeRecovered);
-  
+
   const signaturesMatch = wallet.address.toLowerCase() === fakeRecovered.toLowerCase();
   console.log("Signatures match:", signaturesMatch);
   console.log();
-  
+
   if (signaturesMatch) {
     console.log("❌ SECURITY BREACH: Signature verification succeeded with wrong domain!");
   } else {

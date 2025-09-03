@@ -1,7 +1,7 @@
 import { ethers } from "ethers";
-import { ChainType, getChainConfig } from "../../src/config/chain-config";
-import { getBaseWallet_1 } from "../../src/hooks/useSetup";
-import { EIP712Domain,  TradeOrder } from "../../src/orders";
+import { ChainType, getChainConfig } from "../../../src/config/chain-config";
+import { getBaseWallet_1 } from "../../../src/hooks/useSetup";
+import { EIP712Domain, TradeOrder } from "../../../src/orders";
 
 // Returns Signed Trade Order
 export async function createOrder(chain: ChainType) {
@@ -21,12 +21,12 @@ export async function createOrder(chain: ChainType) {
     name: "EVM Trading Engine",
     version: "1.0.0",
     chainId: Number(chainConfig.id),
-    verifyingContract: orderExecutorAddress, 
+    verifyingContract: orderExecutorAddress,
   };
 
   const appTypes = {
     TradeOrder: [
-      { name: "maker", type: "address" },        // Fixed: was "trader"
+      { name: "maker", type: "address" }, // Fixed: was "trader"
       { name: "inputToken", type: "address" },
       { name: "outputToken", type: "address" },
       { name: "inputAmount", type: "uint256" },
@@ -34,29 +34,30 @@ export async function createOrder(chain: ChainType) {
       { name: "maxSlippageBps", type: "uint16" },
       { name: "allowedRouters", type: "address[]" },
       { name: "expiry", type: "uint256" },
-      { name: "nonce", type: "uint256" },        // Fixed: was "string", should be "uint256"
+      { name: "nonce", type: "uint256" }, // Fixed: was "string", should be "uint256"
     ],
   };
 
   const appValues: TradeOrder = {
-    maker: wallet.address,                      // Fixed: was "trader"
-    inputToken: chainConfig.tokenAddresses.usdc,  // Fixed: using actual Base USDC
+    maker: wallet.address, // Fixed: was "trader"
+    inputToken: chainConfig.tokenAddresses.usdc, // Fixed: using actual Base USDC
     outputToken: chainConfig.tokenAddresses.weth, // Fixed: using actual Base WETH
     inputAmount: ethers.parseUnits("100", 6).toString(),
     minAmountOut: ethers.parseEther("0.025").toString(),
     maxSlippageBps: 100,
-    allowedRouters: [                           // Fixed: added actual routers
+    allowedRouters: [
+      // Fixed: added actual routers
       chainConfig.uniswap.v3.swapRouterV2Address,
       chainConfig.aerodrome.routerAddress,
     ],
     expiry: Math.floor(Date.now() / 1000) + 3600,
-    nonce: "12345",                             // Simple fixed nonce for testing
+    nonce: "12345", // Simple fixed nonce for testing
   };
 
   console.log("📝 Order Data:");
   console.log("  Maker:", appValues.maker);
   console.log("  Input Token:", appValues.inputToken, "(USDC)");
-  console.log("  Output Token:", appValues.outputToken, "(WETH)"); 
+  console.log("  Output Token:", appValues.outputToken, "(WETH)");
   console.log("  Input Amount:", ethers.formatUnits(appValues.inputAmount, 6), "USDC");
   console.log("  Min Amount Out:", ethers.formatEther(appValues.minAmountOut), "ETH");
   console.log("  Max Slippage:", appValues.maxSlippageBps, "bp (1%)");
@@ -110,7 +111,6 @@ export async function createOrder(chain: ChainType) {
       domain: appDomain,
       types: appTypes,
     };
-
   } catch (error) {
     console.error("❌ Error:", error);
     throw error;

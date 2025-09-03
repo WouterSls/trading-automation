@@ -7,7 +7,8 @@ import {Executor} from "../src/Executor.sol";
 
 contract DeployExecutorBase is Script {
     function run() external returns (Executor) {
-        vm.startBroadcast();
+        uint256 pk = vm.envUint("DEPLOYER_KEY");
+        vm.startBroadcast(pk);
         Executor executor = new Executor();
         vm.stopBroadcast();
         return executor;

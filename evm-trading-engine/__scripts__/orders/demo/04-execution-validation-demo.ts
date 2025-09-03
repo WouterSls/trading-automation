@@ -1,17 +1,17 @@
 /**
  * Order Execution Validation Demonstration
- * 
+ *
  * This script demonstrates how backend execution parameters are validated
  * against user-signed order constraints. This is critical for ensuring
  * the backend cannot execute orders in ways that violate user intent.
- * 
+ *
  * Usage: npx ts-node __script__/orders/04-execution-validation-demo.ts
  */
 
 import { ethers } from "ethers";
-import { ChainType, getChainConfig } from "../../src/config/chain-config";
-import { OrderValidator } from "../../src/orders/OrderValidator";
-import { TradeOrder, ExecutionParams } from "../../src/orders/types/OrderTypes";
+import { ChainType, getChainConfig } from "../../../src/config/chain-config";
+import { OrderValidator } from "../../../src/orders/OrderValidator";
+import { TradeOrder, ExecutionParams } from "../../../src/orders/types/OrderTypes";
 
 async function demonstrateExecutionValidation() {
   console.log("\n⚡ Order Execution Validation Demo");
@@ -30,7 +30,7 @@ async function demonstrateExecutionValidation() {
     maxSlippageBps: 150, // Max 1.5% slippage
     allowedRouters: [
       chainConfig.uniswap.v3.swapRouterV2Address, // Uniswap V3
-      chainConfig.aerodrome.routerAddress,        // Aerodrome
+      chainConfig.aerodrome.routerAddress, // Aerodrome
     ],
     expiry: Math.floor(Date.now() / 1000) + 3600, // 1 hour from now
     nonce: "987654321",
@@ -66,7 +66,7 @@ async function demonstrateExecutionValidation() {
 
   console.log("🎯 Execution Plan:");
   console.log("  Router:", validExecution.router.substring(0, 10) + "... (Uniswap V3)");
-  console.log("  Path:", validExecution.path.map(a => a.substring(0, 10) + "...").join(" → "));
+  console.log("  Path:", validExecution.path.map((a) => a.substring(0, 10) + "...").join(" → "));
   console.log("  Amount In:", ethers.formatUnits(validExecution.amountIn, 6), "USDC");
   console.log("  Min Amount Out:", ethers.formatEther(validExecution.amountOutMin), "ETH");
   console.log("  Deadline:", new Date(validExecution.deadline * 1000).toISOString());
@@ -90,7 +90,7 @@ async function demonstrateExecutionValidation() {
   };
 
   console.log("🚫 Backend tries to use unauthorized router:", unauthorizedRouter.substring(0, 15) + "...");
-  
+
   const unauthorizedResult = orderValidator.validateExecution(userOrder, unauthorizedExecution);
   console.log("📋 Validation Result:", unauthorizedResult.isValid ? "✅ VALID" : "❌ REJECTED");
   if (unauthorizedResult.errors.length > 0) {
@@ -110,7 +110,7 @@ async function demonstrateExecutionValidation() {
   console.log("💰 Backend tries to execute more than authorized:");
   console.log("  Authorized:", ethers.formatUnits(userOrder.inputAmount, 6), "USDC");
   console.log("  Attempted:", ethers.formatUnits(excessiveExecution.amountIn, 6), "USDC");
-  
+
   const excessiveResult = orderValidator.validateExecution(userOrder, excessiveExecution);
   console.log("📋 Validation Result:", excessiveResult.isValid ? "✅ VALID" : "❌ REJECTED");
   if (excessiveResult.errors.length > 0) {
@@ -130,10 +130,16 @@ async function demonstrateExecutionValidation() {
   console.log("📉 Backend tries to execute with insufficient output:");
   console.log("  User Minimum:", ethers.formatEther(userOrder.minAmountOut), "ETH");
   console.log("  Backend Plan:", ethers.formatEther(lowOutputExecution.amountOutMin), "ETH");
-  
+
   const lowOutputResult = orderValidator.validateExecution(userOrder, lowOutputExecution);
   console.log("📋 Validation Result:", lowOutputResult.isValid ? "✅ VALID" : "❌ REJECTED");
-  console.log("📈 Estimated Slippage:", lowOutputResult.estimatedSlippageBps, "bp (vs max", userOrder.maxSlippageBps, "bp)");
+  console.log(
+    "📈 Estimated Slippage:",
+    lowOutputResult.estimatedSlippageBps,
+    "bp (vs max",
+    userOrder.maxSlippageBps,
+    "bp)",
+  );
   if (lowOutputResult.errors.length > 0) {
     console.log("🛡️  Protection Activated:", lowOutputResult.errors[0]);
   }
@@ -151,7 +157,7 @@ async function demonstrateExecutionValidation() {
   console.log("🔄 Backend tries to swap to wrong token:");
   console.log("  User Wants:", userOrder.outputToken.substring(0, 15) + "... (WETH)");
   console.log("  Backend Plan:", wrongPathExecution.path[1].substring(0, 15) + "... (DAI)");
-  
+
   const wrongPathResult = orderValidator.validateExecution(userOrder, wrongPathExecution);
   console.log("📋 Validation Result:", wrongPathResult.isValid ? "✅ VALID" : "❌ REJECTED");
   if (wrongPathResult.errors.length > 0) {
@@ -170,9 +176,21 @@ async function demonstrateExecutionValidation() {
   };
 
   console.log("🔄 Backend executes partial order:");
-  console.log("  Full Order:", ethers.formatUnits(userOrder.inputAmount, 6), "USDC →", ethers.formatEther(userOrder.minAmountOut), "ETH");
-  console.log("  Partial:", ethers.formatUnits(partialExecution.amountIn, 6), "USDC →", ethers.formatEther(partialExecution.amountOutMin), "ETH");
-  
+  console.log(
+    "  Full Order:",
+    ethers.formatUnits(userOrder.inputAmount, 6),
+    "USDC →",
+    ethers.formatEther(userOrder.minAmountOut),
+    "ETH",
+  );
+  console.log(
+    "  Partial:",
+    ethers.formatUnits(partialExecution.amountIn, 6),
+    "USDC →",
+    ethers.formatEther(partialExecution.amountOutMin),
+    "ETH",
+  );
+
   const partialResult = orderValidator.validateExecution(userOrder, partialExecution);
   console.log("📋 Validation Result:", partialResult.isValid ? "✅ VALID" : "❌ INVALID");
   console.log("📈 Estimated Slippage:", partialResult.estimatedSlippageBps, "bp");
@@ -193,7 +211,7 @@ async function demonstrateExecutionValidation() {
   console.log("⏰ Backend tries to execute with expired deadline:");
   console.log("  Current Time:", new Date().toISOString());
   console.log("  Execution Deadline:", new Date(expiredExecution.deadline * 1000).toISOString());
-  
+
   const expiredResult = orderValidator.validateExecution(userOrder, expiredExecution);
   console.log("📋 Validation Result:", expiredResult.isValid ? "✅ VALID" : "❌ REJECTED");
   if (expiredResult.errors.length > 0) {
@@ -206,7 +224,7 @@ async function demonstrateExecutionValidation() {
   console.log("====================");
   console.log("✅ Valid execution: Passes all checks");
   console.log("❌ Unauthorized router: Blocked");
-  console.log("❌ Excessive amount: Blocked"); 
+  console.log("❌ Excessive amount: Blocked");
   console.log("❌ Insufficient output: Blocked");
   console.log("❌ Wrong token path: Blocked");
   console.log("✅ Partial execution: Allowed (proportional)");
@@ -236,4 +254,3 @@ async function demonstrateExecutionValidation() {
 
 // Run the execution validation demonstration
 demonstrateExecutionValidation().catch(console.error);
-
