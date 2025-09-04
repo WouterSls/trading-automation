@@ -1,6 +1,6 @@
 import { ethers, Wallet, TransactionRequest } from "ethers";
 import { ChainType, getChainConfig } from "../config/chain-config";
-import { SignedLimitOrder } from "./types/OrderTypes";
+import { SignedLimitOrder } from "./order-types";
 import { RouteOptimizer } from "../routing/RouteOptimizer";
 
 /**

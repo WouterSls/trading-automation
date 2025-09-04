@@ -14,7 +14,7 @@ import { ethers } from "ethers";
 import { getBaseWallet_1 } from "../../../src/hooks/useSetup";
 import { ChainType, getChainConfig } from "../../../src/config/chain-config";
 import { OrderSigner } from "../../../src/orders/OrderSigner";
-import { TradeOrder, EIP712_TYPES } from "../../../src/orders/types/OrderTypes";
+import { TradeOrder, EIP712_TYPES } from "../../../src/orders/order-types";
 
 async function demonstrateSecurityFeatures() {
   console.log("\n🛡️  EIP-712 Security Features Demonstration");

@@ -1,27 +1,31 @@
-import { ethers } from "ethers";
-import { ChainType } from "../../config/chain-config";
+import { ChainType } from "../config/chain-config";
 
+// Import generated types that are consistent with Solidity contracts
+import { LimitOrder, EIP712_GENERATED_TYPES, createDomain as createGeneratedDomain } from "./generated-types";
+
+// Re-export the generated domain interface for convenience
 export interface EIP712Domain {
-  name: string; // Application name: "EVM Trading Engine"
-  version: string; // Version: "1.0.0"
-  chainId: number; // Chain ID (1 for Ethereum, 8453 for Base, etc.)
-  verifyingContract: string; // Address of OrderExecutor contract
+  name: string;
+  version: string;
+  chainId: number;
+  verifyingContract: string;
 }
 
-export interface TradeOrder {
-  maker: string; // User's wallet address
-  inputToken: string; // Token to sell (address)
-  outputToken: string; // Token to buy (address)
-  inputAmount: string; // Amount to sell (in token's smallest unit)
-  minAmountOut: string; // Minimum amount to receive (slippage protection)
+// Re-export base order structure (matches Solidity exactly)
+export { LimitOrder };
 
-  // Execution constraints - backend must respect these
-  maxSlippageBps: number; // Maximum slippage in basis points (100 = 1%)
+// Frontend-specific order interface that extends the base with additional fields
+export interface TradeOrderRequest {
+  // Core order data (matches Solidity exactly)
+  order: LimitOrder;
+
+  // Frontend-specific fields not in Solidity
   allowedRouters: string[]; // Which DEX routers can be used for this order
-
-  // Order lifecycle
-  expiry: number; // Unix timestamp when order expires
-  nonce: string; // Unique order identifier (prevents replay)
+  metadata?: {
+    estimatedGas?: string;
+    userNotes?: string;
+    createdAt?: number;
+  };
 }
 
 // Minimal Permit2 types
@@ -61,10 +65,7 @@ export interface Permit2Data {
   deadline: number; // When this permit expires
 }
 
-export interface SignedTradeOrder {
-  order: TradeOrder;
-  orderSignature: string;
-}
+// Note: SignedTradeOrder removed - use SignedLimitOrder instead
 
 /**
 export interface SingedPermit2Transfer {
@@ -81,7 +82,7 @@ export interface SingedPermit2Transfer {
 export interface SignedLimitOrder {
   permit2Data: Permit2Data; // Permit2 authorization data
   permit2Signature: string; // EIP-712 signature of the permit2 data
-  order: TradeOrder; // The actual order data
+  order: LimitOrder; // The actual order data (matches Solidity)
   orderSignature: string; // EIP-712 signature of the order
 }
 
@@ -101,46 +102,12 @@ export interface ExecutionParams {
 }
 
 /**
- * EIP-712 Type definitions for structured data signing
+ * EIP-712 Type definitions (auto-generated from Solidity contracts)
  *
- * These define the structure that wallets will display to users when signing.
- * The order matters and must match exactly what the smart contract expects.
+ * These are generated automatically from your Solidity contracts to ensure
+ * perfect consistency between smart contracts and frontend types.
  */
-export const EIP712_TYPES = {
-  // Domain separator types
-  EIP712Domain: [
-    { name: "name", type: "string" },
-    { name: "version", type: "string" },
-    { name: "chainId", type: "uint256" },
-    { name: "verifyingContract", type: "address" },
-  ],
-
-  // Main order structure
-  TradeOrder: [
-    { name: "trader", type: "address" },
-    { name: "inputToken", type: "address" },
-    { name: "outputToken", type: "address" },
-    { name: "inputAmount", type: "uint256" },
-    { name: "minAmountOut", type: "uint256" },
-    { name: "maxSlippageBps", type: "uint16" },
-    { name: "allowedRouters", type: "address[]" },
-    { name: "expiry", type: "uint256" },
-    { name: "nonce", type: "string" },
-  ],
-
-  // Permit2 structure (for token authorization)
-  PermitDetails: [
-    { name: "token", type: "address" },
-    { name: "amount", type: "uint160" },
-  ],
-
-  PermitSingle: [
-    { name: "details", type: "PermitDetails" },
-    { name: "spender", type: "address" },
-    { name: "sigDeadline", type: "uint256" },
-    { name: "nonce", type: "uint256" },
-  ],
-};
+export const EIP712_TYPES = EIP712_GENERATED_TYPES;
 
 export enum OrderStatus {
   PENDING = "pending", // Order created, waiting for execution
@@ -164,15 +131,10 @@ export interface OrderWithStatus {
 }
 
 /**
- * Helper function to create domain separator for a specific chain and contract
+ * Helper function to create domain separator (uses generated types for consistency)
  */
-export function createDomain(chain: ChainType, chainId: number, verifyingContract: string): EIP712Domain {
-  return {
-    name: "EVM Trading Engine",
-    version: "1.0.0",
-    chainId: chainId,
-    verifyingContract: verifyingContract,
-  };
+export function createDomain(chainId: number, verifyingContract: string): EIP712Domain {
+  return createGeneratedDomain(chainId, verifyingContract);
 }
 
 /**
@@ -180,4 +142,41 @@ export function createDomain(chain: ChainType, chainId: number, verifyingContrac
  */
 export function generateOrderNonce(): string {
   return Math.floor(Date.now() / 1000 + Math.random() * 1000000).toString();
+}
+
+/**
+ * Creates a TradeOrderRequest from order parameters
+ * This is the recommended way to create orders in new code
+ */
+export function createTradeOrderRequest(orderParams: {
+  maker: string;
+  inputToken: string;
+  outputToken: string;
+  inputAmount: string;
+  minAmountOut: string;
+  maxSlippageBps: string; // Note: string for consistency with Solidity
+  expiryMinutes: number;
+  allowedRouters: string[];
+}): TradeOrderRequest {
+  const expiry = (Math.floor(Date.now() / 1000) + orderParams.expiryMinutes * 60).toString();
+  const nonce = generateOrderNonce();
+
+  const order: LimitOrder = {
+    maker: orderParams.maker,
+    inputToken: orderParams.inputToken,
+    outputToken: orderParams.outputToken,
+    inputAmount: orderParams.inputAmount,
+    minAmountOut: orderParams.minAmountOut,
+    maxSlippageBps: orderParams.maxSlippageBps,
+    expiry: expiry,
+    nonce: nonce,
+  };
+
+  return {
+    order,
+    allowedRouters: orderParams.allowedRouters,
+    metadata: {
+      createdAt: Date.now(),
+    },
+  };
 }

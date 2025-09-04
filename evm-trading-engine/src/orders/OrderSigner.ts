@@ -2,13 +2,15 @@ import { Wallet, ethers } from "ethers";
 import { ChainType, getChainConfig } from "../config/chain-config";
 import {
   EIP712Domain,
-  TradeOrder,
+  LimitOrder,
+  TradeOrderRequest,
   Permit2Data,
   SignedLimitOrder,
   EIP712_TYPES,
   createDomain,
   generateOrderNonce,
-} from "./types/OrderTypes";
+  createTradeOrderRequest,
+} from "./order-types";
 import { Permit2 } from "../smartcontracts/permit2/Permit2";
 
 /**
@@ -29,8 +31,8 @@ export class OrderSigner {
     const chainConfig = getChainConfig(chain);
     const chainId = Number(chainConfig.id);
 
-    // Create the domain separator for EIP-712 signing
-    this.domain = createDomain(chain, chainId, orderExecutorAddress);
+    // Create the domain separator for EIP-712 signing (using generated domain)
+    this.domain = createDomain(chainId, orderExecutorAddress);
     this.permit2 = new Permit2(chain);
   }
 
@@ -58,18 +60,21 @@ export class OrderSigner {
   ): Promise<SignedLimitOrder> {
     console.log("🔏 Creating signed limit order...");
 
-    // 1. Create the order structure
-    const order: TradeOrder = {
+    // 1. Create the order structure using the new format
+    const orderRequest = createTradeOrderRequest({
       maker: wallet.address,
       inputToken: orderParams.inputToken,
       outputToken: orderParams.outputToken,
       inputAmount: orderParams.inputAmount,
       minAmountOut: orderParams.minAmountOut,
-      maxSlippageBps: orderParams.maxSlippageBps,
+      maxSlippageBps: orderParams.maxSlippageBps.toString(), // Convert to string
+      expiryMinutes: orderParams.expiryMinutes,
       allowedRouters: orderParams.allowedRouters,
-      expiry: Math.floor(Date.now() / 1000) + orderParams.expiryMinutes * 60,
-      nonce: generateOrderNonce(),
-    };
+    });
+
+    // Extract the core order (what gets signed) and metadata
+    const order = orderRequest.order;
+    const { allowedRouters } = orderRequest;
 
     console.log("📋 Order structure created:", {
       maker: order.maker,
@@ -78,8 +83,8 @@ export class OrderSigner {
       inputAmount: ethers.formatUnits(order.inputAmount, 18), // Assuming 18 decimals for display
       minAmountOut: ethers.formatUnits(order.minAmountOut, 18),
       maxSlippageBps: order.maxSlippageBps,
-      allowedRouters: order.allowedRouters,
-      expiry: new Date(order.expiry * 1000).toISOString(),
+      allowedRouters: allowedRouters, // Separate from signed order
+      expiry: new Date(parseInt(order.expiry) * 1000).toISOString(),
       nonce: order.nonce,
     });
 
@@ -92,7 +97,7 @@ export class OrderSigner {
       nonce: await this.permit2
         .getPermit2Nonce(wallet, wallet.address, orderParams.inputToken, this.orderExecutorAddress)
         .then((n) => n.toString()),
-      deadline: order.expiry, // Use same deadline as order
+      deadline: parseInt(order.expiry), // Use same deadline as order (convert to number)
     };
 
     console.log("🎫 Permit2 data created:", {
@@ -131,12 +136,12 @@ export class OrderSigner {
    * with all its constraints. The signature is bound to our domain to prevent
    * replay attacks.
    */
-  async signOrder(wallet: Wallet, order: TradeOrder): Promise<string> {
+  async signOrder(wallet: Wallet, order: LimitOrder): Promise<string> {
     console.log("🔐 Signing order data...");
     console.log("🏷️  Domain:", this.domain);
 
-    // Sign the structured order data
-    const signature = await wallet.signTypedData(this.domain, { LimitOrder: EIP712_TYPES.TradeOrder }, order);
+    // Sign the structured order data using generated types
+    const signature = await wallet.signTypedData(this.domain, { LimitOrder: EIP712_TYPES.LimitOrder }, order);
 
     console.log("✅ Order signature created");
     return signature;
@@ -200,7 +205,7 @@ export class OrderSigner {
       // Verify order signature
       const orderSigner = ethers.verifyTypedData(
         this.domain,
-        { LimitOrder: EIP712_TYPES.TradeOrder },
+        { LimitOrder: EIP712_TYPES.LimitOrder },
         signedOrder.order,
         signedOrder.orderSignature,
       );
@@ -265,7 +270,7 @@ export class OrderSigner {
    * Calculates the EIP-712 hash of an order
    * This is what actually gets signed (useful for debugging)
    */
-  getOrderHash(order: TradeOrder): string {
-    return ethers.TypedDataEncoder.hash(this.domain, { LimitOrder: EIP712_TYPES.TradeOrder }, order);
+  getOrderHash(order: LimitOrder): string {
+    return ethers.TypedDataEncoder.hash(this.domain, { LimitOrder: EIP712_TYPES.LimitOrder }, order);
   }
 }

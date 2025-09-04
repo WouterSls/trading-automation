@@ -11,7 +11,7 @@
 import { ethers } from "ethers";
 import { ChainType, getChainConfig } from "../../../src/config/chain-config";
 import { OrderValidator } from "../../../src/orders/OrderValidator";
-import { TradeOrder, ExecutionParams } from "../../../src/orders/types/OrderTypes";
+import { TradeOrder, ExecutionParams } from "../../../src/orders/order-types";
 
 async function demonstrateExecutionValidation() {
   console.log("\n⚡ Order Execution Validation Demo");

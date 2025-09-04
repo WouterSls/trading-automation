@@ -15,7 +15,7 @@ import { ChainType, getChainConfig } from "../../../src/config/chain-config";
 import { getHardhatWallet_1, getHardhatWallet_2 } from "../../../src/hooks/useSetup";
 import { createMinimalErc20 } from "../../../src/smartcontracts/ERC/erc-utils";
 import { Permit2 } from "../../../src/smartcontracts/permit2/Permit2";
-import { Permit2Transfer, Permit2TransferDetails, SignedPermit2Transfer } from "../../../src/orders";
+import { Permit2Transfer, Permit2TransferDetails, SignedPermit2Transfer } from "../../../src/orders/_index";
 import { ERC20 } from "../../../src/smartcontracts/ERC/ERC20";
 import { buyUsdcWithETH } from "../../trading/tokens/buy-usdc";
 

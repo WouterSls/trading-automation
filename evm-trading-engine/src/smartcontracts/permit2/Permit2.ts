@@ -2,7 +2,7 @@ import { Contract, ethers, Signature, Wallet } from "ethers";
 import { ChainType, getChainConfig } from "../../config/chain-config";
 import { PERMIT2_INTERFACE } from "../../lib/smartcontract-abis/_index";
 import { IPermitSingle } from "../universal-router/universal-router-types";
-import { Permit2Transfer, SignedPermit2Transfer } from "../../orders";
+import { Permit2Transfer, SignedPermit2Transfer } from "../../orders/_index";
 import { PERMIT2_TYPES } from "./permit2-types";
 
 export class Permit2 {

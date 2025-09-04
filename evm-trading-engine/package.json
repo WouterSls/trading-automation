@@ -10,6 +10,9 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "generate": "npx openapi-typescript ./trading-engine/src/api/static/openapi.yaml -o ./trading-engine/src/api/generated/openapi.ts",
+    "generate-types": "node ../scripts/generate-types.js",
+    "validate-types": "node ../scripts/validate-types.js",
+    "prebuild": "npm run validate-types",
     "dev": "rm -rf js-build/trading-engine/src/api/static && cp -r trading-engine/src/api/static js-build/trading-engine/src/api/static && npx nodemon js-build/trading-engine/src/server.js"
   },
   "dependencies": {

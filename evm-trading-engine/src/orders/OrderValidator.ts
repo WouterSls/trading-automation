@@ -1,11 +1,14 @@
 import { ethers } from "ethers";
-import { TradeOrder, SignedLimitOrder, ExecutionParams } from "./types/OrderTypes";
+import { LimitOrder, TradeOrderRequest, SignedLimitOrder, ExecutionParams } from "./order-types";
 
 /**
  * Validation errors that can occur with orders
  */
 export class OrderValidationError extends Error {
-  constructor(message: string, public code: string) {
+  constructor(
+    message: string,
+    public code: string,
+  ) {
     super(message);
     this.name = "OrderValidationError";
   }
@@ -31,15 +34,14 @@ export interface ExecutionValidationResult {
 
 /**
  * OrderValidator provides comprehensive validation for limit orders
- * 
+ *
  * This ensures orders meet all requirements and that execution parameters
  * respect the constraints specified by the user in their signed order.
  */
 export class OrderValidator {
-  
   /**
    * Validates a limit order structure and constraints
-   * 
+   *
    * Checks for:
    * - Valid addresses
    * - Reasonable amounts
@@ -47,7 +49,7 @@ export class OrderValidator {
    * - Slippage constraints
    * - Router whitelist
    */
-  validateOrder(order: TradeOrder): OrderValidationResult {
+  validateOrder(order: LimitOrder, allowedRouters?: string[]): OrderValidationResult {
     const errors: string[] = [];
     const warnings: string[] = [];
 
@@ -89,29 +91,36 @@ export class OrderValidator {
     }
 
     // 4. Validate slippage
-    if (order.maxSlippageBps < 0 || order.maxSlippageBps > 10000) {
+    const maxSlippageBps = parseInt(order.maxSlippageBps);
+
+    if (maxSlippageBps < 0 || maxSlippageBps > 10000) {
       errors.push("Max slippage must be between 0 and 10000 basis points (0-100%)");
     }
-    if (order.maxSlippageBps > 500) { // 5%
+    if (maxSlippageBps > 500) {
+      // 5%
       warnings.push("High slippage tolerance (>5%) - consider lowering for better execution");
     }
 
-    // 5. Validate allowed routers
-    if (order.allowedRouters.length === 0) {
-      errors.push("At least one router must be allowed");
-    }
-    for (const router of order.allowedRouters) {
-      if (!ethers.isAddress(router)) {
-        errors.push(`Invalid router address: ${router}`);
+    // 5. Validate allowed routers (if provided)
+    if (allowedRouters && allowedRouters.length > 0) {
+      for (const router of allowedRouters) {
+        if (!ethers.isAddress(router)) {
+          errors.push(`Invalid router address: ${router}`);
+        }
       }
+    } else if (allowedRouters && allowedRouters.length === 0) {
+      warnings.push("No routers specified - order may be restricted during execution");
     }
 
     // 6. Validate expiry
     const currentTime = Math.floor(Date.now() / 1000);
-    if (order.expiry <= currentTime) {
+    const expiry = parseInt(order.expiry);
+
+    if (expiry <= currentTime) {
       errors.push("Order expiry must be in the future");
     }
-    if (order.expiry > currentTime + (30 * 24 * 60 * 60)) { // 30 days
+    if (expiry > currentTime + 30 * 24 * 60 * 60) {
+      // 30 days
       warnings.push("Order expiry is more than 30 days away - consider shorter timeframe");
     }
 
@@ -126,8 +135,8 @@ export class OrderValidator {
     }
 
     const isValid = errors.length === 0;
-    
-    console.log(`📊 Validation result: ${isValid ? '✅ Valid' : '❌ Invalid'}`);
+
+    console.log(`📊 Validation result: ${isValid ? "✅ Valid" : "❌ Invalid"}`);
     if (errors.length > 0) {
       console.log("❌ Errors:", errors);
     }
@@ -140,17 +149,21 @@ export class OrderValidator {
 
   /**
    * Validates that execution parameters respect order constraints
-   * 
+   *
    * This is critical for preventing the backend from executing orders
    * in ways that violate the user's signed constraints.
    */
-  validateExecution(order: TradeOrder, execParams: ExecutionParams): ExecutionValidationResult {
+  validateExecution(
+    order: LimitOrder,
+    execParams: ExecutionParams,
+    allowedRouters?: string[],
+  ): ExecutionValidationResult {
     const errors: string[] = [];
 
     console.log("🔍 Validating execution parameters against order constraints...");
 
-    // 1. Validate router is allowed
-    if (!order.allowedRouters.includes(execParams.router)) {
+    // 1. Validate router is allowed (if routers are specified)
+    if (allowedRouters && allowedRouters.length > 0 && !allowedRouters.includes(execParams.router)) {
       errors.push(`Router ${execParams.router} not in allowed routers list`);
     }
 
@@ -170,7 +183,7 @@ export class OrderValidator {
     try {
       const amountIn = BigInt(execParams.amountIn);
       const orderInputAmount = BigInt(order.inputAmount);
-      
+
       if (amountIn > orderInputAmount) {
         errors.push("Execution amount cannot exceed order input amount");
       }
@@ -186,10 +199,10 @@ export class OrderValidator {
       const orderMinOut = BigInt(order.minAmountOut);
       const amountIn = BigInt(execParams.amountIn);
       const orderInputAmount = BigInt(order.inputAmount);
-      
+
       // Proportional check: if executing partial amount, min out should be proportional
       const expectedMinOut = (orderMinOut * amountIn) / orderInputAmount;
-      
+
       if (amountOutMin < expectedMinOut) {
         errors.push(`Execution min out too low. Expected: ${expectedMinOut}, got: ${amountOutMin}`);
       }
@@ -202,21 +215,23 @@ export class OrderValidator {
     try {
       const amountIn = BigInt(execParams.amountIn);
       const amountOutMin = BigInt(execParams.amountOutMin);
-      
+
       // This is a simplified slippage calculation
       // In practice, you'd want to compare against current market rates
       const inputAmount = BigInt(order.inputAmount);
       const expectedOut = BigInt(order.minAmountOut);
-      
+
       // Calculate expected output for this execution size
       const proportionalExpected = (expectedOut * amountIn) / inputAmount;
-      
+
       if (proportionalExpected > amountOutMin) {
         const slippage = proportionalExpected - amountOutMin;
         estimatedSlippageBps = Number((slippage * 10000n) / proportionalExpected);
-        
-        if (estimatedSlippageBps > order.maxSlippageBps) {
-          errors.push(`Estimated slippage ${estimatedSlippageBps}bp exceeds max allowed ${order.maxSlippageBps}bp`);
+
+        const orderMaxSlippage = parseInt(order.maxSlippageBps);
+
+        if (estimatedSlippageBps > orderMaxSlippage) {
+          errors.push(`Estimated slippage ${estimatedSlippageBps}bp exceeds max allowed ${orderMaxSlippage}bp`);
         }
       }
     } catch {
@@ -229,17 +244,19 @@ export class OrderValidator {
     if (execParams.deadline <= currentTime) {
       errors.push("Execution deadline must be in the future");
     }
-    if (execParams.deadline > order.expiry) {
+    const orderExpiry = parseInt(order.expiry);
+    if (execParams.deadline > orderExpiry) {
       errors.push("Execution deadline cannot be after order expiry");
     }
 
     const isValid = errors.length === 0;
-    
-    console.log(`📊 Execution validation: ${isValid ? '✅ Valid' : '❌ Invalid'}`);
+
+    console.log(`📊 Execution validation: ${isValid ? "✅ Valid" : "❌ Invalid"}`);
     if (errors.length > 0) {
       console.log("❌ Execution errors:", errors);
     }
-    console.log(`📈 Estimated slippage: ${estimatedSlippageBps}bp (max allowed: ${order.maxSlippageBps}bp)`);
+    const orderMaxSlippage = parseInt(order.maxSlippageBps);
+    console.log(`📈 Estimated slippage: ${estimatedSlippageBps}bp (max allowed: ${orderMaxSlippage}bp)`);
 
     return { isValid, errors, estimatedSlippageBps };
   }
@@ -266,7 +283,7 @@ export class OrderValidator {
     try {
       const permitAmount = BigInt(signedOrder.permit2Data.permitted.amount);
       const orderAmount = BigInt(signedOrder.order.inputAmount);
-      
+
       if (permitAmount < orderAmount) {
         errors.push("Permit2 amount must be at least the order input amount");
       }
@@ -283,16 +300,16 @@ export class OrderValidator {
     }
 
     // 4. Basic signature format validation
-    if (signedOrder.orderSignature && !signedOrder.orderSignature.startsWith('0x')) {
+    if (signedOrder.orderSignature && !signedOrder.orderSignature.startsWith("0x")) {
       errors.push("Invalid order signature format");
     }
-    if (signedOrder.permit2Signature && !signedOrder.permit2Signature.startsWith('0x')) {
+    if (signedOrder.permit2Signature && !signedOrder.permit2Signature.startsWith("0x")) {
       errors.push("Invalid Permit2 signature format");
     }
 
     const isValid = errors.length === 0;
-    
-    console.log(`📊 Signed order validation: ${isValid ? '✅ Valid' : '❌ Invalid'}`);
+
+    console.log(`📊 Signed order validation: ${isValid ? "✅ Valid" : "❌ Invalid"}`);
     if (errors.length > 0) {
       console.log("❌ Signed order errors:", errors);
     }
@@ -306,23 +323,26 @@ export class OrderValidator {
   /**
    * Check if an order is expired
    */
-  isOrderExpired(order: TradeOrder): boolean {
+  isOrderExpired(order: LimitOrder): boolean {
     const currentTime = Math.floor(Date.now() / 1000);
-    return order.expiry <= currentTime;
+    return parseInt(order.expiry) <= currentTime;
   }
 
   /**
    * Get time until order expiry in seconds
    */
-  getTimeUntilExpiry(order: TradeOrder): number {
+  getTimeUntilExpiry(order: LimitOrder): number {
     const currentTime = Math.floor(Date.now() / 1000);
-    return Math.max(0, order.expiry - currentTime);
+    return Math.max(0, parseInt(order.expiry) - currentTime);
   }
 
   /**
    * Validate that execution parameters represent a reasonable trade
    */
-  validateTradeReasonableness(order: TradeOrder, execParams: ExecutionParams): {
+  validateTradeReasonableness(
+    order: LimitOrder,
+    execParams: ExecutionParams,
+  ): {
     isReasonable: boolean;
     warnings: string[];
   } {
@@ -340,8 +360,9 @@ export class OrderValidator {
       const amountIn = BigInt(execParams.amountIn);
       const orderAmount = BigInt(order.inputAmount);
       const percentage = (amountIn * 100n) / orderAmount;
-      
-      if (percentage < 5n) { // Less than 5%
+
+      if (percentage < 5n) {
+        // Less than 5%
         warnings.push("Executing very small portion of order - consider batching");
       }
     } catch {
@@ -351,4 +372,3 @@ export class OrderValidator {
     return { isReasonable, warnings };
   }
 }
-

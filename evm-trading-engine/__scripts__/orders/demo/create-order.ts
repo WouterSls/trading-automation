@@ -1,7 +1,7 @@
 import { ethers } from "ethers";
 import { ChainType, getChainConfig } from "../../../src/config/chain-config";
 import { getBaseWallet_1 } from "../../../src/hooks/useSetup";
-import { EIP712Domain, TradeOrder } from "../../../src/orders";
+import { EIP712Domain, TradeOrder } from "../../../src/orders/_index";
 
 // Returns Signed Trade Order
 export async function createOrder(chain: ChainType) {
