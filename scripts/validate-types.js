@@ -276,7 +276,6 @@ class TypeValidator {
   }
 }
 
-// Run validation
 async function main() {
   const validator = new TypeValidator();
   const success = await validator.validate();
