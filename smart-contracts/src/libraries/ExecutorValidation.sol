@@ -31,6 +31,7 @@ library ExecutorValidation {
         address maker;
         address inputToken;
         address outputToken;
+        address trader;
         uint256 inputAmount;
         uint256 minAmountOut;
         uint256 maxSlippageBps;

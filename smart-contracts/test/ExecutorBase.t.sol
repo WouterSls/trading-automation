@@ -11,6 +11,8 @@ contract ExecutorBase is Test {
 
     // Mock contract addresses (we'll use vm.mockCall for these)
     address public constant UNIV3_ROUTER = 0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45;
+    address public constant UNIV3_TRADER = 0x00000000000072a70ecDf485e0E4C7bD8665fc45;
+    address public constant TRADER_REGISTRY = address(0);
     address public constant PERMIT2 = 0x000000000022D473030F116dDEE9F6B43aC78BA3;
 
     // Test tokens
@@ -46,9 +48,9 @@ contract ExecutorBase is Test {
         vm.prank(owner);
         executor = new Executor();
 
-        // Setup initial router allowlist
+        // Setup initial trader registry
         vm.prank(owner);
-        executor.setAllowedRouter(UNIV3_ROUTER, true);
+        executor.updateTraderRegistry(TRADER_REGISTRY);
 
         console.log("ExecutorBase setup complete");
     }
@@ -215,6 +217,7 @@ contract ExecutorBase is Test {
         console.log("Nonce already used validation test passed");
     }
 
+    //TODO: refactor
     function test_BusinessLogic_RouterNotAllowed() public {
         console.log("Testing contract-level router not allowed validation...");
 
@@ -224,8 +227,8 @@ contract ExecutorBase is Test {
         (ExecutorValidation.PermitSingle memory permit2Data, bytes memory permit2Signature) = _createValidPermit2();
 
         // Remove the router from contract allowlist
-        vm.prank(owner);
-        executor.setAllowedRouter(UNIV3_ROUTER, false);
+        //vm.prank(owner);
+        //executor.setAllowedRouter(UNIV3_ROUTER, false);
 
         vm.expectRevert(Executor.RouterNotAllowed.selector);
         executor.executeOrder(order, routeData, orderSignature, permit2Data, permit2Signature);
@@ -272,6 +275,7 @@ contract ExecutorBase is Test {
             inputToken: tokenA,
             outputToken: tokenB,
             inputAmount: 1000e18,
+            trader: UNIV3_TRADER,
             minAmountOut: 900e18,
             maxSlippageBps: 1000,
             expiry: block.timestamp,
