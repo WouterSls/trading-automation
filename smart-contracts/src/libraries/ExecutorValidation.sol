@@ -2,16 +2,11 @@
 pragma solidity ^0.8.20;
 
 import {ECDSA} from "../../lib/openzeppelin-contracts/contracts/utils/cryptography/ECDSA.sol";
+import {Types} from "./Types.sol";
 
-/**
- * @title ExecutorValidation
- * @notice Internal validation library for Executor contract operations
- * @dev All functions are INTERNAL - no deployment needed, gas efficient
- */
 library ExecutorValidation {
     using ECDSA for bytes32;
 
-    // Custom errors
     error ZeroAddress();
     error ZeroAmount();
     error InvalidArrayLength();
@@ -25,13 +20,13 @@ library ExecutorValidation {
     error InvalidSignature();
     error PermitExpired();
     error InvalidPermitSignature();
+    error IncorrectProtocol(Types.Protocol expected, Types.Protocol actual);
 
-    // Data structures
     struct LimitOrder {
         address maker;
         address inputToken;
         address outputToken;
-        address trader;
+        Types.Protocol protocol;
         uint256 inputAmount;
         uint256 minAmountOut;
         uint256 maxSlippageBps;
@@ -57,15 +52,10 @@ library ExecutorValidation {
         uint256 nonce;
     }
 
-    // Type hashes
     bytes32 internal constant LIMIT_ORDER_TYPEHASH = keccak256(
-        "LimitOrder(address maker,address inputToken,address outputToken,uint256 inputAmount,uint256 minAmountOut,uint256 maxSlippageBps,uint256 expiry,uint256 nonce)"
+        "LimitOrder(address maker,address inputToken,address outputToken,uint8 protocol,uint256 inputAmount,uint256 minAmountOut,uint256 maxSlippageBps,uint256 expiry,uint256 nonce)"
     );
 
-    /**
-     * @notice Validates basic input parameters for security and correctness
-     * @dev INTERNAL function - inlined into contract, no deployment needed
-     */
     function validateInputs(LimitOrder calldata order, RouteData calldata routeData, PermitSingle calldata permit2Data)
         internal
         pure
@@ -76,10 +66,6 @@ library ExecutorValidation {
         _validateRouteStructure(routeData);
     }
 
-    /**
-     * @notice Validates business logic constraints
-     * @dev INTERNAL function - inlined into contract, no deployment needed
-     */
     function validateBusinessLogic(
         LimitOrder calldata order,
         mapping(address => mapping(uint256 => bool)) storage usedNonces
@@ -88,18 +74,12 @@ library ExecutorValidation {
         _validateNonce(order, usedNonces);
     }
 
-    /**
-     * @notice Validates that a specific router is allowed
-     * @dev Called by main contract before execution
-     */
-    function validateRouter(address router, mapping(address => bool) storage allowedRouters) internal view {
-        if (!allowedRouters[router]) revert RouterNotAllowed();
+    function validateProtocol(LimitOrder calldata order, Types.Protocol expectedProtocol) internal pure {
+        if (order.protocol != expectedProtocol) {
+            revert IncorrectProtocol(expectedProtocol, order.protocol);
+        }
     }
 
-    /**
-     * @notice Validates EIP-712 order signature
-     * @dev INTERNAL function - inlined into contract, no deployment needed
-     */
     function validateOrderSignature(LimitOrder calldata order, bytes calldata signature, bytes32 domainSeparator)
         internal
         pure
@@ -110,6 +90,7 @@ library ExecutorValidation {
                 order.maker,
                 order.inputToken,
                 order.outputToken,
+                order.protocol,
                 order.inputAmount,
                 order.minAmountOut,
                 order.maxSlippageBps,
@@ -124,10 +105,6 @@ library ExecutorValidation {
         if (recoveredSigner != order.maker) revert InvalidSignature();
     }
 
-    /**
-     * @notice Validates Permit2 signature and expiry
-     * @dev INTERNAL function - inlined into contract, no deployment needed
-     */
     function validatePermit2Signature(PermitSingle calldata permit2Data, bytes calldata signature) internal view {
         if (block.timestamp > permit2Data.sigDeadline) revert PermitExpired();
         if (signature.length == 0) revert InvalidPermitSignature();
@@ -136,10 +113,6 @@ library ExecutorValidation {
         // for gas efficiency and to avoid duplicate validation
     }
 
-    /**
-     * @notice Validates route data consistency
-     * @dev INTERNAL function - inlined into contract, no deployment needed
-     */
     function validateRouteData(RouteData calldata routeData) internal pure {
         if (routeData.isMultiHop) {
             if (routeData.encodedPath.length < 43) revert InvalidPath();
@@ -149,10 +122,6 @@ library ExecutorValidation {
             }
         }
     }
-
-    // ========================================
-    // PRIVATE VALIDATION FUNCTIONS
-    // ========================================
 
     function _validateAddresses(LimitOrder calldata order, PermitSingle calldata permit2Data) private pure {
         if (order.maker == address(0)) revert ZeroAddress();
@@ -167,8 +136,6 @@ library ExecutorValidation {
         if (order.minAmountOut == 0) revert ZeroAmount();
         if (permit2Data.details.amount == 0) revert ZeroAmount();
     }
-
-    // Arrays validation removed - no longer needed
 
     function _validateConsistency(LimitOrder calldata order, PermitSingle calldata permit2Data) private pure {
         if (order.inputToken != permit2Data.details.token) revert TokenMismatch();
