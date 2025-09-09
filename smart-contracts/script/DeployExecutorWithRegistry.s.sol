@@ -14,6 +14,7 @@ contract DeployExecutor is Script {
     // Known contract addresses across chains
     address constant UNIV3_ROUTER = 0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45;
     address constant PERMIT2 = 0x000000000022D473030F116dDEE9F6B43aC78BA3;
+    address constant REGISTRY_ADDRESS = address(0);
 
     function run() external returns (Executor executor) {
         console.log("Deploying Executor contract...");
@@ -30,8 +31,8 @@ contract DeployExecutor is Script {
         console.log("Setting up initial router allowlist...");
 
         // Allow UniswapV3 SwapRouter02
-        executor.setAllowedRouter(UNIV3_ROUTER, true);
-        console.log("Allowed UniswapV3 router:", UNIV3_ROUTER);
+        executor.updateTraderRegistry(REGISTRY_ADDRESS);
+        console.log("updated trader registry with address: ", REGISTRY_ADDRESS);
 
         vm.stopBroadcast();
 
@@ -47,7 +48,7 @@ contract DeployExecutor is Script {
         console.log("Executor Address:", address(executor));
         console.log("Owner:", executor.owner());
         console.log("Chain ID:", block.chainid);
-        console.log("UniswapV3 Router Allowed:", executor.allowedRouter(UNIV3_ROUTER));
+        console.log("Registry Address:", REGISTRY_ADDRESS);
         console.log("Permit2 Address:", PERMIT2);
 
         console.log("\nNext Steps:");
@@ -80,10 +81,8 @@ contract DeployExecutor is Script {
 
         // Check basic properties
         require(executor.owner() != address(0), "Owner not set");
-        require(executor.allowedRouter(UNIV3_ROUTER), "UniswapV3 router not allowed");
 
         console.log("Deployment verification passed");
         console.log("Owner:", executor.owner());
-        console.log("UniswapV3 Router Status:", executor.allowedRouter(UNIV3_ROUTER));
     }
 }
