@@ -1,13 +1,11 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.17;
+pragma solidity ^0.8.20;
 
 import {ExecutorValidation} from "../libraries/ExecutorValidation.sol";
 import {ITrader} from "../interfaces/ITrader.sol";
 
-import {EIP712} from "../../lib/openzeppelin-contracts/contracts/utils/cryptography/EIP712.sol";
 import {SafeERC20} from "../../lib/openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol";
 import {IERC20} from "../../lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
-import {IPermit2} from "../interfaces/IPermit2.sol";
 import {IUniswapV3Router} from "../interfaces/IUniswapV3Router.sol";
 import {ITrader} from "../interfaces/ITrader.sol";
 

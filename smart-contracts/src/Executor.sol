@@ -6,8 +6,8 @@ import {SafeERC20} from "../lib/openzeppelin-contracts/contracts/token/ERC20/uti
 import {ReentrancyGuard} from "../lib/openzeppelin-contracts/contracts/utils/ReentrancyGuard.sol";
 import {IERC20} from "../lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
 import {IPermit2} from "./interfaces/IPermit2.sol";
-import {IUniswapV3Router} from "./interfaces/IUniswapV3Router.sol";
 import {ITrader} from "./interfaces/ITrader.sol";
+import {ITraderRegistry} from "./interfaces/ITraderRegistry.sol";
 
 import {ExecutorValidation} from "./libraries/ExecutorValidation.sol";
 
@@ -87,15 +87,15 @@ contract Executor is EIP712, ReentrancyGuard {
 
         // TRANSFER TOKENS TO TRADER (TRADING CONTRACT / traders)
 
-        // registry pattern
-        address trader = traderRegistry.getTrader(order.trader);
+        // registry pattern - get trader implementation by protocol
+        address trader = traderRegistry.getTrader(order.protocol);
         uint256 amountOut = ITrader(trader).trade(order);
 
         // RETURN TOKENS FROM TRADER (TRADING CONTRACT / traders)
 
         if (amountOut < order.minAmountOut) revert InsufficientOutput();
 
-        emit OrderExecuted(order.maker, order.trader, order.inputAmount, amountOut);
+        emit OrderExecuted(order.maker, trader, order.inputAmount, amountOut);
     }
 
     function _executePermit2Transfer(
@@ -139,9 +139,4 @@ contract Executor is EIP712, ReentrancyGuard {
     }
 
     receive() external payable {}
-}
-
-interface ITraderRegistry {
-    function getTrader(address trader) external view returns (address);
-    function isTraderSupported(address trader) external view returns (bool);
 }

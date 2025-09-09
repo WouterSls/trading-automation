@@ -5,6 +5,7 @@ import {Test} from "forge-std/Test.sol";
 import {console} from "forge-std/console.sol";
 import {Executor} from "../src/Executor.sol";
 import {ExecutorValidation} from "../src/libraries/ExecutorValidation.sol";
+import {Types} from "../src/libraries/Types.sol";
 
 contract ExecutorBase is Test {
     Executor public executor;
@@ -275,7 +276,7 @@ contract ExecutorBase is Test {
             inputToken: tokenA,
             outputToken: tokenB,
             inputAmount: 1000e18,
-            trader: UNIV3_TRADER,
+            protocol: Types.Protocol.UNISWAP_V2,
             minAmountOut: 900e18,
             maxSlippageBps: 1000,
             expiry: block.timestamp,
