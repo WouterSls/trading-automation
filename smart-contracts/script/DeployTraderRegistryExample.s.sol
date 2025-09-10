@@ -13,6 +13,8 @@ import {Types} from "../src/libraries/Types.sol";
  * @dev This demonstrates the improved enum-based protocol registration
  */
 contract DeployTraderRegistryExample is Script {
+    address private constant EXECUTOR = address(0);
+
     function run() external {
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
         vm.startBroadcast(deployerPrivateKey);
@@ -22,7 +24,7 @@ contract DeployTraderRegistryExample is Script {
         console.log("TraderRegistry deployed at:", address(registry));
 
         // 2. Deploy trader implementations
-        UniswapV3Trader uniswapV3Trader = new UniswapV3Trader();
+        UniswapV3Trader uniswapV3Trader = new UniswapV3Trader(EXECUTOR);
         console.log("UniswapV3Trader deployed at:", address(uniswapV3Trader));
 
         // 3. Register protocols using the new enum-based system

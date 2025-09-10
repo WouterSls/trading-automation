@@ -68,11 +68,11 @@ contract Executor is EIP712, ReentrancyGuard {
      * @param permit2Signature EIP-712 signature for Permit2
      */
     function executeOrder(
-        ExecutorValidation.LimitOrder calldata order,
-        ExecutorValidation.RouteData calldata routeData,
-        bytes calldata orderSignature,
         ExecutorValidation.PermitSingle calldata permit2Data,
-        bytes calldata permit2Signature
+        bytes calldata permit2Signature,
+        ExecutorValidation.LimitOrder calldata order,
+        bytes calldata orderSignature,
+        ExecutorValidation.RouteData calldata routeData
     ) external nonReentrant {
         ExecutorValidation.validateInputs(order, routeData, permit2Data);
         ExecutorValidation.validateBusinessLogic(order, usedNonce);
@@ -85,13 +85,11 @@ contract Executor is EIP712, ReentrancyGuard {
 
         _executePermit2Transfer(order, permit2Data, permit2Signature);
 
-        // TRANSFER TOKENS TO TRADER (TRADING CONTRACT / traders)
-
-        // registry pattern - get trader implementation by protocol
         address trader = traderRegistry.getTrader(order.protocol);
-        uint256 amountOut = ITrader(trader).trade(order);
 
-        // RETURN TOKENS FROM TRADER (TRADING CONTRACT / traders)
+        IERC20(order.inputToken).safeTransfer(trader, order.inputAmount);
+
+        uint256 amountOut = ITrader(trader).trade(order, routeData);
 
         if (amountOut < order.minAmountOut) revert InsufficientOutput();
 
