@@ -129,13 +129,6 @@ export class OrderSigner {
     return signedOrder;
   }
 
-  /**
-   * Signs the limit order using EIP-712
-   *
-   * This creates a signature that proves the user authorized this specific order
-   * with all its constraints. The signature is bound to our domain to prevent
-   * replay attacks.
-   */
   async signOrder(wallet: Wallet, order: LimitOrder): Promise<string> {
     console.log("🔐 Signing order data...");
     console.log("🏷️  Domain:", this.domain);
@@ -147,12 +140,6 @@ export class OrderSigner {
     return signature;
   }
 
-  /**
-   * Signs Permit2 authorization using EIP-712
-   *
-   * This creates a signature that allows the OrderExecutor contract to pull
-   * tokens from the user's wallet when the order is executed.
-   */
   async signPermit2(wallet: Wallet, permit2Data: Permit2Data): Promise<string> {
     console.log("🔐 Signing Permit2 authorization...");
 
