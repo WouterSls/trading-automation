@@ -8,10 +8,12 @@
  */
 
 import { ethers } from "ethers";
-import { getBaseWallet_1 } from "../../../src/hooks/useSetup";
-import { ChainType, getChainConfig } from "../../../src/config/chain-config";
-import { OrderSigner } from "../../../src/orders/OrderSigner";
-import { OrderValidator } from "../../../src/orders/OrderValidator";
+import { getBaseWallet_1 } from "../../src/hooks/useSetup";
+import { ChainType, getChainConfig } from "../../src/config/chain-config";
+
+import { OrderSigner } from "../../src/orders/OrderSigner";
+import { OrderValidator } from "../../src/orders/OrderValidator";
+import { Order, Protocol } from "../../src/lib/generated-solidity-types";
 
 async function demonstrateOrderCreation() {
   console.log("\n🎯 Limit Order Creation & Signing Demo");
@@ -46,11 +48,7 @@ async function demonstrateOrderCreation() {
     inputAmount: ethers.parseUnits("1000", 6).toString(), // 1000 USDC (6 decimals)
     minAmountOut: ethers.parseEther("0.25").toString(), // Min 0.25 ETH
     maxSlippageBps: 100, // 1% max slippage
-    allowedRouters: [
-      chainConfig.uniswap.v3.swapRouterV2Address, // Uniswap V3
-      chainConfig.aerodrome.routerAddress, // Aerodrome
-    ],
-    expiryMinutes: 60, // Expire in 1 hour
+    expiryMinutes:  60// Expire in 1 hour
   };
 
   console.log("📝 Order Parameters:");
@@ -59,7 +57,6 @@ async function demonstrateOrderCreation() {
   console.log("  Input Amount:", ethers.formatUnits(orderParams.inputAmount, 6), "USDC");
   console.log("  Min Amount Out:", ethers.formatEther(orderParams.minAmountOut), "ETH");
   console.log("  Max Slippage:", orderParams.maxSlippageBps, "bp (1%)");
-  console.log("  Allowed Routers:", orderParams.allowedRouters.length);
   console.log("  Expires in:", orderParams.expiryMinutes, "minutes");
   console.log();
 
@@ -73,7 +70,6 @@ async function demonstrateOrderCreation() {
     console.log("\n📋 Created Signed Order:");
     console.log("  Order ID (nonce):", signedOrder.order.nonce);
     console.log("  Maker:", signedOrder.order.maker);
-    console.log("  Expiry:", new Date(signedOrder.order.expiry * 1000).toISOString());
     console.log("  Order Signature Length:", signedOrder.orderSignature.length, "chars");
     console.log("  Permit2 Signature Length:", signedOrder.permit2Signature.length, "chars");
     console.log();
@@ -143,9 +139,6 @@ async function demonstrateOrderCreation() {
       "│   minAmountOut: " + ethers.formatEther(orderParams.minAmountOut).padEnd(6) + " ETH                │",
     );
     console.log("│   maxSlippageBps: 100 (1%)                             │");
-    console.log(
-      "│   expiry: " + new Date(signedOrder.order.expiry * 1000).toLocaleString().substring(0, 16) + "...        │",
-    );
     console.log("└─────────────────────────────────────────────────────────┘");
     console.log();
 

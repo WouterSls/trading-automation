@@ -9,9 +9,10 @@
  */
 
 import { ethers } from "ethers";
-import { ChainType, getChainConfig } from "../../../src/config/chain-config";
-import { OrderValidator } from "../../../src/orders/OrderValidator";
-import { TradeOrder, ExecutionParams } from "../../../src/orders/order-types";
+import { ChainType, getChainConfig } from "../../src/config/chain-config";
+import { OrderValidator } from "../../src/orders/OrderValidator";
+import { Order, ExecutionParams } from "../../src/orders/order-types";
+import { Protocol } from "../../src/lib/generated-solidity-types";
 
 async function demonstrateExecutionValidation() {
   console.log("\n⚡ Order Execution Validation Demo");
@@ -21,19 +22,16 @@ async function demonstrateExecutionValidation() {
   const orderValidator = new OrderValidator();
 
   // Mock user's signed order with constraints
-  const userOrder: TradeOrder = {
+  const userOrder: Order= {
     maker: "0x742d35Cc6634C0532925a3b8D86c9Ec4e5FBa3E7",
     inputToken: chainConfig.tokenAddresses.usdc, // USDC
     outputToken: chainConfig.tokenAddresses.weth, // WETH
     inputAmount: ethers.parseUnits("1000", 6).toString(), // 1000 USDC
     minAmountOut: ethers.parseEther("0.25").toString(), // Min 0.25 ETH
-    maxSlippageBps: 150, // Max 1.5% slippage
-    allowedRouters: [
-      chainConfig.uniswap.v3.swapRouterV2Address, // Uniswap V3
-      chainConfig.aerodrome.routerAddress, // Aerodrome
-    ],
-    expiry: Math.floor(Date.now() / 1000) + 3600, // 1 hour from now
+    maxSlippageBps: "150", // Max 1.5% slippage
+    expiry: (Math.floor(Date.now() / 1000) + 3600).toString(), // 1 hour from now
     nonce: "987654321",
+    protocol: Protocol.UNISWAP_V3
   };
 
   console.log("👤 User's Signed Order Constraints:");
@@ -41,10 +39,9 @@ async function demonstrateExecutionValidation() {
   console.log("📝 Input Amount:", ethers.formatUnits(userOrder.inputAmount, 6), "USDC");
   console.log("📝 Min Output:", ethers.formatEther(userOrder.minAmountOut), "ETH");
   console.log("📝 Max Slippage:", userOrder.maxSlippageBps, "bp (1.5%)");
-  console.log("📝 Allowed Routers:", userOrder.allowedRouters.length);
+  console.log("📝 Protocol:", userOrder.protocol);
   console.log("   -", chainConfig.uniswap.v3.swapRouterV2Address.substring(0, 10) + "... (Uniswap V3)");
-  console.log("   -", chainConfig.aerodrome.routerAddress.substring(0, 10) + "... (Aerodrome)");
-  console.log("📝 Expires:", new Date(userOrder.expiry * 1000).toISOString());
+  console.log("📝 Expires:", userOrder.expiry);
   console.log();
 
   // Test different execution scenarios

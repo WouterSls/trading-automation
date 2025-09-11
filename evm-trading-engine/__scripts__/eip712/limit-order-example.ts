@@ -7,9 +7,9 @@
  */
 
 import { ethers, Wallet } from "ethers";
-import { ChainType } from "../../../src/config/chain-config";
-import { OrderSigner } from "../../../src/orders/OrderSigner";
-import { OrderExecutor } from "../../../src/orders/OrderExecutor";
+import { ChainType } from "../../src/config/chain-config";
+import { OrderSigner } from "../../src/orders/OrderSigner";
+import { OrderExecutor } from "../../src/orders/OrderExecutor";
 
 // Example configuration
 const CHAIN = ChainType.ETH;
@@ -33,9 +33,6 @@ async function createLimitOrder() {
     inputAmount: ethers.parseUnits("1000", 6).toString(), // 1000 USDC
     minAmountOut: ethers.parseEther("0.3").toString(), // At least 0.3 ETH
     maxSlippageBps: 100, // 1% max slippage
-    allowedRouters: [
-      "0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45", // UniswapV3 SwapRouter02
-    ],
     expiryMinutes: 60, // Expires in 1 hour
   });
 
@@ -46,7 +43,7 @@ async function createLimitOrder() {
     outputToken: signedOrder.order.outputToken,
     inputAmount: ethers.formatUnits(signedOrder.order.inputAmount, 6),
     minAmountOut: ethers.formatEther(signedOrder.order.minAmountOut),
-    expiry: new Date(signedOrder.order.expiry * 1000).toISOString(),
+    expiry: signedOrder.order.expiry,
   });
 
   return signedOrder;

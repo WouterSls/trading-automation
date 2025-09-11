@@ -11,10 +11,11 @@
  */
 
 import { ethers } from "ethers";
-import { getBaseWallet_1 } from "../../../src/hooks/useSetup";
-import { ChainType, getChainConfig } from "../../../src/config/chain-config";
-import { OrderSigner } from "../../../src/orders/OrderSigner";
-import { TradeOrder, EIP712_TYPES } from "../../../src/orders/order-types";
+import { getBaseWallet_1 } from "../../src/hooks/useSetup";
+import { ChainType, getChainConfig } from "../../src/config/chain-config";
+import { OrderSigner } from "../../src/orders/OrderSigner";
+import { Order, EIP712_TYPES } from "../../src/orders/order-types";
+import { Protocol } from "../../src/lib/generated-solidity-types";
 
 async function demonstrateSecurityFeatures() {
   console.log("\n🛡️  EIP-712 Security Features Demonstration");
@@ -37,16 +38,16 @@ async function demonstrateSecurityFeatures() {
   const maliciousSigner = new OrderSigner(ChainType.BASE, maliciousContract);
 
   // Sample order data
-  const orderData: TradeOrder = {
+  const orderData: Order = {
     maker: wallet.address,
     inputToken: chainConfig.tokenAddresses.usdc,
     outputToken: chainConfig.tokenAddresses.weth,
     inputAmount: ethers.parseUnits("100", 6).toString(),
     minAmountOut: ethers.parseEther("0.025").toString(),
-    maxSlippageBps: 100,
-    allowedRouters: [chainConfig.uniswap.v3.swapRouterV2Address],
-    expiry: Math.floor(Date.now() / 1000) + 3600,
+    maxSlippageBps: "100",
+    expiry: (Math.floor(Date.now() / 1000) + 3600).toString(),
     nonce: "12345",
+    protocol: Protocol.UNISWAP_V3
   };
 
   console.log("📋 Base Order Data:");
@@ -70,7 +71,7 @@ async function demonstrateSecurityFeatures() {
     const maliciousDomain = maliciousSigner.getDomain();
     const recoveredSigner = ethers.verifyTypedData(
       maliciousDomain,
-      { LimitOrder: EIP712_TYPES.TradeOrder },
+      { Order: EIP712_TYPES.Order },
       orderData,
       legitimateSignature,
     );
@@ -105,13 +106,13 @@ async function demonstrateSecurityFeatures() {
   console.log("🏷️  Ethereum Domain (Chain ID 1):", ethereumDomain.chainId);
 
   // Sign order for Base
-  const baseSignature = await wallet.signTypedData(baseDomain, { LimitOrder: EIP712_TYPES.TradeOrder }, orderData);
+  const baseSignature = await wallet.signTypedData(baseDomain, { Order: EIP712_TYPES.Order }, orderData);
 
   // Try to verify on Ethereum
   try {
     const recoveredSigner = ethers.verifyTypedData(
       ethereumDomain,
-      { LimitOrder: EIP712_TYPES.TradeOrder },
+      { Order: EIP712_TYPES.Order },
       orderData,
       baseSignature,
     );
@@ -143,7 +144,7 @@ async function demonstrateSecurityFeatures() {
   try {
     const recoveredSigner = ethers.verifyTypedData(
       legitimateDomain,
-      { LimitOrder: EIP712_TYPES.TradeOrder },
+      { Order: EIP712_TYPES.Order },
       order2, // Different order
       signature1, // Wrong signature
     );
@@ -173,7 +174,7 @@ async function demonstrateSecurityFeatures() {
   try {
     const recoveredSigner = ethers.verifyTypedData(
       legitimateDomain,
-      { LimitOrder: EIP712_TYPES.TradeOrder },
+      { Order: EIP712_TYPES.Order },
       tamperedOrder, // Tampered data
       originalSignature, // Original signature
     );
@@ -189,20 +190,20 @@ async function demonstrateSecurityFeatures() {
   console.log("----------------------------");
 
   const currentTime = Math.floor(Date.now() / 1000);
-  const expiredOrder = {
+  const expiredOrder: Order = {
     ...orderData,
-    expiry: currentTime - 3600, // 1 hour ago
+    expiry: (currentTime - 3600).toString(), // 1 hour ago
     nonce: "999999",
   };
 
   const expiredSignature = await legitimateSigner.signOrder(wallet, expiredOrder);
 
   console.log("📅 Current Time:", new Date(currentTime * 1000).toISOString());
-  console.log("📅 Order Expiry:", new Date(expiredOrder.expiry * 1000).toISOString());
+  console.log("📅 Order Expiry:", expiredOrder.expiry);
   console.log("✅ Signature is valid (cryptographically)");
 
   // Check if expired (this would be done by smart contract)
-  const isExpired = expiredOrder.expiry <= currentTime;
+  const isExpired = Number(expiredOrder.expiry) <= currentTime;
   console.log("⏰ Order Expired:", isExpired ? "YES ❌" : "NO ✅");
   console.log("   Smart contract would reject expired orders during execution");
   console.log();

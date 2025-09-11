@@ -1,7 +1,8 @@
 import { ethers } from "ethers";
-import { ChainType, getChainConfig } from "../../../src/config/chain-config";
-import { getBaseWallet_1 } from "../../../src/hooks/useSetup";
-import { OrderValidator, ExecutionParams, SignedLimitOrder, SignedPermit2Transfer } from "../../../src/orders/_index";
+import { ChainType, getChainConfig } from "../../src/config/chain-config";
+import { getBaseWallet_1 } from "../../src/hooks/useSetup";
+import { OrderValidator } from "../../src/orders/OrderValidator";
+import { ExecutionParams, SignedLimitOrder, SignedPermit2Transfer } from "../../src/orders/order-types";
 
 /**
  * Simulates backend order execution
@@ -149,13 +150,13 @@ async function fullDemo() {
   console.log("=====================================");
 
   // Import the create order function
-  const { createOrder } = await import("./create-order");
+  //const { createOrder } = await import("./create-order");
 
   try {
     // 1. User creates and signs order
     console.log("👤 USER SIDE: Creating signed order...");
     //const permitOrder = await createPermitTransfer(ChainType.BASE);
-    const signedOrder = await createOrder(ChainType.BASE);
+    //const signedOrder = await createOrder(ChainType.BASE);
 
     console.log("\n⏳ [Time passes... market conditions change...]");
     console.log("⏳ [Backend monitoring detects execution opportunity...]");

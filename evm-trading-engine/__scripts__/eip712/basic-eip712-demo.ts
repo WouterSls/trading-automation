@@ -8,8 +8,8 @@
  */
 
 import { ethers, Wallet } from "ethers";
-import { ChainType } from "../../../src/config/chain-config";
-import { getBaseWallet_1 } from "../../../src/hooks/useSetup";
+import { ChainType } from "../../src/config/chain-config";
+import { getBaseWallet_1 } from "../../src/hooks/useSetup";
 
 async function demonstrateBasicEIP712() {
   console.log("\n🔬 EIP-712 Basic Demonstration");
