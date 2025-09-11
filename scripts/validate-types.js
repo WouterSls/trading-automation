@@ -9,8 +9,8 @@ const fs = require("fs");
 const path = require("path");
 
 // Configuration
-const SOLIDITY_FILE = "../smart-contracts/src/libraries/ExecutorValidation.sol";
-const TYPESCRIPT_FILE = "./src/orders/generated-types.ts";
+const SOLIDITY_FILE = path.join(__dirname, "../smart-contracts/src/libraries/ExecutorValidation.sol");
+const TYPESCRIPT_FILE = path.join(__dirname, "../evm-trading-engine/src/orders/generated-types.ts");
 
 class TypeValidator {
   constructor() {
@@ -31,7 +31,7 @@ class TypeValidator {
     const structBody = match[1];
     const fields = [];
 
-    const fieldRegex = /(\w+)\s+(\w+);/g;
+    const fieldRegex = /([\w.]+)\s+(\w+);/g;
     let fieldMatch;
 
     while ((fieldMatch = fieldRegex.exec(structBody)) !== null) {
@@ -146,9 +146,11 @@ class TypeValidator {
           continue;
         }
 
-        if (solField.type !== eipField.type) {
+        // For enums, EIP712 should use uint8, not the enum name
+        const expectedEipType = solField.type.includes(".") ? "uint8" : solField.type;
+        if (expectedEipType !== eipField.type) {
           this.errors.push(
-            `❌ EIP712 type mismatch for '${solField.name}': Solidity(${solField.type}) vs EIP712(${eipField.type})`
+            `❌ EIP712 type mismatch for '${solField.name}': Solidity(${solField.type}) vs EIP712(${eipField.type}) - expected ${expectedEipType}`
           );
         }
       }
@@ -172,6 +174,8 @@ class TypeValidator {
       bool: ["boolean"],
       bytes: ["string"],
       string: ["string"],
+      // Add enum support - enums are represented as numbers in TypeScript
+      "Types.Protocol": ["number", "Protocol"],
     };
 
     // Handle arrays
@@ -182,6 +186,12 @@ class TypeValidator {
       return expectedTsTypes.some(
         (expectedType) => cleanTsType === `${expectedType}[]`
       );
+    }
+
+    // Handle enum types (e.g., "Types.Protocol")
+    if (solidityType.includes(".")) {
+      const expectedTsTypes = compatibilityMap[solidityType] || [solidityType];
+      return expectedTsTypes.includes(cleanTsType);
     }
 
     // Handle regular types
@@ -195,11 +205,11 @@ class TypeValidator {
 
     // Extract Solidity type hash
     const solTypeHashMatch = solidityContent.match(
-      /LIMIT_ORDER_TYPEHASH\s*=\s*keccak256\(\s*"([^"]+)"/
+      /ORDER_TYPEHASH\s*=\s*keccak256\(\s*"([^"]+)"/
     );
 
     if (!solTypeHashMatch) {
-      this.warnings.push(`⚠️  Could not find LIMIT_ORDER_TYPEHASH in Solidity`);
+      this.warnings.push(`⚠️  Could not find ORDER_TYPEHASH in Solidity`);
       return;
     }
 
@@ -224,21 +234,21 @@ class TypeValidator {
       const typescriptContent = fs.readFileSync(TYPESCRIPT_FILE, "utf8");
 
       // Parse structures
-      const solidityLimitOrder = this.parseStruct(
+      const solidityOrder = this.parseStruct(
         solidityContent,
-        "LimitOrder"
+        "Order"
       );
-      const tsLimitOrder = this.parseInterface(typescriptContent, "LimitOrder");
-      const eip712LimitOrder = this.parseEIP712Types(
+      const tsOrder = this.parseInterface(typescriptContent, "Order");
+      const eip712Order = this.parseEIP712Types(
         typescriptContent,
-        "LimitOrder"
+        "Order"
       );
 
       // Validate main order structure
       this.validateFields(
-        solidityLimitOrder,
-        tsLimitOrder,
-        eip712LimitOrder,
+        solidityOrder,
+        tsOrder,
+        eip712Order,
         "Order"
       );
 
