@@ -29,23 +29,9 @@ contract Executor is EIP712, ReentrancyGuard {
 
     mapping(address => mapping(uint256 => bool)) public usedNonce;
 
-    error OrderExpired();
-    error RouterNotAllowed();
-    error NonceAlreadyUsed();
-    error InvalidSignature();
     error CallFailed();
     error InvalidRouter();
     error InsufficientOutput();
-    error ZeroAddress();
-    error ZeroAmount();
-    error InvalidArrayLength();
-    error InvalidRouteData();
-    error TokenMismatch();
-    error InvalidFee();
-    error InvalidPath();
-    error PermitExpired();
-    error InvalidPermitSignature();
-    error PermitAmountMismatch();
 
     event TraderRegistryUpdated(address indexed newRegistry, address indexed updater);
     event OrderExecuted(address indexed maker, address indexed router, uint256 amountIn, uint256 amountOut);
@@ -70,24 +56,20 @@ contract Executor is EIP712, ReentrancyGuard {
     function executeOrder(
         ExecutorValidation.PermitSingle calldata permit2Data,
         bytes calldata permit2Signature,
-        ExecutorValidation.LimitOrder calldata order,
+        ExecutorValidation.Order calldata order,
         bytes calldata orderSignature,
         ExecutorValidation.RouteData calldata routeData
     ) external nonReentrant {
-        ExecutorValidation.validateInputs(order, routeData, permit2Data);
-        ExecutorValidation.validateBusinessLogic(order, usedNonce);
-
-        ExecutorValidation.validateOrderSignature(order, orderSignature, _domainSeparatorV4());
-        ExecutorValidation.validatePermit2Signature(permit2Data, permit2Signature);
-        ExecutorValidation.validateRouteData(routeData);
+        ExecutorValidation.validateInputsAndBusinessLogic(order, routeData, permit2Data, usedNonce);
+        ExecutorValidation.validateSignatures(order, permit2Data, orderSignature, permit2Signature, _domainSeparatorV4());
 
         usedNonce[order.maker][order.nonce] = true;
 
-        _executePermit2Transfer(order, permit2Data, permit2Signature);
-
         address trader = traderRegistry.getTrader(order.protocol);
 
-        IERC20(order.inputToken).safeTransfer(trader, order.inputAmount);
+        _executePermit2Transfer(order, permit2Data, permit2Signature);
+
+        //IERC20(order.inputToken).safeTransfer(trader, order.inputAmount);
 
         uint256 amountOut = ITrader(trader).trade(order, routeData);
 
@@ -97,7 +79,7 @@ contract Executor is EIP712, ReentrancyGuard {
     }
 
     function _executePermit2Transfer(
-        ExecutorValidation.LimitOrder calldata order,
+        ExecutorValidation.Order calldata order,
         ExecutorValidation.PermitSingle calldata permit2Data,
         bytes calldata permit2Signature
     ) internal {

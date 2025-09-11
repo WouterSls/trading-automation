@@ -34,12 +34,12 @@ contract UniswapV3Trader is ITrader {
 
     /**
      * @notice Execute a token swap via Uniswap V3
-     * @param order The limit order containing swap parameters
+     * @param order The order containing swap parameters
      * @param routeData Route configuration for single-hop or multi-hop swaps
      * @return amountOut The amount of output tokens received
      */
     function trade(
-        ExecutorValidation.LimitOrder calldata order,
+        ExecutorValidation.Order calldata order,
         ExecutorValidation.RouteData calldata routeData
     ) external override onlyExecutor returns (uint256 amountOut) {
         uint256 balance = IERC20(order.inputToken).balanceOf(address(this));
@@ -57,7 +57,7 @@ contract UniswapV3Trader is ITrader {
     }
     
     function _executeMultiHopSwap(
-        ExecutorValidation.LimitOrder calldata order,
+        ExecutorValidation.Order calldata order,
         ExecutorValidation.RouteData calldata routeData
     ) private returns (uint256) {
         IUniswapV3Router.ExactInputParams memory params = IUniswapV3Router.ExactInputParams({
@@ -71,7 +71,7 @@ contract UniswapV3Trader is ITrader {
     }
     
     function _executeSingleHopSwap(
-        ExecutorValidation.LimitOrder calldata order,
+        ExecutorValidation.Order calldata order,
         ExecutorValidation.RouteData calldata routeData
     ) private returns (uint256) {
         IUniswapV3Router.ExactInputSingleParams memory params = IUniswapV3Router.ExactInputSingleParams({

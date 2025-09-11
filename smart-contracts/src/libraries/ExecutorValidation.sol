@@ -20,9 +20,10 @@ library ExecutorValidation {
     error InvalidSignature();
     error PermitExpired();
     error InvalidPermitSignature();
-    error IncorrectProtocol(Types.Protocol expected, Types.Protocol actual);
+    error InvalidProtocol();
+    error ProtocolMismatch();
 
-    struct LimitOrder {
+    struct Order {
         address maker;
         address inputToken;
         address outputToken;
@@ -52,41 +53,92 @@ library ExecutorValidation {
         uint256 nonce;
     }
 
-    bytes32 internal constant LIMIT_ORDER_TYPEHASH = keccak256(
-        "LimitOrder(address maker,address inputToken,address outputToken,uint8 protocol,uint256 inputAmount,uint256 minAmountOut,uint256 maxSlippageBps,uint256 expiry,uint256 nonce)"
+    bytes32 internal constant ORDER_TYPEHASH = keccak256(
+        "Order(address maker,address inputToken,address outputToken,uint8 protocol,uint256 inputAmount,uint256 minAmountOut,uint256 maxSlippageBps,uint256 expiry,uint256 nonce)"
     );
 
-    function validateInputs(LimitOrder calldata order, RouteData calldata routeData, PermitSingle calldata permit2Data)
-        internal
-        pure
-    {
-        _validateAddresses(order, permit2Data);
-        _validateAmounts(order, permit2Data);
-        _validateConsistency(order, permit2Data);
-        _validateRouteStructure(routeData);
-    }
-
-    function validateBusinessLogic(
-        LimitOrder calldata order,
+    function validateInputsAndBusinessLogic(
+        Order calldata order,
+        RouteData calldata routeData,
+        PermitSingle calldata permit2Data,
         mapping(address => mapping(uint256 => bool)) storage usedNonces
     ) internal view {
-        _validateExpiry(order);
-        _validateNonce(order, usedNonces);
+        // Address validations
+        if (order.maker == address(0)) revert ZeroAddress();
+        if (order.inputToken == address(0)) revert ZeroAddress();
+        if (order.outputToken == address(0)) revert ZeroAddress();
+        if (permit2Data.details.token == address(0)) revert ZeroAddress();
+        if (permit2Data.spender == address(0)) revert ZeroAddress();
+        
+        // Amount validations
+        if (order.inputAmount == 0) revert ZeroAmount();
+        if (order.minAmountOut == 0) revert ZeroAmount();
+        if (permit2Data.details.amount == 0) revert ZeroAmount();
+        
+        // Consistency checks
+        if (order.inputToken != permit2Data.details.token) revert TokenMismatch();
+        if (order.inputAmount != permit2Data.details.amount) revert PermitAmountMismatch();
+
+        // Protocol validation - check if protocol is valid
+        if (uint8(order.protocol) > uint8(Types.Protocol.QUICKSWAP)) {
+            revert InvalidProtocol();
+        }
+        
+        // Route structure validation
+        if (routeData.isMultiHop && routeData.encodedPath.length == 0) revert InvalidPath();
+        if (!routeData.isMultiHop && routeData.fee == 0) revert InvalidFee();
+        
+        // Route data validation
+        if (routeData.isMultiHop) {
+            if (routeData.encodedPath.length < 43) revert InvalidPath();
+        } else {
+            if (routeData.fee != 100 && routeData.fee != 500 && routeData.fee != 3000 && routeData.fee != 10000) {
+                revert InvalidFee();
+            }
+        }
+        
+        // Business logic validations
+        if (block.timestamp > order.expiry) revert OrderExpired();
+        if (usedNonces[order.maker][order.nonce]) revert NonceAlreadyUsed();
     }
 
-    function validateProtocol(LimitOrder calldata order, Types.Protocol expectedProtocol) internal pure {
+    function validateSignatures(
+        Order calldata order,
+        PermitSingle calldata permit2Data,
+        bytes calldata orderSignature,
+        bytes calldata permit2Signature,
+        bytes32 domainSeparator
+    ) internal view {
+        // Permit2 signature validation first (simpler)
+        if (block.timestamp > permit2Data.sigDeadline) revert PermitExpired();
+        if (permit2Signature.length == 0) revert InvalidPermitSignature();
+        
+        // Order signature validation using helper function
+        if (_generateOrderDigest(order, domainSeparator).recover(orderSignature) != order.maker) {
+            revert InvalidSignature();
+        }
+        
+        // Note: Full permit2 signature validation delegated to Permit2 contract
+        // for gas efficiency and to avoid duplicate validation
+    }
+
+    function validateProtocol(Order calldata order, Types.Protocol expectedProtocol) internal pure {
         if (order.protocol != expectedProtocol) {
-            revert IncorrectProtocol(expectedProtocol, order.protocol);
+            revert ProtocolMismatch();
         }
     }
 
-    function validateOrderSignature(LimitOrder calldata order, bytes calldata signature, bytes32 domainSeparator)
-        internal
-        pure
-    {
-        bytes32 orderHash = keccak256(
-            abi.encode(
-                LIMIT_ORDER_TYPEHASH,
+    /// @notice Helper function to generate order hash without local variable overload
+    /// @dev Reduces stack depth in signature validation
+    function _generateOrderDigest(
+        Order calldata order,
+        bytes32 domainSeparator
+    ) private pure returns (bytes32) {
+        return keccak256(abi.encodePacked(
+            "\x19\x01", 
+            domainSeparator, 
+            keccak256(abi.encode(
+                ORDER_TYPEHASH,
                 order.maker,
                 order.inputToken,
                 order.outputToken,
@@ -96,65 +148,7 @@ library ExecutorValidation {
                 order.maxSlippageBps,
                 order.expiry,
                 order.nonce
-            )
-        );
-
-        bytes32 orderDigest = keccak256(abi.encodePacked("\x19\x01", domainSeparator, orderHash));
-
-        address recoveredSigner = orderDigest.recover(signature);
-        if (recoveredSigner != order.maker) revert InvalidSignature();
-    }
-
-    function validatePermit2Signature(PermitSingle calldata permit2Data, bytes calldata signature) internal view {
-        if (block.timestamp > permit2Data.sigDeadline) revert PermitExpired();
-        if (signature.length == 0) revert InvalidPermitSignature();
-
-        // Note: Full signature validation delegated to Permit2 contract
-        // for gas efficiency and to avoid duplicate validation
-    }
-
-    function validateRouteData(RouteData calldata routeData) internal pure {
-        if (routeData.isMultiHop) {
-            if (routeData.encodedPath.length < 43) revert InvalidPath();
-        } else {
-            if (routeData.fee != 100 && routeData.fee != 500 && routeData.fee != 3000 && routeData.fee != 10000) {
-                revert InvalidFee();
-            }
-        }
-    }
-
-    function _validateAddresses(LimitOrder calldata order, PermitSingle calldata permit2Data) private pure {
-        if (order.maker == address(0)) revert ZeroAddress();
-        if (order.inputToken == address(0)) revert ZeroAddress();
-        if (order.outputToken == address(0)) revert ZeroAddress();
-        if (permit2Data.details.token == address(0)) revert ZeroAddress();
-        if (permit2Data.spender == address(0)) revert ZeroAddress();
-    }
-
-    function _validateAmounts(LimitOrder calldata order, PermitSingle calldata permit2Data) private pure {
-        if (order.inputAmount == 0) revert ZeroAmount();
-        if (order.minAmountOut == 0) revert ZeroAmount();
-        if (permit2Data.details.amount == 0) revert ZeroAmount();
-    }
-
-    function _validateConsistency(LimitOrder calldata order, PermitSingle calldata permit2Data) private pure {
-        if (order.inputToken != permit2Data.details.token) revert TokenMismatch();
-        if (order.inputAmount != permit2Data.details.amount) revert PermitAmountMismatch();
-    }
-
-    function _validateRouteStructure(RouteData calldata routeData) private pure {
-        if (routeData.isMultiHop && routeData.encodedPath.length == 0) revert InvalidPath();
-        if (!routeData.isMultiHop && routeData.fee == 0) revert InvalidFee();
-    }
-
-    function _validateExpiry(LimitOrder calldata order) private view {
-        if (block.timestamp > order.expiry) revert OrderExpired();
-    }
-
-    function _validateNonce(LimitOrder calldata order, mapping(address => mapping(uint256 => bool)) storage usedNonces)
-        private
-        view
-    {
-        if (usedNonces[order.maker][order.nonce]) revert NonceAlreadyUsed();
+            ))
+        ));
     }
 }

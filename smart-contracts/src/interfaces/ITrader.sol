@@ -10,7 +10,7 @@ interface ITrader {
      * @param routeData Route-specific data (path, fees, etc.)
      * @return amountOut The actual amount of output tokens received
      */
-    function trade(ExecutorValidation.LimitOrder calldata order, ExecutorValidation.RouteData calldata routeData) external returns (uint256 amountOut);
+    function trade(ExecutorValidation.Order calldata order, ExecutorValidation.RouteData calldata routeData) external returns (uint256 amountOut);
 
     /**
      * @notice Get the address of the contract this trader uses trade (Router, Exchange, Swapper)

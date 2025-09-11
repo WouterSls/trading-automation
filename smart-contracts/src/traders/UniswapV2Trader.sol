@@ -33,7 +33,7 @@ abstract contract UniswapV2Trader is ITrader {
      * @return amountOut The amount of output tokens received
      */
     function trade(
-        ExecutorValidation.LimitOrder calldata order,
+        ExecutorValidation.Order calldata order,
         ExecutorValidation.RouteData calldata routeData
     ) external override onlyExecutor returns (uint256 amountOut) {
         uint256 balance = IERC20(order.inputToken).balanceOf(address(this));
