@@ -1,5 +1,6 @@
 import { ethers } from "ethers";
-import { LimitOrder, TradeOrderRequest, SignedLimitOrder, ExecutionParams } from "./order-types";
+import { SignedLimitOrder, ExecutionParams } from "./order-types";
+import { Order } from "../lib/generated-solidity-types";
 
 /**
  * Validation errors that can occur with orders
@@ -49,7 +50,7 @@ export class OrderValidator {
    * - Slippage constraints
    * - Router whitelist
    */
-  validateOrder(order: LimitOrder, allowedRouters?: string[]): OrderValidationResult {
+  validateOrder(order: Order, allowedRouters?: string[]): OrderValidationResult {
     const errors: string[] = [];
     const warnings: string[] = [];
 
@@ -154,7 +155,7 @@ export class OrderValidator {
    * in ways that violate the user's signed constraints.
    */
   validateExecution(
-    order: LimitOrder,
+    order: Order,
     execParams: ExecutionParams,
     allowedRouters?: string[],
   ): ExecutionValidationResult {
@@ -235,7 +236,6 @@ export class OrderValidator {
         }
       }
     } catch {
-      // If we can't calculate slippage, that's a warning but not necessarily an error
       console.log("⚠️  Could not estimate slippage");
     }
 
@@ -323,7 +323,7 @@ export class OrderValidator {
   /**
    * Check if an order is expired
    */
-  isOrderExpired(order: LimitOrder): boolean {
+  isOrderExpired(order: Order): boolean {
     const currentTime = Math.floor(Date.now() / 1000);
     return parseInt(order.expiry) <= currentTime;
   }
@@ -331,7 +331,7 @@ export class OrderValidator {
   /**
    * Get time until order expiry in seconds
    */
-  getTimeUntilExpiry(order: LimitOrder): number {
+  getTimeUntilExpiry(order: Order): number {
     const currentTime = Math.floor(Date.now() / 1000);
     return Math.max(0, parseInt(order.expiry) - currentTime);
   }
@@ -340,7 +340,7 @@ export class OrderValidator {
    * Validate that execution parameters represent a reasonable trade
    */
   validateTradeReasonableness(
-    order: LimitOrder,
+    order: Order,
     execParams: ExecutionParams,
   ): {
     isReasonable: boolean;
