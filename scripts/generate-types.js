@@ -10,7 +10,7 @@ const path = require("path");
 
 // Configuration
 const SOLIDITY_DIR = path.join(__dirname, "../smart-contracts/src");
-const OUTPUT_FILE = path.join(__dirname, "../evm-trading-engine/src/orders/generated-types.ts");
+const OUTPUT_FILE = path.join(__dirname, "../evm-trading-engine/src/lib/generated-solidity-types.ts");
 
 function parseStruct(content, structName) {
   const structRegex = new RegExp(
