@@ -9,6 +9,8 @@ import {IPermit2} from "./interfaces/IPermit2.sol";
 import {ITrader} from "./interfaces/ITrader.sol";
 import {ITraderRegistry} from "./interfaces/ITraderRegistry.sol";
 
+// USER EIP712Verifier.sol in contracts/mocks
+
 import {ExecutorValidation} from "./libraries/ExecutorValidation.sol";
 
 /**
@@ -65,17 +67,17 @@ contract Executor is EIP712, ReentrancyGuard {
 
         usedNonce[order.maker][order.nonce] = true;
 
-        address trader = traderRegistry.getTrader(order.protocol);
+        //address trader = traderRegistry.getTrader(order.protocol);
 
-        _executePermit2Transfer(order, permit2Data, permit2Signature);
+        //_executePermit2Transfer(order, permit2Data, permit2Signature);
 
         //IERC20(order.inputToken).safeTransfer(trader, order.inputAmount);
 
-        uint256 amountOut = ITrader(trader).trade(order, routeData);
+        //uint256 amountOut = ITrader(trader).trade(order, routeData);
 
-        if (amountOut < order.minAmountOut) revert InsufficientOutput();
+        //if (amountOut < order.minAmountOut) revert InsufficientOutput();
 
-        emit OrderExecuted(order.maker, trader, order.inputAmount, amountOut);
+        //emit OrderExecuted(order.maker, trader, order.inputAmount, amountOut);
     }
 
     function _executePermit2Transfer(

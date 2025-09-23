@@ -46,7 +46,7 @@ export interface PermitDetails {
 }
 
 export interface PermitSingle {
-  details: string; // PermitDetails
+  details: PermitDetails; // PermitDetails
   spender: string; // address
   sigDeadline: string; // uint256
   nonce: string; // uint256
