@@ -37,3 +37,55 @@ export const PERMIT2_TYPES = {
     { name: "sigDeadline", type: "uint256" },
   ],
 };
+
+// ==============================
+// TypeScript equivalents of Permit2 structs
+// ==============================
+
+// ISignatureTransfer.TokenPermissions
+export interface TokenPermissions {
+  token: string; // address
+  amount: string; // uint256
+}
+
+// ISignatureTransfer.PermitTransferFrom
+export interface PermitTransferFrom {
+  permitted: TokenPermissions;
+  nonce: string; // uint256
+  deadline: string; // uint256
+}
+
+// ISignatureTransfer.SignatureTransferDetails
+export interface SignatureTransferDetails {
+  to: string; // address
+  requestedAmount: string; // uint256
+}
+
+// ISignatureTransfer.PermitBatchTransferFrom
+export interface PermitBatchTransferFrom {
+  permitted: TokenPermissions[];
+  nonce: string; // uint256
+  deadline: string; // uint256
+}
+
+// IAllowanceTransfer.PermitDetails
+export interface PermitDetails {
+  token: string; // address
+  amount: string; // uint160 (use string for BN)
+  expiration: string; // uint48 (use string)
+  nonce: string; // uint48 (use string)
+}
+
+// IAllowanceTransfer.PermitSingle
+export interface PermitSingle {
+  details: PermitDetails;
+  spender: string; // address
+  sigDeadline: string; // uint256
+}
+
+// IAllowanceTransfer.PermitBatch
+export interface PermitBatch {
+  details: PermitDetails[];
+  spender: string; // address
+  sigDeadline: string; // uint256
+}

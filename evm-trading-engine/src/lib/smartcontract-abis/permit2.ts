@@ -9,6 +9,9 @@ const PERMIT2_ABI = [
   "function permitTransferFrom(tuple(tuple(address token, uint256 amount) permitted, uint256 nonce, uint256 deadline) permit, tuple(address to, uint256 requestedAmount) transferDetails, address owner, bytes signature) external",
   
   "function transferFrom(address from, address to, uint160 amount, address token) external",
+  
+  // Nonce bitmap for ISignatureTransfer
+  "function nonceBitmap(address owner, uint256 wordPos) external view returns (uint256)",
 ] as const;
 
 export const PERMIT2_INTERFACE = new ethers.Interface(PERMIT2_ABI);

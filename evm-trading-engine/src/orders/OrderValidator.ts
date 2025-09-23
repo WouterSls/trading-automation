@@ -1,6 +1,6 @@
 import { ethers } from "ethers";
 import { SignedLimitOrder, ExecutionParams } from "./order-types";
-import { Order } from "../lib/generated-solidity-types";
+import { SignedOrder as Order } from "../lib/generated-solidity-types";
 
 /**
  * Validation errors that can occur with orders

@@ -8,7 +8,8 @@
 
 import { ethers, Wallet } from "ethers";
 import { ChainType } from "../../src/config/chain-config";
-import { OrderSigner } from "../../src/orders/OrderSigner";
+//import { OrderSigner } from "../../src/orders/OrderSigner";
+import { Executor } from "../../src/smartcontracts/executor/Executor";
 import { OrderExecutor } from "../../src/orders/OrderExecutor";
 
 // Example configuration
@@ -24,10 +25,10 @@ async function createLimitOrder() {
   const userWallet = new Wallet("USER_PRIVATE_KEY", new ethers.JsonRpcProvider(RPC_URL));
 
   // Initialize order signer
-  const orderSigner = new OrderSigner(CHAIN, EXECUTOR_CONTRACT_ADDRESS);
+  const executor = new Executor(CHAIN, EXECUTOR_CONTRACT_ADDRESS);
 
   // Create signed limit order
-  const signedOrder = await orderSigner.createSignedOrder(userWallet, {
+  const signedOrder = await executor.createSignedOrder(userWallet, {
     inputToken: "0xA0b86a33E6441D4B3bECa73A2d8C4d7a1C8A8B3c", // Example USDC
     outputToken: "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2", // WETH
     inputAmount: ethers.parseUnits("1000", 6).toString(), // 1000 USDC
@@ -38,12 +39,12 @@ async function createLimitOrder() {
 
   console.log("✅ Limit order created and signed!");
   console.log("📋 Order details:", {
-    maker: signedOrder.order.maker,
-    inputToken: signedOrder.order.inputToken,
-    outputToken: signedOrder.order.outputToken,
-    inputAmount: ethers.formatUnits(signedOrder.order.inputAmount, 6),
-    minAmountOut: ethers.formatEther(signedOrder.order.minAmountOut),
-    expiry: signedOrder.order.expiry,
+    maker: signedOrder.maker,
+    inputToken: signedOrder.inputToken,
+    outputToken: signedOrder.outputToken,
+    inputAmount: ethers.formatUnits(signedOrder.inputAmount, 6),
+    minAmountOut: ethers.formatEther(signedOrder.minAmountOut),
+    expiry: signedOrder.expiry,
   });
 
   return signedOrder;

@@ -4,6 +4,7 @@ pragma solidity ^0.8.20;
 import {Test} from "forge-std/Test.sol";
 import {Executor} from "../src/Executor.sol";
 import {ExecutorValidation} from "../src/libraries/ExecutorValidation.sol";
+import {ISignatureTransfer} from "../lib/permit2/src/interfaces/ISignatureTransfer.sol";
 import {Types} from "../src/libraries/Types.sol";
 
 contract ValidationHelper {
@@ -12,9 +13,9 @@ contract ValidationHelper {
     bytes32 public constant TEST_DOMAIN_SEPARATOR = keccak256("TEST_DOMAIN");
 
     function validateInputsAndBusinessLogic(
-        ExecutorValidation.Order calldata order,
+        ExecutorValidation.SignedOrder calldata order,
         ExecutorValidation.RouteData calldata routeData,
-        ExecutorValidation.PermitSingle calldata permit2Data
+        ExecutorValidation.SignedPermitData calldata permit2Data
     ) external view {
         ExecutorValidation.validateInputsAndBusinessLogic(
             order,
@@ -22,13 +23,6 @@ contract ValidationHelper {
             permit2Data,
             testNonces
         );
-    }
-
-    function validateProtocol(
-        ExecutorValidation.Order calldata order,
-        Types.Protocol expectedProtocol
-    ) external pure {
-        ExecutorValidation.validateProtocol(order, expectedProtocol);
     }
 
     function setNonceUsed(address maker, uint256 nonce, bool used) external {
@@ -77,9 +71,9 @@ contract ExecutorValidationTest is Test {
     // ========================================
 
     function test_ZeroMakerAddress_ShouldRevert() public {
-        ExecutorValidation.Order memory order = _createValidOrder();
+        ExecutorValidation.SignedOrder memory order = _createValidOrder();
         ExecutorValidation.RouteData memory routeData = _createValidRouteData();
-        ExecutorValidation.PermitSingle memory permit2Data = _createValidPermit2();
+        ExecutorValidation.SignedPermitData memory permit2Data = _createValidPermit2();
         order.maker = address(0);
 
         vm.expectRevert(ExecutorValidation.ZeroAddress.selector);
@@ -87,9 +81,9 @@ contract ExecutorValidationTest is Test {
     }
 
     function test_ZeroInputToken_ShouldRevert() public {
-        ExecutorValidation.Order memory order = _createValidOrder();
+        ExecutorValidation.SignedOrder memory order = _createValidOrder();
         ExecutorValidation.RouteData memory routeData = _createValidRouteData();
-        ExecutorValidation.PermitSingle memory permit2Data = _createValidPermit2();
+        ExecutorValidation.SignedPermitData memory permit2Data = _createValidPermit2();
         order.inputToken = address(0);
 
         vm.expectRevert(ExecutorValidation.ZeroAddress.selector);
@@ -97,9 +91,9 @@ contract ExecutorValidationTest is Test {
     }
 
     function test_ZeroOutputToken_ShouldRevert() public {
-        ExecutorValidation.Order memory order = _createValidOrder();
+        ExecutorValidation.SignedOrder memory order = _createValidOrder();
         ExecutorValidation.RouteData memory routeData = _createValidRouteData();
-        ExecutorValidation.PermitSingle memory permit2Data = _createValidPermit2();
+        ExecutorValidation.SignedPermitData memory permit2Data = _createValidPermit2();
         order.outputToken = address(0);
 
         vm.expectRevert(ExecutorValidation.ZeroAddress.selector);
@@ -107,20 +101,10 @@ contract ExecutorValidationTest is Test {
     }
 
     function test_ZeroPermitToken_ShouldRevert() public {
-        ExecutorValidation.Order memory order = _createValidOrder();
+        ExecutorValidation.SignedOrder memory order = _createValidOrder();
         ExecutorValidation.RouteData memory routeData = _createValidRouteData();
-        ExecutorValidation.PermitSingle memory permit2Data = _createValidPermit2();
-        permit2Data.details.token = address(0);
-
-        vm.expectRevert(ExecutorValidation.ZeroAddress.selector);
-        helper.validateInputsAndBusinessLogic(order, routeData, permit2Data);
-    }
-
-    function test_ZeroPermitSpender_ShouldRevert() public {
-        ExecutorValidation.Order memory order = _createValidOrder();
-        ExecutorValidation.RouteData memory routeData = _createValidRouteData();
-        ExecutorValidation.PermitSingle memory permit2Data = _createValidPermit2();
-        permit2Data.spender = address(0);
+        ExecutorValidation.SignedPermitData memory permit2Data = _createValidPermit2();
+        permit2Data.permit.permitted.token = address(0);
 
         vm.expectRevert(ExecutorValidation.ZeroAddress.selector);
         helper.validateInputsAndBusinessLogic(order, routeData, permit2Data);
@@ -131,20 +115,21 @@ contract ExecutorValidationTest is Test {
     // ========================================
 
     function test_ZeroInputAmount_ShouldRevert() public {
-        ExecutorValidation.Order memory order = _createValidOrder();
+        ExecutorValidation.SignedOrder memory order = _createValidOrder();
         ExecutorValidation.RouteData memory routeData = _createValidRouteData();
-        ExecutorValidation.PermitSingle memory permit2Data = _createValidPermit2();
+        ExecutorValidation.SignedPermitData memory permit2Data = _createValidPermit2();
         order.inputAmount = 0;
-        permit2Data.details.amount = 0; // Keep consistent
+        permit2Data.permit.permitted.amount = 0; // Keep consistent
+        permit2Data.transferDetails.requestedAmount = 0;
 
         vm.expectRevert(ExecutorValidation.ZeroAmount.selector);
         helper.validateInputsAndBusinessLogic(order, routeData, permit2Data);
     }
 
     function test_ZeroMinAmountOut_ShouldRevert() public {
-        ExecutorValidation.Order memory order = _createValidOrder();
+        ExecutorValidation.SignedOrder memory order = _createValidOrder();
         ExecutorValidation.RouteData memory routeData = _createValidRouteData();
-        ExecutorValidation.PermitSingle memory permit2Data = _createValidPermit2();
+        ExecutorValidation.SignedPermitData memory permit2Data = _createValidPermit2();
         order.minAmountOut = 0;
 
         vm.expectRevert(ExecutorValidation.ZeroAmount.selector);
@@ -152,10 +137,10 @@ contract ExecutorValidationTest is Test {
     }
 
     function test_ZeroPermitAmount_ShouldRevert() public {
-        ExecutorValidation.Order memory order = _createValidOrder();
+        ExecutorValidation.SignedOrder memory order = _createValidOrder();
         ExecutorValidation.RouteData memory routeData = _createValidRouteData();
-        ExecutorValidation.PermitSingle memory permit2Data = _createValidPermit2();
-        permit2Data.details.amount = 0;
+        ExecutorValidation.SignedPermitData memory permit2Data = _createValidPermit2();
+        permit2Data.permit.permitted.amount = 0;
 
         vm.expectRevert(ExecutorValidation.ZeroAmount.selector);
         helper.validateInputsAndBusinessLogic(order, routeData, permit2Data);
@@ -166,20 +151,21 @@ contract ExecutorValidationTest is Test {
     // ========================================
 
     function test_TokenMismatch_ShouldRevert() public {
-        ExecutorValidation.Order memory order = _createValidOrder();
+        ExecutorValidation.SignedOrder memory order = _createValidOrder();
         ExecutorValidation.RouteData memory routeData = _createValidRouteData();
-        ExecutorValidation.PermitSingle memory permit2Data = _createValidPermit2();
-        permit2Data.details.token = tokenB; // Order uses tokenA
+        ExecutorValidation.SignedPermitData memory permit2Data = _createValidPermit2();
+        permit2Data.permit.permitted.token = tokenB; // Order uses tokenA
 
         vm.expectRevert(ExecutorValidation.TokenMismatch.selector);
         helper.validateInputsAndBusinessLogic(order, routeData, permit2Data);
     }
 
     function test_AmountMismatch_ShouldRevert() public {
-        ExecutorValidation.Order memory order = _createValidOrder();
+        ExecutorValidation.SignedOrder memory order = _createValidOrder();
         ExecutorValidation.RouteData memory routeData = _createValidRouteData();
-        ExecutorValidation.PermitSingle memory permit2Data = _createValidPermit2();
-        permit2Data.details.amount = 2000e18; // Order uses 1000e18
+        ExecutorValidation.SignedPermitData memory permit2Data = _createValidPermit2();
+        // Mismatch: request does not equal order amount
+        permit2Data.transferDetails.requestedAmount = 2000e18; // Order uses 1000e18
 
         vm.expectRevert(ExecutorValidation.PermitAmountMismatch.selector);
         helper.validateInputsAndBusinessLogic(order, routeData, permit2Data);
@@ -190,8 +176,8 @@ contract ExecutorValidationTest is Test {
     // ========================================
 
     function test_MultiHopWithEmptyPath_ShouldRevert() public {
-        ExecutorValidation.Order memory order = _createValidOrder();
-        ExecutorValidation.PermitSingle memory permit2Data = _createValidPermit2();
+        ExecutorValidation.SignedOrder memory order = _createValidOrder();
+        ExecutorValidation.SignedPermitData memory permit2Data = _createValidPermit2();
 
         ExecutorValidation.RouteData memory routeData = ExecutorValidation.RouteData({
             encodedPath: "",
@@ -204,8 +190,8 @@ contract ExecutorValidationTest is Test {
     }
 
     function test_SingleHopWithZeroFee_ShouldRevert() public {
-        ExecutorValidation.Order memory order = _createValidOrder();
-        ExecutorValidation.PermitSingle memory permit2Data = _createValidPermit2();
+        ExecutorValidation.SignedOrder memory order = _createValidOrder();
+        ExecutorValidation.SignedPermitData memory permit2Data = _createValidPermit2();
 
         ExecutorValidation.RouteData memory routeData = ExecutorValidation.RouteData({
             encodedPath: "",
@@ -218,8 +204,8 @@ contract ExecutorValidationTest is Test {
     }
 
     function test_InvalidSingleHopFee_ShouldRevert() public {
-        ExecutorValidation.Order memory order = _createValidOrder();
-        ExecutorValidation.PermitSingle memory permit2Data = _createValidPermit2();
+        ExecutorValidation.SignedOrder memory order = _createValidOrder();
+        ExecutorValidation.SignedPermitData memory permit2Data = _createValidPermit2();
 
         ExecutorValidation.RouteData memory routeData = ExecutorValidation.RouteData({
             encodedPath: "",
@@ -232,8 +218,8 @@ contract ExecutorValidationTest is Test {
     }
 
     function test_MultiHopWithShortPath_ShouldRevert() public {
-        ExecutorValidation.Order memory order = _createValidOrder();
-        ExecutorValidation.PermitSingle memory permit2Data = _createValidPermit2();
+        ExecutorValidation.SignedOrder memory order = _createValidOrder();
+        ExecutorValidation.SignedPermitData memory permit2Data = _createValidPermit2();
 
         ExecutorValidation.RouteData memory routeData = ExecutorValidation.RouteData({
             encodedPath: hex"1234", // Too short (< 43 bytes)
@@ -250,9 +236,9 @@ contract ExecutorValidationTest is Test {
     // ========================================
 
     function test_ExpiredOrder_ShouldRevert() public {
-        ExecutorValidation.Order memory order = _createValidOrder();
+        ExecutorValidation.SignedOrder memory order = _createValidOrder();
         ExecutorValidation.RouteData memory routeData = _createValidRouteData();
-        ExecutorValidation.PermitSingle memory permit2Data = _createValidPermit2();
+        ExecutorValidation.SignedPermitData memory permit2Data = _createValidPermit2();
         
         order.expiry = block.timestamp - 1; // Expired
 
@@ -261,9 +247,9 @@ contract ExecutorValidationTest is Test {
     }
 
     function test_UsedNonce_ShouldRevert() public {
-        ExecutorValidation.Order memory order = _createValidOrder();
+        ExecutorValidation.SignedOrder memory order = _createValidOrder();
         ExecutorValidation.RouteData memory routeData = _createValidRouteData();
-        ExecutorValidation.PermitSingle memory permit2Data = _createValidPermit2();
+        ExecutorValidation.SignedPermitData memory permit2Data = _createValidPermit2();
         
         // Mark nonce as used
         helper.setNonceUsed(order.maker, order.nonce, true);
@@ -276,19 +262,8 @@ contract ExecutorValidationTest is Test {
     // PROTOCOL VALIDATION TESTS
     // ========================================
 
-    function test_CorrectProtocol_ShouldPass() public view {
-        ExecutorValidation.Order memory order = _createValidOrder();
-        
-        // Should not revert
-        helper.validateProtocol(order, Types.Protocol.UNISWAP_V2);
-    }
-
-    function test_IncorrectProtocol_ShouldRevert() public {
-        ExecutorValidation.Order memory order = _createValidOrder();
-        
-        vm.expectRevert(ExecutorValidation.ProtocolMismatch.selector);
-        helper.validateProtocol(order, Types.Protocol.UNISWAP_V3);
-    }
+    // Protocol-specific tests removed as protocol validation is integrated
+    // in validateInputsAndBusinessLogic and invalid enum values cannot be constructed
 
     // Note: Invalid protocol enum values cannot be created directly in Solidity
     // The protocol validation occurs within validateCompleteOrder and checks:
@@ -306,26 +281,37 @@ contract ExecutorValidationTest is Test {
     // HELPER FUNCTIONS
     // ========================================
 
-    function _createValidOrder() internal view returns (ExecutorValidation.Order memory) {
-        return ExecutorValidation.Order({
+    function _createValidOrder() internal view returns (ExecutorValidation.SignedOrder memory) {
+        return ExecutorValidation.SignedOrder({
             maker: user,
             inputToken: tokenA,
             outputToken: tokenB,
-            inputAmount: 1000e18,
             protocol: Types.Protocol.UNISWAP_V2,
+            inputAmount: 1000e18,
             minAmountOut: 900e18,
             maxSlippageBps: 1000,
             expiry: block.timestamp + 1 hours, // Valid expiry
-            nonce: 1
+            nonce: 1,
+            signature: ""
         });
     }
 
-    function _createValidPermit2() internal view returns (ExecutorValidation.PermitSingle memory) {
-        return ExecutorValidation.PermitSingle({
-            details: ExecutorValidation.PermitDetails({token: tokenA, amount: 1000e18}),
-            spender: address(executor),
-            sigDeadline: block.timestamp + 1 hours, // Valid deadline
-            nonce: 1
+    function _createValidPermit2() internal view returns (ExecutorValidation.SignedPermitData memory) {
+        return ExecutorValidation.SignedPermitData({
+            permit: ISignatureTransfer.PermitTransferFrom({
+                permitted: ISignatureTransfer.TokenPermissions({
+                    token: tokenA,
+                    amount: 1000e18
+                }),
+                nonce: 1,
+                deadline: block.timestamp + 1 hours
+            }),
+            transferDetails: ISignatureTransfer.SignatureTransferDetails({
+                to: address(executor),
+                requestedAmount: 1000e18
+            }),
+            owner: user,
+            signature: ""
         });
     }
 

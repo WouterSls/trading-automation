@@ -19,8 +19,8 @@ export enum Protocol {
   QUICKSWAP = 8
 }
 
-// Core order structure (matches ExecutorValidation.LimitOrder)
-export interface Order {
+// Core order structure (matches ExecutorValidation.SignedOrder)
+export interface SignedOrder {
   maker: string; // address
   inputToken: string; // address
   outputToken: string; // address
@@ -30,6 +30,7 @@ export interface Order {
   maxSlippageBps: string; // uint256
   expiry: string; // uint256
   nonce: string; // uint256
+  signature: string; // bytes
 }
 
 // Route data structure (matches ExecutorValidation.RouteData)
@@ -40,17 +41,20 @@ export interface RouteData {
 }
 
 // Permit structures (match ExecutorValidation permit types)
-export interface PermitDetails {
-  token: string; // address
-  amount: string; // uint256
+export interface SignedPermitData {
+  permit: any; // ISignatureTransfer.PermitTransferFrom
+  transferDetails: any; // ISignatureTransfer.SignatureTransferDetails
+  owner: string; // address
+  signature: string; // bytes
 }
 
-export interface PermitSingle {
-  details: PermitDetails; // PermitDetails
-  spender: string; // address
-  sigDeadline: string; // uint256
-  nonce: string; // uint256
+
+export interface SignedPermitAllowanceData {
+  permitSingle: any; // IAllowanceTransfer.PermitSingle
+  owner: string; // address
+  signature: string; // bytes
 }
+
 
 /**
  * EIP712 type definitions (auto-generated from Solidity structs)
@@ -66,7 +70,7 @@ export const EIP712_GENERATED_TYPES = {
   ],
   
   // Generated from Solidity structs
-  Order: [
+  SignedOrder: [
     { name: "maker", type: "address" },
     { name: "inputToken", type: "address" },
     { name: "outputToken", type: "address" },
@@ -75,29 +79,15 @@ export const EIP712_GENERATED_TYPES = {
     { name: "minAmountOut", type: "uint256" },
     { name: "maxSlippageBps", type: "uint256" },
     { name: "expiry", type: "uint256" },
-    { name: "nonce", type: "uint256" }
-  ],
-  RouteData: [
-    { name: "encodedPath", type: "bytes" },
-    { name: "fee", type: "uint24" },
-    { name: "isMultiHop", type: "bool" }
-  ],
-  PermitDetails: [
-    { name: "token", type: "address" },
-    { name: "amount", type: "uint256" }
-  ],
-  PermitSingle: [
-    { name: "details", type: "PermitDetails" },
-    { name: "spender", type: "address" },
-    { name: "sigDeadline", type: "uint256" },
-    { name: "nonce", type: "uint256" }
-  ],
+    { name: "nonce", type: "uint256" },
+    { name: "signature", type: "bytes" }
+  ]
 };
 
 /**
  * Type hash constants (must match Solidity)
  */
-export const ORDER_TYPEHASH = "Order(address maker,address inputToken,address outputToken,uint8 protocol,uint256 inputAmount,uint256 minAmountOut,uint256 maxSlippageBps,uint256 expiry,uint256 nonce)";
+export const SIGNEDORDER_TYPEHASH = "SignedOrder(address maker,address inputToken,address outputToken,uint8 protocol,uint256 inputAmount,uint256 minAmountOut,uint256 maxSlippageBps,uint256 expiry,uint256 nonce,bytes signature)";
 
 /**
  * Domain helper function

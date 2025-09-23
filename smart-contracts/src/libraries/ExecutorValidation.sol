@@ -3,6 +3,8 @@ pragma solidity ^0.8.20;
 
 import {ECDSA} from "../../lib/openzeppelin-contracts/contracts/utils/cryptography/ECDSA.sol";
 import {Types} from "./Types.sol";
+import {ISignatureTransfer} from "../../lib/permit2/src/interfaces/ISignatureTransfer.sol";
+import {IAllowanceTransfer} from "../../lib/permit2/src/interfaces/IAllowanceTransfer.sol";
 
 library ExecutorValidation {
     using ECDSA for bytes32;
@@ -23,7 +25,7 @@ library ExecutorValidation {
     error InvalidProtocol();
     error ProtocolMismatch();
 
-    struct Order {
+    struct SignedOrder {
         address maker;
         address inputToken;
         address outputToken;
@@ -33,6 +35,7 @@ library ExecutorValidation {
         uint256 maxSlippageBps;
         uint256 expiry;
         uint256 nonce;
+        bytes signature;
     }
 
     struct RouteData {
@@ -41,46 +44,51 @@ library ExecutorValidation {
         bool isMultiHop;
     }
 
-    struct PermitDetails {
-        address token;
-        uint256 amount;
+    // Single signature transfer permit2 interaction
+    struct SignedPermitData {
+        ISignatureTransfer.PermitTransferFrom permit; // -> TypeData 
+        ISignatureTransfer.SignatureTransferDetails transferDetails; // -> details
+        address owner; // -> signature validation = act in account of
+        bytes signature; // -> signature to verify operation
     }
 
-    struct PermitSingle {
-        PermitDetails details;
-        address spender;
-        uint256 sigDeadline;
-        uint256 nonce;
+    // Allowance based permit2 interaction
+    struct SignedPermitAllowanceData {
+        IAllowanceTransfer.PermitSingle permitSingle;
+        address owner;
+        bytes signature;
     }
+
 
     bytes32 internal constant ORDER_TYPEHASH = keccak256(
         "Order(address maker,address inputToken,address outputToken,uint8 protocol,uint256 inputAmount,uint256 minAmountOut,uint256 maxSlippageBps,uint256 expiry,uint256 nonce)"
     );
 
     function validateInputsAndBusinessLogic(
-        Order calldata order,
+        SignedOrder calldata signedOrder,
         RouteData calldata routeData,
-        PermitSingle calldata permit2Data,
+        SignedPermitData calldata signedPermitData,
         mapping(address => mapping(uint256 => bool)) storage usedNonces
     ) internal view {
         // Address validations
-        if (order.maker == address(0)) revert ZeroAddress();
-        if (order.inputToken == address(0)) revert ZeroAddress();
-        if (order.outputToken == address(0)) revert ZeroAddress();
-        if (permit2Data.details.token == address(0)) revert ZeroAddress();
-        if (permit2Data.spender == address(0)) revert ZeroAddress();
+        if (signedOrder.maker == address(0)) revert ZeroAddress();
+        if (signedOrder.inputToken == address(0)) revert ZeroAddress();
+        if (signedOrder.outputToken == address(0)) revert ZeroAddress();
+        if (signedPermitData.permit.permitted.token == address(0)) revert ZeroAddress();
         
         // Amount validations
-        if (order.inputAmount == 0) revert ZeroAmount();
-        if (order.minAmountOut == 0) revert ZeroAmount();
-        if (permit2Data.details.amount == 0) revert ZeroAmount();
+        if (signedOrder.inputAmount == 0) revert ZeroAmount();
+        if (signedOrder.minAmountOut == 0) revert ZeroAmount();
+        if (signedPermitData.permit.permitted.amount == 0) revert ZeroAmount();
+        if (signedPermitData.transferDetails.requestedAmount == 0) revert ZeroAmount();
         
         // Consistency checks
-        if (order.inputToken != permit2Data.details.token) revert TokenMismatch();
-        if (order.inputAmount != permit2Data.details.amount) revert PermitAmountMismatch();
+        if (signedOrder.inputToken != signedPermitData.permit.permitted.token) revert TokenMismatch();
+        if (signedOrder.inputAmount != signedPermitData.transferDetails.requestedAmount) revert PermitAmountMismatch();
+        if (signedPermitData.transferDetails.requestedAmount > signedPermitData.permit.permitted.amount) revert PermitAmountMismatch();
 
         // Protocol validation - check if protocol is valid
-        if (uint8(order.protocol) > uint8(Types.Protocol.QUICKSWAP)) {
+        if (uint8(signedOrder.protocol) > uint8(Types.Protocol.QUICKSWAP)) {
             revert InvalidProtocol();
         }
         
@@ -98,23 +106,20 @@ library ExecutorValidation {
         }
         
         // Business logic validations
-        if (block.timestamp > order.expiry) revert OrderExpired();
-        if (usedNonces[order.maker][order.nonce]) revert NonceAlreadyUsed();
+        if (block.timestamp > signedOrder.expiry) revert OrderExpired();
+        if (usedNonces[signedOrder.maker][signedOrder.nonce]) revert NonceAlreadyUsed();
     }
 
     function validateSignatures(
-        Order calldata order,
-        PermitSingle calldata permit2Data,
-        bytes calldata orderSignature,
-        bytes calldata permit2Signature,
+        SignedOrder calldata signedOrder,
+        SignedPermitData calldata signedPermitData,
         bytes32 domainSeparator
     ) internal view {
         // Permit2 signature validation first (simpler)
-        if (block.timestamp > permit2Data.sigDeadline) revert PermitExpired();
-        if (permit2Signature.length == 0) revert InvalidPermitSignature();
+        if (block.timestamp > signedPermitData.permit.deadline) revert PermitExpired();
         
         // Order signature validation using helper function
-        if (_generateOrderDigest(order, domainSeparator).recover(orderSignature) != order.maker) {
+        if (_generateOrderDigest(signedOrder, domainSeparator).recover(signedOrder.signature) != signedOrder.maker) {
             revert InvalidSignature();
         }
         
@@ -122,16 +127,10 @@ library ExecutorValidation {
         // for gas efficiency and to avoid duplicate validation
     }
 
-    function validateProtocol(Order calldata order, Types.Protocol expectedProtocol) internal pure {
-        if (order.protocol != expectedProtocol) {
-            revert ProtocolMismatch();
-        }
-    }
-
     /// @notice Helper function to generate order hash without local variable overload
     /// @dev Reduces stack depth in signature validation
     function _generateOrderDigest(
-        Order calldata order,
+        SignedOrder calldata order,
         bytes32 domainSeparator
     ) private pure returns (bytes32) {
         return keccak256(abi.encodePacked(

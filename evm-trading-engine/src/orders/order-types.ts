@@ -1,8 +1,7 @@
 
 // Import generated types that are consistent with Solidity contracts
-import { Order, EIP712_GENERATED_TYPES, createDomain as createGeneratedDomain } from "../lib/generated-solidity-types";
+import { SignedOrder, EIP712_GENERATED_TYPES, createDomain as createGeneratedDomain } from "../lib/generated-solidity-types";
 
-export { Order };
 
 export interface EIP712Domain {
   name: string;
@@ -14,7 +13,7 @@ export interface EIP712Domain {
 
 // Frontend-specific order interface that extends the base with additional fields
 export interface OrderRequest {
-  order: Order;
+  order: SignedOrder;
 
   // Frontend-specific fields not in Solidity
   allowedRouters: string[]; // Which DEX routers can be used for this order
@@ -58,7 +57,7 @@ export interface Permit2Data {
 export interface SignedLimitOrder {
   permit2Data: Permit2Data; // Permit2 authorization data
   permit2Signature: string; // EIP-712 signature of the permit2 data
-  order: Order; // The actual order data (matches Solidity)
+  order: SignedOrder; // The actual order data (matches Solidity)
   orderSignature: string; // EIP-712 signature of the order
 }
 

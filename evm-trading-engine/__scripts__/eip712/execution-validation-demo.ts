@@ -11,7 +11,8 @@
 import { ethers } from "ethers";
 import { ChainType, getChainConfig } from "../../src/config/chain-config";
 import { OrderValidator } from "../../src/orders/OrderValidator";
-import { Order, ExecutionParams } from "../../src/orders/order-types";
+import { ExecutionParams } from "../../src/orders/order-types";
+import { SignedOrder as Order } from "../../src/lib/generated-solidity-types";
 import { Protocol } from "../../src/lib/generated-solidity-types";
 
 async function demonstrateExecutionValidation() {
@@ -31,7 +32,8 @@ async function demonstrateExecutionValidation() {
     maxSlippageBps: "150", // Max 1.5% slippage
     expiry: (Math.floor(Date.now() / 1000) + 3600).toString(), // 1 hour from now
     nonce: "987654321",
-    protocol: Protocol.UNISWAP_V3
+    protocol: Protocol.UNISWAP_V3,
+    signature: "0x"
   };
 
   console.log("👤 User's Signed Order Constraints:");

@@ -19,6 +19,7 @@ import { Permit2 } from "../../../src/smartcontracts/permit2/Permit2";
 import { ERC20, createMinimalErc20 } from "../../../src/smartcontracts/ERC/_index";
 import { V4PoolAction, V4PoolActionConstants } from "../../../src/smartcontracts/uniswap-v4/uniswap-v4-types";
 import { UniswapV4Router } from "../../../src/smartcontracts/uniswap-v4/UniswapV4Router";
+import { PermitSingle } from "../../../src/smartcontracts/permit2/permit2-types";
 
 async function verifyOrGrantMaxUnitAllowance(wallet: Wallet, token: ERC20, spender: string) {
   const permit2Allowance = await token.getRawAllowance(wallet.address, spender);
@@ -107,20 +108,22 @@ export async function v4SwapInteraction(wallet: Wallet, tradeCreationDto: TradeC
     usdc.getTokenAddress(),
     router.getRouterAddress(),
   );
-  const permitSingle: IPermitSingle = {
+  const permitSingle: PermitSingle = {
     details: {
-      token: usdc.getTokenAddress(),
-      amount: BigInt(tradeCreationDto.inputAmount),
-      expiration: deadline,
-      nonce: nonce,
+      token: usdc.getTokenAddress(), // address
+      amount: tradeCreationDto.inputAmount, // uint160 (use string for BN)
+      expiration: deadline.toString(), // uint48 (use string)
+      nonce: nonce, // uint48 (use string)
     },
     spender: router.getRouterAddress(),
-    sigDeadline: deadline,
+    sigDeadline: deadline.toString(),
   };
   const signature = await permit2.signPermitSingle(wallet, permitSingle);
 
   const permit2PermitCommand = CommandType.PERMIT2_PERMIT;
-  const permit2Input = encodePermitSingleInput(permitSingle, signature);
+
+  // used to use old IPermitSingle from universal-router-types -> double check permit2 allowance vs spender
+  //const permit2Input = encodePermitSingleInput(permitSingle, signature);
 
   // Permit2 Transfer From -> Move tokens to router contract
   const permitTransferFrom: IPermitTransferFrom = {
@@ -166,7 +169,7 @@ export async function v4SwapInteraction(wallet: Wallet, tradeCreationDto: TradeC
   console.log("commands", commands);
   const txRequest = await router.createExecuteTransaction(
     commands,
-    [permit2Input, permit2TransferFromInput, swapInput],
+    [/**permit2Input,*/ permit2TransferFromInput, swapInput],
     deadline,
   );
   //const txRequest = await router.createExecuteTransaction(wallet, swapCommand, [swapInput]);

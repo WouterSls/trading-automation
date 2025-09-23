@@ -10,7 +10,7 @@ const path = require("path");
 
 // Configuration
 const SOLIDITY_FILE = path.join(__dirname, "../smart-contracts/src/libraries/ExecutorValidation.sol");
-const TYPESCRIPT_FILE = path.join(__dirname, "../evm-trading-engine/src/orders/generated-types.ts");
+const TYPESCRIPT_FILE = path.join(__dirname, "../evm-trading-engine/src/lib/generated-solidity-types.ts");
 
 class TypeValidator {
   constructor() {
@@ -31,7 +31,7 @@ class TypeValidator {
     const structBody = match[1];
     const fields = [];
 
-    const fieldRegex = /([\w.]+)\s+(\w+);/g;
+    const fieldRegex = /([\w.\[\]]+)\s+(\w+);/g;
     let fieldMatch;
 
     while ((fieldMatch = fieldRegex.exec(structBody)) !== null) {
@@ -236,12 +236,12 @@ class TypeValidator {
       // Parse structures
       const solidityOrder = this.parseStruct(
         solidityContent,
-        "Order"
+        "SignedOrder"
       );
-      const tsOrder = this.parseInterface(typescriptContent, "Order");
+      const tsOrder = this.parseInterface(typescriptContent, "SignedOrder");
       const eip712Order = this.parseEIP712Types(
         typescriptContent,
-        "Order"
+        "SignedOrder"
       );
 
       // Validate main order structure
@@ -249,7 +249,7 @@ class TypeValidator {
         solidityOrder,
         tsOrder,
         eip712Order,
-        "Order"
+        "SignedOrder"
       );
 
       // Validate type hashes

@@ -3,8 +3,12 @@ import { ChainType, getChainConfig } from "../../config/chain-config";
 import { PERMIT2_INTERFACE } from "../../lib/smartcontract-abis/_index";
 import { IPermitSingle } from "../universal-router/universal-router-types";
 import { Permit2Transfer, SignedPermit2Transfer } from "../../orders/order-types";
-import { PERMIT2_TYPES } from "./permit2-types";
+import { PERMIT2_TYPES, PermitSingle, PermitTransferFrom } from "./permit2-types";
 
+
+//Permit2 has two distincy ways of interacting with the permit2 contract.
+//Allowance based transfer -> update allowance via permit signature siging = preferred when multiple transfers are expected
+//Signature based transfer -> single token transfer via signature siging = preferred when single token transfer
 export class Permit2 {
   private permit2Address: string;
   private permit2Contract: Contract;
@@ -36,6 +40,36 @@ export class Permit2 {
     this.permit2Contract = this.permit2Contract.connect(wallet) as Contract;
     const [allowanceRaw, expiration, nonce] = await this.permit2Contract.allowance(owner, token, spender);
     return nonce;
+  }
+
+  /**
+   * Gets a valid nonce for ISignatureTransfer (permitTransferFrom)
+   * Uses unordered nonces with bitmap system
+   * @param wallet - Wallet to connect to contract
+   * @param owner - Token owner address
+   * @param wordPos - Word position in bitmap (default: 0)
+   * @param bitPos - Bit position within word (default: 0)
+   * @returns Valid nonce for permitTransferFrom
+   */
+  async getSignatureTransferNonce(
+    wallet: Wallet, 
+    owner: string, 
+    wordPos: number = 0, 
+    bitPos: number = 0
+  ): Promise<string> {
+    this.permit2Contract = this.permit2Contract.connect(wallet) as Contract;
+    
+    // Check if the bit is already used
+    const bitmap = await this.permit2Contract.nonceBitmap(owner, wordPos);
+    const bit = BigInt(1 << bitPos);
+    
+    if ((bitmap & bit) !== 0n) {
+      throw new Error(`Nonce already used: wordPos=${wordPos}, bitPos=${bitPos}`);
+    }
+    
+    // Combine wordPos and bitPos into a single nonce
+    const nonce = (BigInt(wordPos) << 8n) | BigInt(bitPos);
+    return nonce.toString();
   }
 
   /**
@@ -119,7 +153,7 @@ export class Permit2 {
     }
   }
 
-  async signPermitTransferFrom(wallet: Wallet, permit: Permit2Transfer, spender: string): Promise<string> {
+  async signPermitTransferFrom(permit: PermitTransferFrom, spender: string, wallet: Wallet, ): Promise<string> {
     const domain = this.getDomain();
     const types = {
       PermitTransferFrom: PERMIT2_TYPES.PermitTransferFrom,
@@ -136,12 +170,22 @@ export class Permit2 {
     return await wallet.signTypedData(domain, types, values);
   }
 
-  async signPermitSingle(wallet: Wallet, permitSingle: IPermitSingle): Promise<string> {
+  async signPermitSingle(wallet: Wallet, permitSingle: PermitSingle): Promise<string> {
     const domain = this.getDomain();
+    console.log("domain")
+    console.log(domain)
+    console.log()
     const types = {
       PermitDetails: PERMIT2_TYPES.PermitDetails,
       PermitSingle: PERMIT2_TYPES.PermitSingle,
     };
+    console.log("types")
+    console.log(types)
+    console.log()
+
+    console.log("permit single")
+    console.log(permitSingle);
+    console.log();
 
     return await wallet.signTypedData(domain, types, permitSingle);
   }

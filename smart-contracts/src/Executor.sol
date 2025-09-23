@@ -5,7 +5,7 @@ import {EIP712} from "../lib/openzeppelin-contracts/contracts/utils/cryptography
 import {SafeERC20} from "../lib/openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol";
 import {ReentrancyGuard} from "../lib/openzeppelin-contracts/contracts/utils/ReentrancyGuard.sol";
 import {IERC20} from "../lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
-import {IPermit2} from "./interfaces/IPermit2.sol";
+import {ISignatureTransfer} from "../lib/permit2/src/interfaces/ISignatureTransfer.sol";
 import {ITrader} from "./interfaces/ITrader.sol";
 import {ITraderRegistry} from "./interfaces/ITraderRegistry.sol";
 
@@ -31,6 +31,7 @@ contract Executor is EIP712, ReentrancyGuard {
 
     mapping(address => mapping(uint256 => bool)) public usedNonce;
 
+    error InvalidTrader();
     error CallFailed();
     error InvalidRouter();
     error InsufficientOutput();
@@ -49,55 +50,61 @@ contract Executor is EIP712, ReentrancyGuard {
 
     /**
      * @notice Execute a signed off-chain order using modular validation
-     * @param order The signed order fields
+     * @param signedPermitData EIP-712 signature for Permit2
+     * @param signedOrder EIP-712 signature by order.maker
      * @param routeData Route information for trade execution
-     * @param orderSignature EIP-712 signature by order.maker
-     * @param permit2Data Permit2 authorization data
-     * @param permit2Signature EIP-712 signature for Permit2
      */
     function executeOrder(
-        ExecutorValidation.PermitSingle calldata permit2Data,
-        bytes calldata permit2Signature,
-        ExecutorValidation.Order calldata order,
-        bytes calldata orderSignature,
+        ExecutorValidation.SignedPermitData calldata signedPermitData,
+        ExecutorValidation.SignedOrder calldata signedOrder,
         ExecutorValidation.RouteData calldata routeData
     ) external nonReentrant {
-        ExecutorValidation.validateInputsAndBusinessLogic(order, routeData, permit2Data, usedNonce);
-        ExecutorValidation.validateSignatures(order, permit2Data, orderSignature, permit2Signature, _domainSeparatorV4());
+        ExecutorValidation.validateInputsAndBusinessLogic(signedOrder, routeData, signedPermitData, usedNonce);
+        ExecutorValidation.validateSignatures(signedOrder,signedPermitData, _domainSeparatorV4());
 
-        usedNonce[order.maker][order.nonce] = true;
+        usedNonce[signedOrder.maker][signedOrder.nonce] = true;
 
-        //address trader = traderRegistry.getTrader(order.protocol);
 
-        //_executePermit2Transfer(order, permit2Data, permit2Signature);
+        ISignatureTransfer.PermitTransferFrom memory permit = ISignatureTransfer.PermitTransferFrom({
+            permitted: ISignatureTransfer.TokenPermissions({
+                token: signedPermitData.permit.permitted.token,
+                amount: signedPermitData.permit.permitted.amount
+            }),
+            nonce: signedPermitData.permit.nonce,
+            deadline: signedPermitData.permit.deadline
+        });
 
-        //IERC20(order.inputToken).safeTransfer(trader, order.inputAmount);
 
-        //uint256 amountOut = ITrader(trader).trade(order, routeData);
+        address trader = traderRegistry.getTrader(order.protocol);
+        if (trader != signedPermitData.transferDetails.to) revert InvalidTrader(); 
 
-        //if (amountOut < order.minAmountOut) revert InsufficientOutput();
+        ISignatureTransfer.SignatureTransferDetails memory transferDetails  = ISignatureTransfer.SignatureTransferDetails({
+            to: signedPermitData.transferDetails.to,
+            requestedAmount: signedPermitData.transferDetails.requestedAmount
+        });
 
-        //emit OrderExecuted(order.maker, trader, order.inputAmount, amountOut);
+        ISignatureTransfer(PERMIT2).permitTransferFrom(
+            permit,
+            transferDetails,
+            signedPermitData.owner, // should be identical as order.maker
+            signedPermitData.signature 
+        );
+
+        //IERC20(signedOrder.inputToken).safeTransfer(trader, signedOrder.inputAmount);
+
+        //uint256 amountOut = ITrader(trader).trade(signedOrder, routeData);
+
+        //if (amountOut < signedOrder.minAmountOut) revert InsufficientOutput();
+
+        //emit OrderExecuted(signedOrder.maker, trader, signedOrder.inputAmount, amountOut);
     }
 
     function _executePermit2Transfer(
-        ExecutorValidation.Order calldata order,
-        ExecutorValidation.PermitSingle calldata permit2Data,
+        ExecutorValidation.SignedOrder calldata order,
+        ExecutorValidation.SignedPermitData calldata signedPermitData,
         bytes calldata permit2Signature
     ) internal {
-        IPermit2.PermitSingle memory permit2Transfer = IPermit2.PermitSingle({
-            details: IPermit2.PermitDetails({token: permit2Data.details.token, amount: permit2Data.details.amount}),
-            spender: permit2Data.spender,
-            sigDeadline: permit2Data.sigDeadline,
-            nonce: permit2Data.nonce
-        });
 
-        IPermit2(PERMIT2).permitTransferFrom(
-            permit2Transfer,
-            IPermit2.SignatureTransferDetails({to: address(this), requestedAmount: order.inputAmount}),
-            order.maker,
-            permit2Signature
-        );
     }
 
     function cancelNonce(uint256 nonce) external {

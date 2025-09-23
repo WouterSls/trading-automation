@@ -6,11 +6,11 @@ import {ExecutorValidation} from "../libraries/ExecutorValidation.sol";
 interface ITrader {
     /**
      * @notice Execute a trade using DEX-specific logic
-     * @param order The limit order containing trade parameters
+     * @param signedOrder The limit order containing trade parameters
      * @param routeData Route-specific data (path, fees, etc.)
      * @return amountOut The actual amount of output tokens received
      */
-    function trade(ExecutorValidation.Order calldata order, ExecutorValidation.RouteData calldata routeData) external returns (uint256 amountOut);
+    function trade(ExecutorValidation.SignedOrder calldata signedOrder, ExecutorValidation.RouteData calldata routeData) external returns (uint256 amountOut);
 
     /**
      * @notice Get the address of the contract this trader uses trade (Router, Exchange, Swapper)

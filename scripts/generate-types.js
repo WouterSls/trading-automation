@@ -24,8 +24,8 @@ function parseStruct(content, structName) {
   const structBody = match[1];
   const fields = [];
 
-  // Parse each field - updated regex to handle enum types like "Types.Protocol"
-  const fieldRegex = /([\w.]+)\s+(\w+);/g;
+  // Parse each field - handle enum types like "Types.Protocol" and namespaced structs
+  const fieldRegex = /([\w.\[\]]+)\s+(\w+);/g;
   let fieldMatch;
 
   while ((fieldMatch = fieldRegex.exec(structBody)) !== null) {
@@ -45,24 +45,29 @@ function mapSolidityToTypeScript(solidityType) {
   if (solidityType.match(/^uint\d*$/)) return "string"; // Use string for big numbers
   if (solidityType === "bool") return "boolean";
   if (solidityType === "bytes") return "string";
+  if (solidityType === "bytes32") return "string";
   
-  // Handle enum types - they should be numbers in TypeScript
-  if (solidityType.includes(".")) {
-    // This is likely an enum like "Types.Protocol"
-    return "number";
-  }
-  
+  // Handle array types
   if (solidityType.includes("[]")) {
     const baseType = solidityType.replace("[]", "");
     return `${mapSolidityToTypeScript(baseType)}[]`;
   }
+
+  // Handle namespaced enum types specifically (e.g., Types.Protocol)
+  if (solidityType.includes(".")) {
+    // If it's the known enum, map to number; otherwise fallback to any
+    if (solidityType === "Types.Protocol") return "number";
+    // Namespaced struct types from external interfaces → use any
+    return "any";
+  }
+  
   return "string"; // Default fallback
 }
 
 function generateEIP712Types(struct) {
   const types = struct.fields.map((field) => {
     // Convert enum types to uint8 for EIP712
-    const eip712Type = field.solidityType.includes(".") ? "uint8" : field.solidityType;
+    const eip712Type = field.solidityType === "Types.Protocol" ? "uint8" : field.solidityType;
     return `    { name: "${field.name}", type: "${eip712Type}" }`;
   });
 
@@ -73,7 +78,7 @@ function generateTypeHash(struct) {
   const typeString = struct.fields
     .map((field) => {
       // Convert enum types to uint8 for type hash
-      const typeForHash = field.solidityType.includes(".") ? "uint8" : field.solidityType;
+      const typeForHash = field.solidityType === "Types.Protocol" ? "uint8" : field.solidityType;
       return `${typeForHash} ${field.name}`;
     })
     .join(",");
@@ -130,13 +135,13 @@ function generateTypes() {
   const protocolEnum = parseEnum(typesContent, "Protocol");
 
   // Parse structs
-  const order = parseStruct(validationContent, "Order");
+  const order = parseStruct(validationContent, "SignedOrder");
   const routeData = parseStruct(validationContent, "RouteData");
-  const permitDetails = parseStruct(validationContent, "PermitDetails");
-  const permitSingle = parseStruct(validationContent, "PermitSingle");
+  const signedPermitData = parseStruct(validationContent, "SignedPermitData");
+  const signedPermitAllowanceData = parseStruct(validationContent, "SignedPermitAllowanceData");
 
   if (!order) {
-    console.error("❌ Could not parse Order struct");
+    console.error("❌ Could not parse SignedOrder struct");
     return;
   }
 
@@ -151,7 +156,7 @@ function generateTypes() {
  */
 
 ${protocolEnum ? generateEnumTypeScript(protocolEnum) + '\n' : ''}
-// Core order structure (matches ExecutorValidation.LimitOrder)
+// Core order structure (matches ExecutorValidation.SignedOrder)
 export interface ${order.name} {
 ${order.fields
   .map((f) => `  ${f.name}: ${f.typeScriptType}; // ${f.solidityType}`)
@@ -166,17 +171,19 @@ ${routeData.fields
 }
 
 // Permit structures (match ExecutorValidation permit types)
-export interface ${permitDetails.name} {
-${permitDetails.fields
+${signedPermitData ? `export interface ${signedPermitData.name} {
+${signedPermitData.fields
   .map((f) => `  ${f.name}: ${f.typeScriptType}; // ${f.solidityType}`)
   .join("\n")}
 }
+` : ""}
 
-export interface ${permitSingle.name} {
-${permitSingle.fields
+${signedPermitAllowanceData ? `export interface ${signedPermitAllowanceData.name} {
+${signedPermitAllowanceData.fields
   .map((f) => `  ${f.name}: ${f.typeScriptType}; // ${f.solidityType}`)
   .join("\n")}
 }
+` : ""}
 
 /**
  * EIP712 type definitions (auto-generated from Solidity structs)
@@ -192,10 +199,7 @@ export const EIP712_GENERATED_TYPES = {
   ],
   
   // Generated from Solidity structs
-${generateEIP712Types(order)},
-${generateEIP712Types(routeData)},
-${generateEIP712Types(permitDetails)},
-${generateEIP712Types(permitSingle)},
+${generateEIP712Types(order)}
 };
 
 /**
