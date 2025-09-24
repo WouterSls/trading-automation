@@ -9,8 +9,6 @@ import {ISignatureTransfer} from "../lib/permit2/src/interfaces/ISignatureTransf
 import {ITrader} from "./interfaces/ITrader.sol";
 import {ITraderRegistry} from "./interfaces/ITraderRegistry.sol";
 
-// USER EIP712Verifier.sol in contracts/mocks
-
 import {ExecutorValidation} from "./libraries/ExecutorValidation.sol";
 
 /**
@@ -24,7 +22,8 @@ contract Executor is EIP712, ReentrancyGuard {
     string private constant NAME = "EVM Trading Engine";
     string private constant VERSION = "1";
 
-    address private constant PERMIT2 = 0x000000000022D473030F116dDEE9F6B43aC78BA3;
+    //address private constant PERMIT2 = 0x000000000022D473030F116dDEE9F6B43aC78BA3;
+    address public immutable PERMIT2;
 
     address public owner;
     ITraderRegistry public traderRegistry;
@@ -39,7 +38,8 @@ contract Executor is EIP712, ReentrancyGuard {
     event TraderRegistryUpdated(address indexed newRegistry, address indexed updater);
     event OrderExecuted(address indexed maker, address indexed router, uint256 amountIn, uint256 amountOut);
 
-    constructor() EIP712(NAME, VERSION) {
+    constructor(address _permit2) EIP712(NAME, VERSION) {
+        PERMIT2 = _permit2;
         owner = msg.sender;
     }
 
@@ -74,21 +74,21 @@ contract Executor is EIP712, ReentrancyGuard {
             deadline: signedPermitData.permit.deadline
         });
 
-        address trader = traderRegistry.getTrader(routeData.protocol);
-        if (trader != signedPermitData.transferDetails.to) revert InvalidTrader(); 
-
-        //Transfer to trader directly to save gas
         ISignatureTransfer.SignatureTransferDetails memory transferDetails  = ISignatureTransfer.SignatureTransferDetails({
             to: signedPermitData.transferDetails.to,
             requestedAmount: signedPermitData.transferDetails.requestedAmount
         });
+
         ISignatureTransfer(PERMIT2).permitTransferFrom(
             permit,
             transferDetails,
-            signedPermitData.owner, // should be identical as order.maker
+            signedPermitData.owner, 
             signedPermitData.signature 
         );
-        //IERC20(signedOrder.inputToken).safeTransfer(trader, signedOrder.inputAmount);
+
+        address trader = traderRegistry.getTrader(routeData.protocol);
+        //Transfer to trader directly with permit2 to save gas
+        IERC20(signedOrder.inputToken).safeTransfer(trader, signedOrder.inputAmount);
 
         ITrader.TradeParameters memory tradeParameters = ITrader.TradeParameters({
             inputToken: signedOrder.inputToken,
