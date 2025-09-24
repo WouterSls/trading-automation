@@ -59,7 +59,6 @@ export class Permit2 {
   ): Promise<string> {
     this.permit2Contract = this.permit2Contract.connect(wallet) as Contract;
     
-    // Check if the bit is already used
     const bitmap = await this.permit2Contract.nonceBitmap(owner, wordPos);
     const bit = BigInt(1 << bitPos);
     
@@ -67,7 +66,6 @@ export class Permit2 {
       throw new Error(`Nonce already used: wordPos=${wordPos}, bitPos=${bitPos}`);
     }
     
-    // Combine wordPos and bitPos into a single nonce
     const nonce = (BigInt(wordPos) << 8n) | BigInt(bitPos);
     return nonce.toString();
   }
