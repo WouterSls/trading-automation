@@ -55,7 +55,7 @@ contract UniswapV3Trader is ITrader {
     }
     
     function _executeMultiHopSwap(
-        TradeParameters calldata params,
+        TradeParameters calldata _params,
         ExecutorValidation.RouteData calldata routeData
     ) private returns (uint256) {
         IUniswapV3Router.ExactInputParams memory params = IUniswapV3Router.ExactInputParams({
@@ -63,24 +63,24 @@ contract UniswapV3Trader is ITrader {
             recipient: EXECUTOR, // to maker for gas optimization?
             //deadline: params.expiry,
             deadline: block.timestamp + 1,
-            amountIn: params.inputAmount,
+            amountIn: _params.inputAmount,
             amountOutMinimum: 0
         });
         return IUniswapV3Router(UNIV3_ROUTER).exactInput(params);
     }
     
     function _executeSingleHopSwap(
-        TradeParameters calldata params,
+        TradeParameters calldata _params,
         ExecutorValidation.RouteData calldata routeData
     ) private returns (uint256) {
         IUniswapV3Router.ExactInputSingleParams memory params = IUniswapV3Router.ExactInputSingleParams({
-            tokenIn: params.inputToken,
-            tokenOut: params.outputToken,
+            tokenIn: _params.inputToken,
+            tokenOut: _params.outputToken,
             fee: routeData.fee,
             recipient: EXECUTOR, //maker for gas optimization?
             //deadline: order.expiry,
             deadline: block.timestamp + 1,
-            amountIn: params.inputAmount,
+            amountIn: _params.inputAmount,
             //amountOutMinimum: order.minAmountOut,
             amountOutMinimum: 0,
             sqrtPriceLimitX96: 0
