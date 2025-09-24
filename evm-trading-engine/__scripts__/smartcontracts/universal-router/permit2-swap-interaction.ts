@@ -68,7 +68,7 @@ export async function v4SwapInteraction(wallet: Wallet, tradeCreationDto: TradeC
 
   const router = new UniversalRouter(chain);
   const v2Router = new UniswapV2RouterV2(chain);
-  const permit2 = new Permit2(chain);
+  const permit2 = new Permit2(Number(chainConfig.id), chainConfig.uniswap.permit2Address);
 
   const usdcAddress = chainConfig.tokenAddresses.usdc;
   const wethAddress = chainConfig.tokenAddresses.weth;
@@ -102,9 +102,8 @@ export async function v4SwapInteraction(wallet: Wallet, tradeCreationDto: TradeC
   //await testPermit2TransferFrom(wallet, chain);
 
   // Permit2 Permit -> Permit router contract
-  const nonce = await permit2.getPermit2Nonce(
+  const nonce = await permit2.getAllowanceTransferNonce(
     wallet,
-    wallet.address,
     usdc.getTokenAddress(),
     router.getRouterAddress(),
   );
