@@ -1,18 +1,16 @@
-start-al:
-	anvil --fork-url https://eth-mainnet.g.alchemy.com/v2/QxLBeuGOK2JfjGRgVSnumKzAWS_9k4-Z
-start:
-	anvil --fork-url https://reth-ethereum.ithaca.xyz/rpc
+ifneq (,$(wildcard .env))
+include .env
+export
+endif
 
-deploy:
-	forge script script/Counter.s.sol --rpc-url $RPC_URL --broadcast --private-key $KEY -vvvv
+start-eth:
+	anvil --chain-id 31337 --fork-url $(ETH_RPC)
 
-deploy-token:
-	forge script script/DeploySimpleToken.s.sol --rpc-url $RPC_URL --broadcast --private-key $KEY -vvvv
+deploy-executor-local:
+	forge script script/DeployExecutorETH.s.sol --rpc-url $(LOCAL_RPC) --broadcast
 
-test-token:
-	forge test --match-contract SimpleTokenTest -vvvv
+deploy-script-with-key:
+	forge script script/DeployContract.s.sol --rpc-url $(RPC_URL) --broadcast --private-key $(KEY) -vvvv
 
-source:
-	set -a
-	. ./.env
-	set +a
+deploy-script-with-env:
+	forge script script/DeployContract.s.sol --rpc-url $(RPC_URL) --broadcast -vvvv
