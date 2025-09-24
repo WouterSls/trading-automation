@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.15;
 
 import {Script} from "forge-std/Script.sol";
 import {console} from "forge-std/console.sol";
@@ -13,15 +13,24 @@ contract DeployExecutorBase is Script {
         address deployer = vm.addr(pk);
 
         vm.startBroadcast(pk);
-        Executor executor = new Executor();
+        //Permit2 permit2 = new Permit2();
+        address permit2Address = 0x000000000022D473030F116dDEE9F6B43aC78BA3;
+        
+        // Deploy Executor with Permit2 address
+        Executor executor = new Executor(permit2Address);
+        
+        // Deploy mock tokens
         ERC20Mock tokenA = new ERC20Mock();
         ERC20Mock tokenB = new ERC20Mock();
 
-        tokenA.mint(deployer,1 * 10**18);
         vm.stopBroadcast();
 
         console.log("DEPLOYER ADDRESS:");
         console.log(deployer);
+        console.log();
+
+        console.log("PERMIT2 ADDRESS:");
+        console.log(permit2Address);
         console.log();
 
         console.log("EXECUTOR ADDRESS:");
@@ -39,7 +48,6 @@ contract DeployExecutorBase is Script {
         console.log("OWNER:");
         console.log(executor.owner());
         console.log();
-
 
         return executor;
     }
