@@ -2,7 +2,7 @@ import {
   PermitTransferFrom, 
   SignatureTransferDetails, 
   PermitSingle 
-} from '../permit2/permit2-types';
+} from '../../smartcontracts/permit2/permit2-types';
 
 // Re-export generated types as the single source of truth
 export { 
@@ -13,6 +13,13 @@ export {
   SIGNEDORDER_TYPEHASH,
   createDomain
 } from '../../lib/generated-solidity-types';
+
+export interface EIP712Domain {
+  name: string;
+  version: string;
+  chainId: number;
+  verifyingContract: string;
+}
 
 export const EIP712_TYPES = {
   EIP712Domain: [
@@ -26,9 +33,8 @@ export const EIP712_TYPES = {
   Order: [
     { name: "maker", type: "address" },
     { name: "inputToken", type: "address" },
-    { name: "outputToken", type: "address" },
-    { name: "protocol", type: "uint8" },
     { name: "inputAmount", type: "uint256" },
+    { name: "outputToken", type: "address" },
     { name: "minAmountOut", type: "uint256" },
     { name: "maxSlippageBps", type: "uint256" },
     { name: "expiry", type: "uint256" },
@@ -39,9 +45,8 @@ export const EIP712_TYPES = {
 export interface Order {
   maker: string;
   inputToken: string;
-  outputToken: string;
-  protocol: number; // can we sign protocol?
   inputAmount: bigint;
+  outputToken: string;
   minAmountOut: bigint;
   maxSlippageBps: number;
   expiry: number;
@@ -74,11 +79,6 @@ export interface SignedPermitAllowanceData {
   signature: string; // bytes
 }
 
-export interface EIP712Domain {
-  name: string;
-  version: string;
-  chainId: number;
-  verifyingContract: string;
-}
+
 
 

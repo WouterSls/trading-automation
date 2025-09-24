@@ -38,9 +38,11 @@ export const PERMIT2_TYPES = {
   ],
 };
 
-// ==============================
-// TypeScript equivalents of Permit2 structs
-// ==============================
+export type Permit2Domain = {
+  name: 'Permit2';
+  chainId: number;
+  verifyingContract: string;
+};
 
 // ISignatureTransfer.TokenPermissions
 export interface TokenPermissions {
@@ -48,20 +50,18 @@ export interface TokenPermissions {
   amount: bigint; // uint256
 }
 
-// ISignatureTransfer.PermitTransferFrom
 export interface PermitTransferFrom {
   permitted: TokenPermissions;
+  spender: string; // address
   nonce: string; // uint256
   deadline: string; // uint256
 }
 
-// ISignatureTransfer.SignatureTransferDetails
 export interface SignatureTransferDetails {
   to: string; // address
   requestedAmount: bigint; // uint256
 }
 
-// ISignatureTransfer.PermitBatchTransferFrom
 export interface PermitBatchTransferFrom {
   permitted: TokenPermissions[];
   nonce: string; // uint256
@@ -76,14 +76,12 @@ export interface PermitDetails {
   nonce: string; // uint48 (use string)
 }
 
-// IAllowanceTransfer.PermitSingle
 export interface PermitSingle {
   details: PermitDetails;
   spender: string; // address
   sigDeadline: string; // uint256
 }
 
-// IAllowanceTransfer.PermitBatch
 export interface PermitBatch {
   details: PermitDetails[];
   spender: string; // address

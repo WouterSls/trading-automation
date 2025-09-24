@@ -3,72 +3,91 @@ import { ChainType, getChainConfig } from "../../config/chain-config";
 import { PERMIT2_INTERFACE } from "../../lib/smartcontract-abis/_index";
 import { IPermitSingle } from "../universal-router/universal-router-types";
 import { Permit2Transfer, SignedPermit2Transfer } from "../../orders/order-types";
-import { PERMIT2_TYPES, PermitSingle, PermitTransferFrom } from "./permit2-types";
+import { PERMIT2_TYPES, Permit2Domain, PermitSingle, PermitTransferFrom } from "./permit2-types";
+import { SignedPermitSignatureData } from "../../trading/executor/executor-types";
+
 
 
 //Permit2 has two distincy ways of interacting with the permit2 contract.
 //Allowance based transfer -> update allowance via permit signature siging = preferred when multiple transfers are expected
 //Signature based transfer -> single token transfer via signature siging = preferred when single token transfer
 export class Permit2 {
-  private permit2Address: string;
-  private permit2Contract: Contract;
-
-  private chainId: number;
-
-  constructor(chain: ChainType) {
-    const chainConfig = getChainConfig(chain);
-    this.permit2Address = chainConfig.uniswap.permit2Address;
-    this.chainId = Number(chainConfig.id);
-
-    if (!this.permit2Address || this.permit2Address.trim() === "") {
-      throw new Error(`Permit2 address not defined for chain: ${chainConfig.name}`);
-    }
-
-    this.permit2Contract = new ethers.Contract(this.permit2Address, PERMIT2_INTERFACE);
-  }
+  constructor(private chainId: number, private permit2Address: string) { }
 
   getAddress = () => this.permit2Address;
-  getDomain = () => {
+  getDomain(): Permit2Domain {
     return {
-      name: "Permit2",
+      name: 'Permit2',
       chainId: this.chainId,
-      verifyingContract: this.permit2Address,
-    };
-  };
+      verifyingContract: this.permit2Address
+    }
+  }
 
-  async getPermit2Nonce(wallet: Wallet, owner: string, token: string, spender: string) {
-    this.permit2Contract = this.permit2Contract.connect(wallet) as Contract;
-    const [allowanceRaw, expiration, nonce] = await this.permit2Contract.allowance(owner, token, spender);
-    return nonce;
+  async signSignatureTransfer(signer: Wallet, value: PermitTransferFrom) {
+    const domain = this.getDomain();
+    const types = {
+      PermitTransferFrom: PERMIT2_TYPES.PermitTransferFrom,
+      TokenPermissions: PERMIT2_TYPES.TokenPermissions,
+    };
+
+    try {
+      return await signer.signTypedData(domain, types, value);
+    } catch (error) {
+      console.log("Error during signing ISignatureTrasfer.PermitTransferFrom typeData");
+      throw error;
+    }
   }
 
   /**
    * Gets a valid nonce for ISignatureTransfer (permitTransferFrom)
    * Uses unordered nonces with bitmap system
    * @param wallet - Wallet to connect to contract
-   * @param owner - Token owner address
-   * @param wordPos - Word position in bitmap (default: 0)
-   * @param bitPos - Bit position within word (default: 0)
    * @returns Valid nonce for permitTransferFrom
    */
-  async getSignatureTransferNonce(
-    wallet: Wallet, 
-    owner: string, 
-    wordPos: number = 0, 
-    bitPos: number = 0
-  ): Promise<string> {
-    this.permit2Contract = this.permit2Contract.connect(wallet) as Contract;
-    
-    const bitmap = await this.permit2Contract.nonceBitmap(owner, wordPos);
-    const bit = BigInt(1 << bitPos);
-    
-    if ((bitmap & bit) !== 0n) {
-      throw new Error(`Nonce already used: wordPos=${wordPos}, bitPos=${bitPos}`);
+  async getSignatureTransferNonce(wallet: Wallet): Promise<string> {
+    const permit2Contract = new Contract(this.permit2Address, PERMIT2_INTERFACE, wallet);
+    const owner = wallet.address;
+
+    let wordPos = 0;
+    let foundAvailableNonce = false;
+    while (!foundAvailableNonce) {
+      const bitmap = await permit2Contract.nonceBitmap(owner, wordPos);
+      
+      for (let bitPos = 0; bitPos < 256; bitPos++) {
+        const bit = BigInt(1 << bitPos);
+        
+        if ((bitmap & bit) === 0n) {
+          const nonce = (BigInt(wordPos) << 8n) | BigInt(bitPos);
+          foundAvailableNonce = true;
+          return nonce.toString();
+        }
+      }
+      
+      wordPos++;
+      
+      if (wordPos > 1000000) { // 1 million words = 256 million nonces safety check to prevent infinite loop (though practically impossible)
+        throw new Error("No available nonces found after checking 1 million words");
+      }
     }
-    
-    const nonce = (BigInt(wordPos) << 8n) | BigInt(bitPos);
-    return nonce.toString();
+
+    throw new Error("No available nonces found");
   }
+
+
+  async signAllowanecTranfer() {
+
+  }
+
+  async getAllowanceTransferNonce(wallet: Wallet, token: string, spender: string) {
+    const permit2Contract = new Contract(this.permit2Address, PERMIT2_INTERFACE, wallet);
+    const owner = wallet.address;
+    const [allowanceRaw, expiration, nonce] = await permit2Contract.allowance(owner, token, spender);
+    return nonce;
+  }
+
+
+
+
 
   /**
    * Executes a signed Permit2 transfer on-chain
@@ -77,40 +96,39 @@ export class Permit2 {
    * @param signedPermit2Transfer - The signed permit transfer data
    * @returns Transaction receipt
    */
-  async executeSignedPermit2Transfer(
+  static async executeSignedPermit2SignatureTransfer(
     executorWallet: Wallet,
-    signedPermit2Transfer: SignedPermit2Transfer,
+    permit2Address: string,
+    signedPermit2Transfer: SignedPermitSignatureData,
   ): Promise<ethers.TransactionReceipt> {
     console.log("🚀 Executing Permit2 Transfer On-Chain");
     console.log("=====================================");
 
-    this.permit2Contract = this.permit2Contract.connect(executorWallet) as Contract;
+    const contract = new Contract(permit2Address, PERMIT2_INTERFACE, executorWallet);
 
     const { permit, transferDetails, signature, owner } = signedPermit2Transfer;
 
     console.log("📋 Transfer Details:");
     console.log("  Owner:", owner);
     console.log("  Token:", permit.permitted.token);
-    console.log("  Amount:", ethers.formatUnits(permit.permitted.amount, 6), "USDC");
+    console.log("  Amount:", ethers.formatUnits(permit.permitted.amount, 18), "Token");
     console.log("  To:", transferDetails.to);
-    console.log("  Requested Amount:", ethers.formatUnits(transferDetails.requestedAmount, 6), "USDC");
+    console.log("  Requested Amount:", ethers.formatUnits(transferDetails.requestedAmount, 18), "Token");
     console.log("  Nonce:", permit.nonce);
-    console.log("  Deadline:", new Date(permit.deadline * 1000).toISOString());
+    console.log("  Deadline:", new Date(Number(permit.deadline) * 1000).toISOString());
     console.log("  Executor:", executorWallet.address);
     console.log();
 
     try {
       // First, simulate the transaction to catch errors early
       console.log("🔍 Simulating transaction...");
-      await this.permit2Contract.permitTransferFrom.staticCall(permit, transferDetails, owner, signature);
+      await contract.permitTransferFrom.staticCall(permit, transferDetails, owner, signature);
       console.log("✅ Simulation successful");
       console.log();
 
       // Execute the actual transaction
       console.log("📤 Sending transaction...");
-      const txResponse = await this.permit2Contract.permitTransferFrom(permit, transferDetails, owner, signature, {
-        gasLimit: 200000, // Set reasonable gas limit
-      });
+      const txResponse = await contract.permitTransferFrom(permit, transferDetails, owner, signature);
 
       console.log("⏳ Transaction sent:", txResponse.hash);
       console.log("⏳ Waiting for confirmation...");
@@ -151,35 +169,22 @@ export class Permit2 {
     }
   }
 
-  async signPermitTransferFrom(permit: PermitTransferFrom, spender: string, wallet: Wallet, ): Promise<string> {
-    const domain = this.getDomain();
-    const types = {
-      PermitTransferFrom: PERMIT2_TYPES.PermitTransferFrom,
-      TokenPermissions: PERMIT2_TYPES.TokenPermissions,
-    };
 
-    const values = {
-      permitted: permit.permitted,
-      spender: spender,
-      nonce: permit.nonce,
-      deadline: permit.deadline,
-    };
-
-    return await wallet.signTypedData(domain, types, values);
-  }
-
-  async signPermitSingle(wallet: Wallet, permitSingle: PermitSingle): Promise<string> {
+  async signPermitSingle(signer: Wallet, permitSingle: PermitSingle): Promise<string> {
+    const network = await signer.provider!.getNetwork();
     const domain = this.getDomain();
     const types = {
       PermitDetails: PERMIT2_TYPES.PermitDetails,
       PermitSingle: PERMIT2_TYPES.PermitSingle,
     };
-    
+
     const values = {
 
     }
 
 
-    return await wallet.signTypedData(domain, types, permitSingle);
+    return await signer.signTypedData(domain, types, permitSingle);
   }
+
+
 }
