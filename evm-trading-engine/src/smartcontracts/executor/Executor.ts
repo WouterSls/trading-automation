@@ -4,9 +4,9 @@ import { TransactionRequest } from "ethers";
 import { EXECUTOR_INTERFACE } from "../../lib/smartcontract-abis/executor";
 import { ChainType, getChainConfig } from "../../config/chain-config";
 import { Permit2 } from "../permit2/Permit2";
-import { EIP712Domain, SignedOrder, SignedPermitSignatureData } from "./executor-types";
+import { EIP712_TYPES, EIP712Domain, Order, SignedOrder, SignedPermitSignatureData } from "./executor-types";
 import { TradeCreationDto } from "../../trading/types/_index";
-import { RouteData, SignedPermitData } from "../../lib/generated-solidity-types";
+import { EIP712_GENERATED_TYPES, Protocol, RouteData, SignedPermitData } from "../../lib/generated-solidity-types";
 import { decodeLogs } from "../../lib/decoding-utils";
 import { PermitTransferFrom, SignatureTransferDetails } from "../permit2/permit2-types";
 
@@ -26,7 +26,6 @@ export class Executor {
   }
 
   //approvePermit2
-
   //signPermitTransferFrom
   //signOrder
 
@@ -62,7 +61,7 @@ export class Executor {
     console.log()
   }
 
-  async createSignedPermitData(signer: Wallet, tokenIn: string, amountIn: string, deadline: string, to: string) {
+  async createSignedPermitData(signer: Wallet, tokenIn: string, amountIn: bigint, deadline: string, to: string) {
     let permit2Nonce = "0";
     try {
       permit2Nonce = await this.permit2.getSignatureTransferNonce(signer, signer.address);
@@ -105,22 +104,45 @@ export class Executor {
     return signedPermitData;
   }
 
-  async createSignedOrder(wallet: Wallet, orderParameters: any): Promise<SignedOrder> {
+  async createSignedOrder(signer: Wallet, tokenIn: string, amountIn: bigint, tokenOut: string): Promise<SignedOrder> {
+    let orderNonce = 0;
+    try {
+      orderNonce = this.getOrderNonce();
+    } catch (error) {
+      console.log("Error during getting of IExecutor.Order nonce", error);
+      throw error;
+    }
+
+    // can be used to limit scope of protocols in signature
+    //const protocol = Protocol.UNISWAP_V2;
+
+    const types = { Order: EIP712_TYPES.Order };
+
+    const value = {
+      maker: signer.address,
+      inputToken: tokenIn,
+      inputAmount: BigInt(amountIn),
+      outputToken: tokenOut,
+      minAmountOut: 1n,
+      //protocol: protocol,
+      maxSlippageBps: 50,
+      expiry: Math.floor(Date.now() / 1000) + 3600,
+      nonce: orderNonce,
+    };
+
+    let orderSignature = "0x";
+    try {
+      orderSignature = await signer.signTypedData(this.domain, types, value);
+    } catch (error) {
+      console.log("Error during signing IExecutor.Order typeData:", error);
+    }
+
     const signedOrder: SignedOrder = {
-      maker: "", // address
-      inputToken: "", // address
-      outputToken: "", // address
-      protocol: 0, // Types.Protocol
-      inputAmount: "0", // uint256
-      minAmountOut: "0", // uint256
-      maxSlippageBps: "50", // uint256
-      expiry: "0", // uint256
-      nonce: "0", // uint256
-      signature: "0x", // bytes
+      ...value,
+      signature: orderSignature,
     }
 
     return signedOrder;
-
   }
 
   private createDomain(chainId: number, verifyingContract: string) {
@@ -130,6 +152,10 @@ export class Executor {
       chainId: chainId,
       verifyingContract: verifyingContract,
     };
+  }
+
+  private getOrderNonce() {
+    return 0;
   }
 }
 

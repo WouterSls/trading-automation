@@ -25,19 +25,21 @@ export interface SignedOrder {
   inputToken: string; // address
   outputToken: string; // address
   protocol: number; // Types.Protocol
-  inputAmount: string; // uint256
-  minAmountOut: string; // uint256
-  maxSlippageBps: string; // uint256
-  expiry: string; // uint256
-  nonce: string; // uint256
+  inputAmount: bigint; // uint256
+  minAmountOut: bigint; // uint256
+  maxSlippageBps: number; // uint256
+  expiry: number; // uint256
+  nonce: number; // uint256
   signature: string; // bytes
 }
 
 // Route data structure (matches ExecutorValidation.RouteData)
 export interface RouteData {
-  encodedPath: string; // bytes
+  protocol: number; // Types.Protocol
+  path: string[];
   fee: string; // uint24
   isMultiHop: boolean; // bool
+  encodedPath: string; // bytes
 }
 
 // Permit structures (match ExecutorValidation permit types)

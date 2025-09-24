@@ -43,8 +43,10 @@ async function executorInteraction() {
    */
   const signer: Wallet = deployerWallet;
   const tokenIn: string = tokenA.getTokenAddress();
-  const amountIn: string = ethers.parseUnits("100", tokenA.getDecimals()).toString();
+  const amountIn: bigint = ethers.parseUnits("100", tokenA.getDecimals());
+  const amountOutMin: bigint = 0n
   const expiry: string = (Math.floor(Date.now() / 1000) + 3600).toString();
+  // REPLACE WITH TRADER ADDRESS?
   const to: string = EXECUTOR_ADDRESS;
 
   /**
@@ -60,40 +62,28 @@ async function executorInteraction() {
   /**
    * SIGNED ORDER
    */
-  //const domain = createDomain(Number(chainId), EXECUTOR_ADDRESS);
-  //console.log("Domain used for signing:", domain);
 
-  const orderNonce = "1" // executor.getOrderNonce(); | usedNonce(address, nonce) == false;
   const tokenOut: string = tokenB.getTokenAddress();
 
-  const signedOrder: SignedOrder = {
-    maker: deployerWallet.address,
-    inputToken: tokenIn,
-    inputAmount: amountIn,
-    outputToken: tokenOut,
-    minAmountOut: "1", // throw errors on zeroAmount -> should always be calculated
-    protocol: Protocol.UNISWAP_V2,
-    maxSlippageBps: "50", //50%
-    expiry: (Math.floor(Date.now() / 1000) + 3600).toString(),
-    nonce: orderNonce,
-    signature: "0x",
-  }
-
+  const signedOrder = await executor.createSignedOrder(signer, tokenIn, amountIn, tokenOut)
   console.log("SIGNED ORDER")
   console.log("===============================");
   console.log(signedOrder);
   console.log()
 
   const routeData: RouteData = {
-    encodedPath: "0x",
+    protocol: Protocol.UNISWAP_V2,
+    path: [tokenIn, tokenOut],
     fee: "3000",
-    isMultiHop: false
+    isMultiHop: false,
+    encodedPath: "0x"
   }
   console.log("ROUTE DATA")
   console.log("===============================");
   console.log(routeData);
   console.log()
 
+  return;
   /**
    * EXECUTION
    */
@@ -116,6 +106,19 @@ async function executorInteraction() {
   }
 }
 
+async function abiEncoderTest() {
+  const defaultEncoder = ethers.AbiCoder.defaultAbiCoder();
+
+  const withBigint = defaultEncoder.encode(["uint256"],[1890809809n]);
+  const withString = defaultEncoder.encode(["uint256"],["1890809809"]);
+
+  console.log("BINGINT")
+  console.log(withBigint)
+  console.log("STRING")
+  console.log(withString);
+}
+
 if (require.main === module) {
+  //abiEncoderTest().catch(console.error);
   executorInteraction().catch(console.error);
 }

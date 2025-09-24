@@ -45,7 +45,7 @@ export const PERMIT2_TYPES = {
 // ISignatureTransfer.TokenPermissions
 export interface TokenPermissions {
   token: string; // address
-  amount: string; // uint256
+  amount: bigint; // uint256
 }
 
 // ISignatureTransfer.PermitTransferFrom
@@ -58,7 +58,7 @@ export interface PermitTransferFrom {
 // ISignatureTransfer.SignatureTransferDetails
 export interface SignatureTransferDetails {
   to: string; // address
-  requestedAmount: string; // uint256
+  requestedAmount: bigint; // uint256
 }
 
 // ISignatureTransfer.PermitBatchTransferFrom
