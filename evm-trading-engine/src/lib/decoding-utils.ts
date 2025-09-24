@@ -6,6 +6,7 @@ import { UNISWAP_V2_PAIR_INTERFACE } from "./smartcontract-abis/uniswap-v2";
 import { UNIVERSAL_ROUTER_INTERFACE } from "./smartcontract-abis/universal-router";
 import { calculatePriceFromSqrtPriceX96 } from "../smartcontracts/uniswap-v3/uniswap-v3-utils";
 import { EXECUTOR_INTERFACE } from "./smartcontract-abis/executor";
+import { PERMIT2_INTERFACE } from "./smartcontract-abis/permit2";
 
 export function decodeLogs(logs: ReadonlyArray<ethers.Log>) {
   const decodedLogs = [] as any[];
@@ -21,6 +22,16 @@ export function decodeLogs(logs: ReadonlyArray<ethers.Log>) {
           from: decoded.args.from,
           to: decoded.args.to,
           amount: decoded.args.amount,
+        });
+      } else if (log.topics[0] === ERC20_INTERFACE.getEvent("Approval")!.topicHash) {
+        const decoded = ERC20_INTERFACE.parseLog({ topics: log.topics, data: log.data });
+        if (!decoded) throw new Error("Failed to decode ERC20 Approval");
+        decodedLogs.push({
+          type: "ERC20 Approval",
+          contract: log.address,
+          owner: decoded.args.owner,
+          spender: decoded.args.spender,
+          value: decoded.args.value,
         });
       } else if (log.topics[0] === WETH_INTERFACE.getEvent("Withdrawal")!.topicHash) {
         const decoded = WETH_INTERFACE.parseLog({ topics: log.topics, data: log.data });
@@ -70,6 +81,63 @@ export function decodeLogs(logs: ReadonlyArray<ethers.Log>) {
           liquidity: decoded.args.liquidity,
           tick: decoded.args.tick,
         });
+      } else if (log.topics[0] === PERMIT2_INTERFACE.getEvent("UnorderedNonceInvalidation")!.topicHash) {
+        const decoded = PERMIT2_INTERFACE.parseLog({ topics: log.topics, data: log.data });
+        if (!decoded) throw new Error("Failed to decode Permit2 UnorderedNonceInvalidation");
+        decodedLogs.push({
+          type: "Permit2 UnorderedNonceInvalidation",
+          contract: log.address,
+          owner: decoded.args.owner,
+          word: decoded.args.word,
+          mask: decoded.args.mask,
+        });
+      } else if (log.topics[0] === PERMIT2_INTERFACE.getEvent("NonceInvalidation")!.topicHash) {
+        const decoded = PERMIT2_INTERFACE.parseLog({ topics: log.topics, data: log.data });
+        if (!decoded) throw new Error("Failed to decode Permit2 NonceInvalidation");
+        decodedLogs.push({
+          type: "Permit2 NonceInvalidation",
+          contract: log.address,
+          owner: decoded.args.owner,
+          token: decoded.args.token,
+          spender: decoded.args.spender,
+          newNonce: decoded.args.newNonce,
+          oldNonce: decoded.args.oldNonce,
+        });
+      } else if (log.topics[0] === PERMIT2_INTERFACE.getEvent("Approval")!.topicHash) {
+        const decoded = PERMIT2_INTERFACE.parseLog({ topics: log.topics, data: log.data });
+        if (!decoded) throw new Error("Failed to decode Permit2 Approval");
+        decodedLogs.push({
+          type: "Permit2 Approval",
+          contract: log.address,
+          owner: decoded.args.owner,
+          token: decoded.args.token,
+          spender: decoded.args.spender,
+          amount: decoded.args.amount,
+          expiration: decoded.args.expiration,
+        });
+      } else if (log.topics[0] === PERMIT2_INTERFACE.getEvent("Permit")!.topicHash) {
+        const decoded = PERMIT2_INTERFACE.parseLog({ topics: log.topics, data: log.data });
+        if (!decoded) throw new Error("Failed to decode Permit2 Permit");
+        decodedLogs.push({
+          type: "Permit2 Permit",
+          contract: log.address,
+          owner: decoded.args.owner,
+          token: decoded.args.token,
+          spender: decoded.args.spender,
+          amount: decoded.args.amount,
+          expiration: decoded.args.expiration,
+          nonce: decoded.args.nonce,
+        });
+      } else if (log.topics[0] === PERMIT2_INTERFACE.getEvent("Lockdown")!.topicHash) {
+        const decoded = PERMIT2_INTERFACE.parseLog({ topics: log.topics, data: log.data });
+        if (!decoded) throw new Error("Failed to decode Permit2 Lockdown");
+        decodedLogs.push({
+          type: "Permit2 Lockdown",
+          contract: log.address,
+          owner: decoded.args.owner,
+          token: decoded.args.token,
+          spender: decoded.args.spender,
+        });
       } else {
         decodedLogs.push({ type: "Unknown", address: log.address, topics: log.topics, data: log.data });
       }
@@ -95,6 +163,7 @@ export function decodeError(errorOrData: any) {
   const interfaces = [
     { name: "Executor", interface: EXECUTOR_INTERFACE },
     { name: "Universal Router", interface: UNIVERSAL_ROUTER_INTERFACE },
+    { name: "Permit2", interface: PERMIT2_INTERFACE },
     { name: "ERC20", interface: ERC20_INTERFACE },
     { name: "WETH", interface: WETH_INTERFACE },
     { name: "Uniswap V3 Pool", interface: UNISWAP_V3_POOL_INTERFACE },
