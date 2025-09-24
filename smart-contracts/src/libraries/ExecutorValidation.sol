@@ -63,7 +63,7 @@ library ExecutorValidation {
 
 
     bytes32 internal constant ORDER_TYPEHASH = keccak256(
-        "Order(address maker,address inputToken,address outputToken,uint8 protocol,uint256 inputAmount,uint256 minAmountOut,uint256 maxSlippageBps,uint256 expiry,uint256 nonce)"
+        "Order(address maker,address inputToken,uint256 inputAmount,address outputToken,uint256 minAmountOut,uint256 maxSlippageBps,uint256 expiry,uint256 nonce)"
     );
 
     function validateInputsAndBusinessLogic(
@@ -143,8 +143,8 @@ library ExecutorValidation {
                 ORDER_TYPEHASH,
                 order.maker,
                 order.inputToken,
-                order.outputToken,
                 order.inputAmount,
+                order.outputToken,
                 order.minAmountOut,
                 order.maxSlippageBps,
                 order.expiry,
