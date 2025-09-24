@@ -28,20 +28,18 @@ abstract contract UniswapV2Trader is ITrader {
 
     /**
      * @notice Execute a token swap via Uniswap V3
-     * @param order The limit order containing swap parameters
-     * @param routeData Route configuration for single-hop or multi-hop swaps
+     * @param params Route configuration for single-hop or multi-hop swaps
      * @return amountOut The amount of output tokens received
      */
     function trade(
-        ExecutorValidation.SignedOrder calldata order,
-        ExecutorValidation.RouteData calldata routeData
+        TradeParameters calldata params
     ) external override onlyExecutor returns (uint256 amountOut) {
-        uint256 balance = IERC20(order.inputToken).balanceOf(address(this));
-        if (balance < order.inputAmount) revert InsufficientBalance();
+        uint256 balance = IERC20(params.inputToken).balanceOf(address(this));
+        if (balance < params.inputAmount) revert InsufficientBalance();
     
-        IERC20(order.inputToken).forceApprove(UNIV2_ROUTER, order.inputAmount);
+        IERC20(params.inputToken).forceApprove(UNIV2_ROUTER, params.inputAmount);
 
-        if (routeData.isMultiHop) {
+        if (params.routeData.isMultiHop) {
 
         }
     
@@ -49,7 +47,7 @@ abstract contract UniswapV2Trader is ITrader {
 
         amountOut = 0;
     
-        IERC20(order.inputToken).forceApprove(UNIV2_ROUTER, 0);
+        IERC20(params.inputToken).forceApprove(UNIV2_ROUTER, 0);
 
     }
     

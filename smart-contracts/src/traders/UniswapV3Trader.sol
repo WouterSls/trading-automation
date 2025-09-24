@@ -34,54 +34,55 @@ contract UniswapV3Trader is ITrader {
 
     /**
      * @notice Execute a token swap via Uniswap V3
-     * @param order The order containing swap parameters
-     * @param routeData Route configuration for single-hop or multi-hop swaps
+     * @param params Route configuration for single-hop or multi-hop swaps
      * @return amountOut The amount of output tokens received
      */
     function trade(
-        ExecutorValidation.SignedOrder calldata order,
-        ExecutorValidation.RouteData calldata routeData
+        TradeParameters calldata params
     ) external override onlyExecutor returns (uint256 amountOut) {
-        uint256 balance = IERC20(order.inputToken).balanceOf(address(this));
-        if (balance < order.inputAmount) revert InsufficientBalance();
+        uint256 balance = IERC20(params.inputToken).balanceOf(address(this));
+        if (balance < params.inputAmount) revert InsufficientBalance();
     
-        IERC20(order.inputToken).forceApprove(UNIV3_ROUTER, order.inputAmount);
+        IERC20(params.inputToken).forceApprove(UNIV3_ROUTER, params.inputAmount);
     
-        if (routeData.isMultiHop) {
-            amountOut = _executeMultiHopSwap(order, routeData);
+        if (params.routeData.isMultiHop) {
+            amountOut = _executeMultiHopSwap(params, params.routeData);
         } else {
-            amountOut = _executeSingleHopSwap(order, routeData);
+            amountOut = _executeSingleHopSwap(params, params.routeData);
         }
     
-        IERC20(order.inputToken).forceApprove(UNIV3_ROUTER, 0);
+        IERC20(params.inputToken).forceApprove(UNIV3_ROUTER, 0);
     }
     
     function _executeMultiHopSwap(
-        ExecutorValidation.SignedOrder calldata order,
+        TradeParameters calldata params,
         ExecutorValidation.RouteData calldata routeData
     ) private returns (uint256) {
         IUniswapV3Router.ExactInputParams memory params = IUniswapV3Router.ExactInputParams({
             path: routeData.encodedPath,
-            recipient: order.maker,
-            deadline: order.expiry,
-            amountIn: order.inputAmount,
-            amountOutMinimum: order.minAmountOut
+            recipient: EXECUTOR, // to maker for gas optimization?
+            //deadline: params.expiry,
+            deadline: block.timestamp + 1,
+            amountIn: params.inputAmount,
+            amountOutMinimum: 0
         });
         return IUniswapV3Router(UNIV3_ROUTER).exactInput(params);
     }
     
     function _executeSingleHopSwap(
-        ExecutorValidation.SignedOrder calldata order,
+        TradeParameters calldata params,
         ExecutorValidation.RouteData calldata routeData
     ) private returns (uint256) {
         IUniswapV3Router.ExactInputSingleParams memory params = IUniswapV3Router.ExactInputSingleParams({
-            tokenIn: order.inputToken,
-            tokenOut: order.outputToken,
+            tokenIn: params.inputToken,
+            tokenOut: params.outputToken,
             fee: routeData.fee,
-            recipient: order.maker,
-            deadline: order.expiry,
-            amountIn: order.inputAmount,
-            amountOutMinimum: order.minAmountOut,
+            recipient: EXECUTOR, //maker for gas optimization?
+            //deadline: order.expiry,
+            deadline: block.timestamp + 1,
+            amountIn: params.inputAmount,
+            //amountOutMinimum: order.minAmountOut,
+            amountOutMinimum: 0,
             sqrtPriceLimitX96: 0
         });
         return IUniswapV3Router(UNIV3_ROUTER).exactInputSingle(params);

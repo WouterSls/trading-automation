@@ -29,7 +29,6 @@ library ExecutorValidation {
         address maker;
         address inputToken;
         address outputToken;
-        Types.Protocol protocol;
         uint256 inputAmount;
         uint256 minAmountOut;
         uint256 maxSlippageBps;
@@ -39,9 +38,12 @@ library ExecutorValidation {
     }
 
     struct RouteData {
-        bytes encodedPath;
+        Types.Protocol protocol;
+        address[] path;
         uint24 fee;
+        // bool feeOnTransfer;
         bool isMultiHop;
+        bytes encodedPath;
     }
 
     // Single signature transfer permit2 interaction
@@ -87,8 +89,12 @@ library ExecutorValidation {
         if (signedOrder.inputAmount != signedPermitData.transferDetails.requestedAmount) revert PermitAmountMismatch();
         if (signedPermitData.transferDetails.requestedAmount > signedPermitData.permit.permitted.amount) revert PermitAmountMismatch();
 
+        // Business logic validations
+        if (block.timestamp > signedOrder.expiry) revert OrderExpired();
+        if (usedNonces[signedOrder.maker][signedOrder.nonce]) revert NonceAlreadyUsed();
+
         // Protocol validation - check if protocol is valid
-        if (uint8(signedOrder.protocol) > uint8(Types.Protocol.QUICKSWAP)) {
+        if (uint8(routeData.protocol) > uint8(Types.Protocol.QUICKSWAP)) {
             revert InvalidProtocol();
         }
         
@@ -105,9 +111,6 @@ library ExecutorValidation {
             }
         }
         
-        // Business logic validations
-        if (block.timestamp > signedOrder.expiry) revert OrderExpired();
-        if (usedNonces[signedOrder.maker][signedOrder.nonce]) revert NonceAlreadyUsed();
     }
 
     function validateSignatures(
@@ -141,7 +144,6 @@ library ExecutorValidation {
                 order.maker,
                 order.inputToken,
                 order.outputToken,
-                order.protocol,
                 order.inputAmount,
                 order.minAmountOut,
                 order.maxSlippageBps,

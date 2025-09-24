@@ -4,13 +4,20 @@ pragma solidity ^0.8.20;
 import {ExecutorValidation} from "../libraries/ExecutorValidation.sol";
 
 interface ITrader {
+    struct TradeParameters {
+        address inputToken;
+        uint256 inputAmount;
+        address outputToken;
+        ExecutorValidation.RouteData routeData;
+    }
+
+
     /**
      * @notice Execute a trade using DEX-specific logic
-     * @param signedOrder The limit order containing trade parameters
-     * @param routeData Route-specific data (path, fees, etc.)
+     * @param params Route-specific data (path, fees, etc.)
      * @return amountOut The actual amount of output tokens received
      */
-    function trade(ExecutorValidation.SignedOrder calldata signedOrder, ExecutorValidation.RouteData calldata routeData) external returns (uint256 amountOut);
+    function trade(TradeParameters calldata params) external returns (uint256 amountOut);
 
     /**
      * @notice Get the address of the contract this trader uses trade (Router, Exchange, Swapper)

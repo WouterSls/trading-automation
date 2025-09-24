@@ -60,7 +60,7 @@ contract Executor is EIP712, ReentrancyGuard {
         ExecutorValidation.RouteData calldata routeData
     ) external nonReentrant {
         ExecutorValidation.validateInputsAndBusinessLogic(signedOrder, routeData, signedPermitData, usedNonce);
-        ExecutorValidation.validateSignatures(signedOrder,signedPermitData, _domainSeparatorV4());
+        ExecutorValidation.validateSignatures(signedOrder, signedPermitData, _domainSeparatorV4());
 
         usedNonce[signedOrder.maker][signedOrder.nonce] = true;
 
@@ -74,25 +74,29 @@ contract Executor is EIP712, ReentrancyGuard {
             deadline: signedPermitData.permit.deadline
         });
 
-
-        address trader = traderRegistry.getTrader(order.protocol);
+        address trader = traderRegistry.getTrader(routeData.protocol);
         if (trader != signedPermitData.transferDetails.to) revert InvalidTrader(); 
 
+        //Transfer to trader directly to save gas
         ISignatureTransfer.SignatureTransferDetails memory transferDetails  = ISignatureTransfer.SignatureTransferDetails({
             to: signedPermitData.transferDetails.to,
             requestedAmount: signedPermitData.transferDetails.requestedAmount
         });
-
         ISignatureTransfer(PERMIT2).permitTransferFrom(
             permit,
             transferDetails,
             signedPermitData.owner, // should be identical as order.maker
             signedPermitData.signature 
         );
-
         //IERC20(signedOrder.inputToken).safeTransfer(trader, signedOrder.inputAmount);
 
-        //uint256 amountOut = ITrader(trader).trade(signedOrder, routeData);
+        ITrader.TradeParameters memory tradeParameters = ITrader.TradeParameters({
+            inputToken: signedOrder.inputToken,
+            inputAmount: signedOrder.inputAmount,
+            outputToken: signedOrder.outputToken,
+            routeData: routeData
+        });
+        //uint256 amountOut = ITrader(trader).trade(tradeParameters);
 
         //if (amountOut < signedOrder.minAmountOut) revert InsufficientOutput();
 

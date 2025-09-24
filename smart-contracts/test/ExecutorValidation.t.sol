@@ -9,7 +9,7 @@ import {Types} from "../src/libraries/Types.sol";
 
 contract ValidationHelper {
     mapping(address => mapping(uint256 => bool)) public testNonces;
-    
+
     bytes32 public constant TEST_DOMAIN_SEPARATOR = keccak256("TEST_DOMAIN");
 
     function validateInputsAndBusinessLogic(
@@ -17,12 +17,7 @@ contract ValidationHelper {
         ExecutorValidation.RouteData calldata routeData,
         ExecutorValidation.SignedPermitData calldata permit2Data
     ) external view {
-        ExecutorValidation.validateInputsAndBusinessLogic(
-            order,
-            routeData,
-            permit2Data,
-            testNonces
-        );
+        ExecutorValidation.validateInputsAndBusinessLogic(order, routeData, permit2Data, testNonces);
     }
 
     function setNonceUsed(address maker, uint256 nonce, bool used) external {
@@ -59,9 +54,9 @@ contract ExecutorValidationTest is Test {
     }
 
     // ========================================
-    // HAPPY PATH TESTS - These should pass with valid inputs  
+    // HAPPY PATH TESTS - These should pass with valid inputs
     // ========================================
-    
+
     // Note: A true happy path test would require valid signatures, which is complex in unit tests.
     // The individual validation tests below ensure each validation rule works correctly.
     // The integration test in Executor.sol tests the complete flow with proper signatures.
@@ -178,11 +173,16 @@ contract ExecutorValidationTest is Test {
     function test_MultiHopWithEmptyPath_ShouldRevert() public {
         ExecutorValidation.SignedOrder memory order = _createValidOrder();
         ExecutorValidation.SignedPermitData memory permit2Data = _createValidPermit2();
+        address[] memory path = new address[](2);
+        path[0] = tokenA;
+        path[1] = tokenB;
 
         ExecutorValidation.RouteData memory routeData = ExecutorValidation.RouteData({
-            encodedPath: "",
+            protocol: Types.Protocol.UNISWAP_V2,
+            path: path,
             fee: 3000,
-            isMultiHop: true
+            isMultiHop: true,
+            encodedPath: "0x"
         });
 
         vm.expectRevert(ExecutorValidation.InvalidPath.selector);
@@ -192,11 +192,16 @@ contract ExecutorValidationTest is Test {
     function test_SingleHopWithZeroFee_ShouldRevert() public {
         ExecutorValidation.SignedOrder memory order = _createValidOrder();
         ExecutorValidation.SignedPermitData memory permit2Data = _createValidPermit2();
+        address[] memory path = new address[](2);
+        path[0] = tokenA;
+        path[1] = tokenB;
 
         ExecutorValidation.RouteData memory routeData = ExecutorValidation.RouteData({
-            encodedPath: "",
+            protocol: Types.Protocol.UNISWAP_V2,
+            path: path,
             fee: 0,
-            isMultiHop: false
+            isMultiHop: false,
+            encodedPath: "0x"
         });
 
         vm.expectRevert(ExecutorValidation.InvalidFee.selector);
@@ -206,11 +211,16 @@ contract ExecutorValidationTest is Test {
     function test_InvalidSingleHopFee_ShouldRevert() public {
         ExecutorValidation.SignedOrder memory order = _createValidOrder();
         ExecutorValidation.SignedPermitData memory permit2Data = _createValidPermit2();
+        address[] memory path = new address[](2);
+        path[0] = tokenA;
+        path[1] = tokenB;
 
         ExecutorValidation.RouteData memory routeData = ExecutorValidation.RouteData({
-            encodedPath: "",
-            fee: 1500, // Invalid fee
-            isMultiHop: false
+            protocol: Types.Protocol.UNISWAP_V2,
+            path: path,
+            fee: 1500, // invalid fee
+            isMultiHop: false,
+            encodedPath: "0x"
         });
 
         vm.expectRevert(ExecutorValidation.InvalidFee.selector);
@@ -220,11 +230,16 @@ contract ExecutorValidationTest is Test {
     function test_MultiHopWithShortPath_ShouldRevert() public {
         ExecutorValidation.SignedOrder memory order = _createValidOrder();
         ExecutorValidation.SignedPermitData memory permit2Data = _createValidPermit2();
+        address[] memory path = new address[](2);
+        path[0] = tokenA;
+        path[1] = tokenB;
 
         ExecutorValidation.RouteData memory routeData = ExecutorValidation.RouteData({
-            encodedPath: hex"1234", // Too short (< 43 bytes)
+            protocol: Types.Protocol.UNISWAP_V2,
+            path: path,
             fee: 3000,
-            isMultiHop: true
+            isMultiHop: true,
+            encodedPath: hex"1234" // Too short (< 43 bytes)
         });
 
         vm.expectRevert(ExecutorValidation.InvalidPath.selector);
@@ -239,7 +254,7 @@ contract ExecutorValidationTest is Test {
         ExecutorValidation.SignedOrder memory order = _createValidOrder();
         ExecutorValidation.RouteData memory routeData = _createValidRouteData();
         ExecutorValidation.SignedPermitData memory permit2Data = _createValidPermit2();
-        
+
         order.expiry = block.timestamp - 1; // Expired
 
         vm.expectRevert(ExecutorValidation.OrderExpired.selector);
@@ -250,7 +265,7 @@ contract ExecutorValidationTest is Test {
         ExecutorValidation.SignedOrder memory order = _createValidOrder();
         ExecutorValidation.RouteData memory routeData = _createValidRouteData();
         ExecutorValidation.SignedPermitData memory permit2Data = _createValidPermit2();
-        
+
         // Mark nonce as used
         helper.setNonceUsed(order.maker, order.nonce, true);
 
@@ -273,7 +288,7 @@ contract ExecutorValidationTest is Test {
     // ========================================
     // NOTE: SIGNATURE VALIDATION
     // ========================================
-    
+
     // Signature validation testing has been removed as it requires complex EIP-712 signature generation
     // and is better tested in integration tests with the complete Executor flow.
 
@@ -286,7 +301,6 @@ contract ExecutorValidationTest is Test {
             maker: user,
             inputToken: tokenA,
             outputToken: tokenB,
-            protocol: Types.Protocol.UNISWAP_V2,
             inputAmount: 1000e18,
             minAmountOut: 900e18,
             maxSlippageBps: 1000,
@@ -299,28 +313,26 @@ contract ExecutorValidationTest is Test {
     function _createValidPermit2() internal view returns (ExecutorValidation.SignedPermitData memory) {
         return ExecutorValidation.SignedPermitData({
             permit: ISignatureTransfer.PermitTransferFrom({
-                permitted: ISignatureTransfer.TokenPermissions({
-                    token: tokenA,
-                    amount: 1000e18
-                }),
+                permitted: ISignatureTransfer.TokenPermissions({token: tokenA, amount: 1000e18}),
                 nonce: 1,
                 deadline: block.timestamp + 1 hours
             }),
-            transferDetails: ISignatureTransfer.SignatureTransferDetails({
-                to: address(executor),
-                requestedAmount: 1000e18
-            }),
+            transferDetails: ISignatureTransfer.SignatureTransferDetails({to: address(executor), requestedAmount: 1000e18}),
             owner: user,
             signature: ""
         });
     }
 
-    function _createValidRouteData() internal pure returns (ExecutorValidation.RouteData memory) {
+    function _createValidRouteData() internal view returns (ExecutorValidation.RouteData memory) {
+        address[] memory path = new address[](2);
+        path[0] = tokenA;
+        path[1] = tokenB;
         return ExecutorValidation.RouteData({
-            encodedPath: "",
-            fee: 3000,
-            isMultiHop: false
+            protocol: Types.Protocol.UNISWAP_V2,
+            path: path,
+            fee: 0,
+            isMultiHop: false,
+            encodedPath: "0x"
         });
     }
-
 }
