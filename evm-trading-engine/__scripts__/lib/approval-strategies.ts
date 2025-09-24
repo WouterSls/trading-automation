@@ -32,7 +32,7 @@ async function permit2Check() {
   console.log(`\t${weth.getSymbol()} balance: ${wethBalance}`);
   console.log();
 
-  const permit2 = new Permit2(chain);
+  const permit2 = new Permit2(Number(chainConfig.id),chainConfig.uniswap.permit2Address);
 }
 
 async function approvalStrategies() {
