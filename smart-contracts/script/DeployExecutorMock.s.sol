@@ -7,7 +7,7 @@ import {console} from "forge-std/console.sol";
 import {Executor} from "../src/Executor.sol";
 import {ERC20Mock} from "../lib/openzeppelin-contracts/contracts/mocks/token/ERC20Mock.sol";
 
-contract DeployExecutorBase is Script {
+contract DeployExecutorMock is Script {
     function run() external returns (Executor) {
         uint256 pk = vm.envUint("DEPLOYER_KEY");
         address deployer = vm.addr(pk);
@@ -15,10 +15,10 @@ contract DeployExecutorBase is Script {
         vm.startBroadcast(pk);
         //Permit2 permit2 = new Permit2();
         address permit2Address = 0x000000000022D473030F116dDEE9F6B43aC78BA3;
-        
+
         // Deploy Executor with Permit2 address
         Executor executor = new Executor(permit2Address);
-        
+
         // Deploy mock tokens
         ERC20Mock tokenA = new ERC20Mock();
         ERC20Mock tokenB = new ERC20Mock();

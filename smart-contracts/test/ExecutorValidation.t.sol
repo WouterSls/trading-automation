@@ -40,6 +40,7 @@ contract ExecutorValidationTest is Test {
     address public unauthorizedUser;
 
     // Private keys for signing (test keys only)
+    address public constant PERMIT2 = 0x000000000022D473030F116dDEE9F6B43aC78BA3;
     uint256 public constant DEPLOYER_PRIVATE_KEY = 0x1234;
     uint256 public constant USER_PRIVATE_KEY = 0x5678;
 
@@ -49,7 +50,7 @@ contract ExecutorValidationTest is Test {
         unauthorizedUser = makeAddr("unauthorized");
 
         vm.prank(deployer);
-        executor = new Executor();
+        executor = new Executor(PERMIT2);
         helper = new ValidationHelper();
     }
 

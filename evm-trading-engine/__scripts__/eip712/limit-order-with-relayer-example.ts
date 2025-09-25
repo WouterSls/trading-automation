@@ -9,7 +9,7 @@
 import { ethers, Wallet } from "ethers";
 import { ChainType } from "../../src/config/chain-config";
 //import { OrderSigner } from "../../src/orders/OrderSigner";
-import { OrderExecutor } from "../../src/trading/executor/OrderExecutor";
+import { OrderExecutor } from "../../src/trading/executor/OrderRelayer";
 import { OrderCreator } from "../../src/trading/executor/OrderCreator";
 
 // Example configuration
@@ -30,13 +30,19 @@ async function createOrder() {
   const creator = new OrderCreator(CHAIN_ID, EXECUTOR_CONTRACT_ADDRESS, PERMIT2_CONTRACT_ADDRESS);
   const executor = new OrderExecutor();
 
-  const inputToken = "0xA0b86a33E6441D4B3bECa73A2d8C4d7a1C8A8B3c" // Example USDC
-  const outputToken = "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2" // WETH
-  const inputAmount = ethers.parseUnits("1000", 6) // 1000 USDC
-  const minAmountOut = ethers.parseEther("0.3").toString() // At least 0.3 ETH
+  const inputToken = "0xA0b86a33E6441D4B3bECa73A2d8C4d7a1C8A8B3c"; // Example USDC
+  const outputToken = "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"; // WETH
+  const inputAmount = ethers.parseUnits("1000", 6); // 1000 USDC
+  const minAmountOut = ethers.parseEther("0.3").toString(); // At least 0.3 ETH
   const deadline = (Math.floor(Date.now() / 1000) + 3600).toString();
   // Create singed permit data
-  const signedPermitData = await creator.createSignedPermitData(userWallet,inputToken,inputAmount,deadline,EXECUTOR_CONTRACT_ADDRESS)
+  const signedPermitData = await creator.createSignedPermitData(
+    userWallet,
+    inputToken,
+    inputAmount,
+    deadline,
+    EXECUTOR_CONTRACT_ADDRESS,
+  );
 
   // Create signed limit order
   const signedOrder = await creator.createSignedOrder(userWallet, inputToken, inputAmount, outputToken);
@@ -49,10 +55,10 @@ async function createOrder() {
     minAmountOut: ethers.formatEther(signedOrder.minAmountOut),
     expiry: signedOrder.expiry,
   });
-  
+
   const routeData: any = "";
 
-  return {signedPermitData, signedOrder, routeData};
+  return { signedPermitData, signedOrder, routeData };
 }
 
 // Example: Relayer executes the limit order
@@ -66,14 +72,20 @@ async function executeOrder(signedPermitData: any, signedOrder: any, routeData: 
   const orderExecutor = new OrderExecutor();
 
   // Check if order can be executed
-  const canExecute = true //await orderExecutor.canExecuteOrder(signedOrder, relayerWallet);
+  const canExecute = true; //await orderExecutor.canExecuteOrder(signedOrder, relayerWallet);
   if (!canExecute) {
     console.log("❌ Order cannot be executed (insufficient liquidity or expired)");
     return;
   }
 
   // Execute the order
-  const txHash = await orderExecutor.execute(signedPermitData, signedOrder, routeData, EXECUTOR_CONTRACT_ADDRESS, relayerWallet);
+  const txHash = await orderExecutor.execute(
+    signedPermitData,
+    signedOrder,
+    routeData,
+    EXECUTOR_CONTRACT_ADDRESS,
+    relayerWallet,
+  );
   console.log("✅ Order executed successfully! Transaction:", txHash);
 }
 
@@ -83,7 +95,7 @@ async function demonstrateFlow() {
     console.log("🚀 Starting limit order demonstration...\n");
 
     // Step 1: User creates signed order
-    const {signedPermitData, signedOrder, routeData } = await createOrder();
+    const { signedPermitData, signedOrder, routeData } = await createOrder();
     console.log("\n" + "=".repeat(50) + "\n");
 
     // Step 2: Relayer executes order (could happen minutes/hours later)

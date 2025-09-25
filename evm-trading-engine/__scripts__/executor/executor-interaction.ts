@@ -1,14 +1,15 @@
 import { Contract, ethers, EtherSymbol, TransactionReceipt, Wallet } from "ethers";
-import { getHardhatWallet_1 } from "../../src/hooks/useSetup";
+import { getHardhatWallet_1, getHardhatWallet_2 } from "../../src/hooks/useSetup";
 import { createDomain, SignedOrder, Protocol, RouteData } from "../../src/lib/generated-solidity-types";
 import { decodeError } from "../../src/lib/decoding-utils";
 import { ChainType, mapNetworkNameToChainType } from "../../src/config/chain-config";
-import { OrderExecutor } from "../../src/trading/executor/OrderExecutor";
+import { OrderRelayer } from "../../src/trading/executor/OrderRelayer";
 import { OrderCreator } from "../../src/trading/executor/OrderCreator";
 import { ERC20 } from "../../src/smartcontracts/ERC/ERC20";
 import { createMinimalErc20 } from "../../src/smartcontracts/ERC/erc-utils";
 import { Permit2 } from "../../src/smartcontracts/permit2/Permit2";
 import { PermitTransferFrom } from "../../src/smartcontracts/permit2/permit2-types";
+import { Executor } from "../../src/smartcontracts/executor/Executor";
 
 async function executorInteraction() {
   // ETH FORK
@@ -17,17 +18,20 @@ async function executorInteraction() {
   //const DEPLOYED_MOCK_B = "0x3eEAEf0dddbda233651dc839591b992795Ba7168";
   // LOCAL
   const EXECUTOR_ADDRESS = "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512";
-  const DEPLOYED_MOCK_A = "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0"
+  const DEPLOYED_MOCK_A = "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0";
   const DEPLOYED_MOCK_B = "0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9";
-  const PERMIT2_ADDRESS = "0x000000000022D473030F116dDEE9F6B43aC78BA3";
+  //const PERMIT2_ADDRESS = "0x000000000022D473030F116dDEE9F6B43aC78BA3";
+  const PERMIT2_ADDRESS = "0xBE05d211eD3fd34A1624060419358AA073957faC";
 
   const deployerWallet = getHardhatWallet_1();
+  const deployer: Wallet = deployerWallet;
+  const paymasterWallet = getHardhatWallet_2();
   const provider = deployerWallet.provider;
   const network = await deployerWallet.provider?.getNetwork();
   if (!provider || !network) throw new Error("PROVIDER ERROR");
   let chainId = network.chainId;
   let networkName = network.name;
-  const chainType = ChainType.ETH
+  const chainType = ChainType.ETH;
 
   console.log("EXECUTOR CONTRACT TESTING");
   console.log("===============================");
@@ -36,29 +40,32 @@ async function executorInteraction() {
   console.log("ChainType", chainType);
   console.log();
 
-  const executor: OrderExecutor = new OrderExecutor();
+  const executor: Executor = new Executor(Number(chainId), EXECUTOR_ADDRESS);
   const creator: OrderCreator = new OrderCreator(Number(chainId), EXECUTOR_ADDRESS, PERMIT2_ADDRESS);
-  const tokenA: ERC20 | null = await createMinimalErc20(DEPLOYED_MOCK_A, deployerWallet.provider!);
-  const tokenB: ERC20 | null = await createMinimalErc20(DEPLOYED_MOCK_B, deployerWallet.provider!);
+  const relayer: OrderRelayer = new OrderRelayer();
+  const tokenA: ERC20 | null = await createMinimalErc20(DEPLOYED_MOCK_A, deployer.provider!);
+  const tokenB: ERC20 | null = await createMinimalErc20(DEPLOYED_MOCK_B, deployer.provider!);
 
   if (!tokenA || !tokenB) {
-    throw new Error(`No Mock ERC20's created at addresses: \nA: ${DEPLOYED_MOCK_A}\nB: ${DEPLOYED_MOCK_B}`)
+    throw new Error(`No Mock ERC20's created at addresses: \nA: ${DEPLOYED_MOCK_A}\nB: ${DEPLOYED_MOCK_B}`);
   }
 
   const deployerBalance = await tokenA.getFormattedTokenBalance(deployerWallet.address);
   const executorBalance = await tokenA.getFormattedTokenBalance(EXECUTOR_ADDRESS);
 
+  const permit2Address = await executor.getPermit2(deployer);
   console.log("TOKEN A:", tokenA.getTokenAddress());
+  console.log("PERMIT2:", permit2Address);
+  console.log("EXECUTOR:", tokenA.getTokenAddress());
   console.log();
   console.log("DEPLOYER BALANCE\tEXECUTOR BALANCE");
   console.log(`${deployerBalance}\t\t\t${executorBalance}`);
   console.log();
 
-
-  //await mintTokens(deployerWallet,tokenA.getTokenAddress());
+  // await mintTokens(deployerWallet, tokenA.getTokenAddress());
 
   // WE NEED TO APPROVE PERMIT2 CONTRACT -> TransferFrom is failing most likely
-  //await approvePermit2(deployerWallet,tokenA, PERMIT2_ADDRESS);
+  //await approvePermit2(deployerWallet, tokenA, PERMIT2_ADDRESS);
 
   /**
    * TRADE PARAMETER
@@ -66,8 +73,8 @@ async function executorInteraction() {
   const signer: Wallet = deployerWallet;
   const tokenIn: string = tokenA.getTokenAddress();
   const amountIn: bigint = ethers.parseUnits("10", tokenA.getDecimals());
-  const amountOutMin: bigint = 0n
-  const expiry: string = (Math.floor(Date.now() / 1000)  + 3600).toString();
+  const amountOutMin: bigint = 0n;
+  const expiry: string = (Math.floor(Date.now() / 1000) + 3600).toString();
   // REPLACE WITH TRADER ADDRESS IN EXECUTOR CONTRACT FOR GAS OPTIMIZATION
   const to: string = EXECUTOR_ADDRESS;
 
@@ -75,11 +82,10 @@ async function executorInteraction() {
    * SIGNED PERMIT DATA
    */
   const signedPermitData = await creator.createSignedPermitData(signer, tokenIn, amountIn, expiry, to);
-  console.log("SIGNED PERMIT DATA")
+  console.log("SIGNED PERMIT DATA");
   console.log("===============================");
   console.log(signedPermitData);
   console.log();
-
 
   /**
    * SIGNED ORDER
@@ -87,43 +93,38 @@ async function executorInteraction() {
 
   const tokenOut: string = tokenB.getTokenAddress();
 
-  const signedOrder = await creator.createSignedOrder(signer, tokenIn, amountIn, tokenOut)
-  console.log("SIGNED ORDER")
+  const signedOrder = await creator.createSignedOrder(signer, tokenIn, amountIn, tokenOut);
+  console.log("SIGNED ORDER");
   console.log("===============================");
   console.log(signedOrder);
-  console.log()
+  console.log();
 
   const routeData: RouteData = {
     protocol: Protocol.UNISWAP_V2,
     path: [tokenIn, tokenOut],
     fee: "3000",
     isMultiHop: false,
-    encodedPath: "0x"
-  }
-  console.log("ROUTE DATA")
+    encodedPath: "0x",
+  };
+  console.log("ROUTE DATA");
   console.log("===============================");
   console.log(routeData);
-  console.log()
+  console.log();
+  return;
 
   /**
    * EXECUTION
    */
-  const relayer: Wallet = deployerWallet;
+  const paymaster: Wallet = paymasterWallet;
 
   try {
-    await executor.execute(
-      signedPermitData,
-      signedOrder,
-      routeData,
-      EXECUTOR_ADDRESS,
-      relayer
-    )
+    await relayer.execute(signedPermitData, signedOrder, routeData, EXECUTOR_ADDRESS, paymaster);
   } catch (error) {
     const decoded = decodeError(error);
     if (decoded.type == "Decoded") {
       console.log("Decoded Error:", decoded);
     } else {
-      console.log(error)
+      console.log(error);
     }
   }
 }
@@ -131,29 +132,26 @@ async function executorInteraction() {
 async function abiEncoderTest() {
   const defaultEncoder = ethers.AbiCoder.defaultAbiCoder();
 
-  const withBigint = defaultEncoder.encode(["uint256"],[1890809809n]);
-  const withString = defaultEncoder.encode(["uint256"],["1890809809"]);
+  const withBigint = defaultEncoder.encode(["uint256"], [1890809809n]);
+  const withString = defaultEncoder.encode(["uint256"], ["1890809809"]);
 
-  console.log("BINGINT")
-  console.log(withBigint)
-  console.log("STRING")
+  console.log("BINGINT");
+  console.log(withBigint);
+  console.log("STRING");
   console.log(withString);
 }
 
-async function mintTokens(wallet: Wallet, tokenAddress: string ) {
+async function mintTokens(wallet: Wallet, tokenAddress: string) {
   const encoder = ethers.AbiCoder.defaultAbiCoder();
   const selector = ethers.id("mint(address,uint256)").slice(0, 10); // 0x40c10f19
-  const args = encoder.encode(
-    ["address", "uint256"],
-    [wallet.address, ethers.parseUnits("1000", 18)]
-  );
-  const callData = ethers.concat([selector,args])
+  const args = encoder.encode(["address", "uint256"], [wallet.address, ethers.parseUnits("1000", 18)]);
+  const callData = ethers.concat([selector, args]);
 
-  const txResponse = await wallet.sendTransaction({to: tokenAddress, data: callData});
+  const txResponse = await wallet.sendTransaction({ to: tokenAddress, data: callData });
   const txReceipt = await txResponse.wait();
 
   if (!txReceipt && txReceipt!.status != 1) {
-    throw new Error("Transaction failed")
+    throw new Error("Transaction failed");
   }
   console.log("Transaction success");
 }

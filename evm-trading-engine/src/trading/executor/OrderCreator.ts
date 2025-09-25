@@ -16,18 +16,13 @@ export class OrderCreator {
 
   //approvePermit2
 
-  async createSignedPermitData(
-    signer: Wallet, 
-    tokenIn: string, 
-    amountIn: bigint, 
-    expiry: string, 
-    to: string
-  ) {
+  async createSignedPermitData(signer: Wallet, tokenIn: string, amountIn: bigint, expiry: string, to: string) {
     const permit2Nonce = await this.permit2.getSignatureTransferNonce(signer);
+    //const permit2Nonce = "0";
     const value: PermitTransferFrom = {
       permitted: {
         token: tokenIn,
-        amount: amountIn
+        amount: amountIn,
       },
       spender: this.executor.getAddress(),
       nonce: permit2Nonce,
@@ -45,13 +40,13 @@ export class OrderCreator {
       },
       owner: signer.address,
       signature: permitSignature,
-    }
+    };
 
     return signedPermitData;
   }
 
   async createSignedOrder(signer: Wallet, tokenIn: string, amountIn: bigint, tokenOut: string): Promise<SignedOrder> {
-    const orderNonce = this.executor.getOrderNonce();
+    const orderNonce = await this.executor.getOrderNonce();
     const value: Order = {
       maker: signer.address,
       inputToken: tokenIn,
@@ -68,10 +63,8 @@ export class OrderCreator {
     const signedOrder: SignedOrder = {
       ...value,
       signature: orderSignature,
-    }
+    };
 
     return signedOrder;
   }
 }
-
-

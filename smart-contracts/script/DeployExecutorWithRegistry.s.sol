@@ -24,7 +24,7 @@ contract DeployExecutor is Script {
         vm.startBroadcast();
 
         // Deploy the Executor contract
-        executor = new Executor();
+        executor = new Executor(PERMIT2);
         console.log("Executor deployed at:", address(executor));
 
         // Setup initial configuration

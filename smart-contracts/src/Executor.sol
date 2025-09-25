@@ -64,7 +64,6 @@ contract Executor is EIP712, ReentrancyGuard {
 
         usedNonce[signedOrder.maker][signedOrder.nonce] = true;
 
-
         ISignatureTransfer.PermitTransferFrom memory permit = ISignatureTransfer.PermitTransferFrom({
             permitted: ISignatureTransfer.TokenPermissions({
                 token: signedPermitData.permit.permitted.token,
@@ -74,28 +73,27 @@ contract Executor is EIP712, ReentrancyGuard {
             deadline: signedPermitData.permit.deadline
         });
 
-        ISignatureTransfer.SignatureTransferDetails memory transferDetails  = ISignatureTransfer.SignatureTransferDetails({
+        ISignatureTransfer.SignatureTransferDetails memory transferDetails = ISignatureTransfer.SignatureTransferDetails({
             to: signedPermitData.transferDetails.to,
             requestedAmount: signedPermitData.transferDetails.requestedAmount
         });
 
         ISignatureTransfer(PERMIT2).permitTransferFrom(
-            permit,
-            transferDetails,
-            signedPermitData.owner, 
-            signedPermitData.signature 
+            permit, transferDetails, signedPermitData.owner, signedPermitData.signature
         );
 
         address trader = traderRegistry.getTrader(routeData.protocol);
         //Transfer to trader directly with permit2 to save gas
         IERC20(signedOrder.inputToken).safeTransfer(trader, signedOrder.inputAmount);
 
-        ITrader.TradeParameters memory tradeParameters = ITrader.TradeParameters({
-            inputToken: signedOrder.inputToken,
-            inputAmount: signedOrder.inputAmount,
-            outputToken: signedOrder.outputToken,
-            routeData: routeData
-        });
+        /**
+         * ITrader.TradeParameters memory tradeParameters = ITrader.TradeParameters({
+         *         inputToken: signedOrder.inputToken,
+         *         inputAmount: signedOrder.inputAmount,
+         *         outputToken: signedOrder.outputToken,
+         *         routeData: routeData
+         *     });
+         */
         //uint256 amountOut = ITrader(trader).trade(tradeParameters);
 
         //if (amountOut < signedOrder.minAmountOut) revert InsufficientOutput();
@@ -107,9 +105,7 @@ contract Executor is EIP712, ReentrancyGuard {
         ExecutorValidation.SignedOrder calldata order,
         ExecutorValidation.SignedPermitData calldata signedPermitData,
         bytes calldata permit2Signature
-    ) internal {
-
-    }
+    ) internal {}
 
     function cancelNonce(uint256 nonce) external {
         usedNonce[msg.sender][nonce] = true;
