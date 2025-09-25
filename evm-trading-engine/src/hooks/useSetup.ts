@@ -96,6 +96,18 @@ export const getHardhatWallet_2 = (): Wallet => {
   const wallet = new ethers.Wallet(privateKey, provider);
   return wallet;
 };
+export const getHardhatWallet_3 = (): Wallet => {
+  const rpcUrl = process.env.HARDHAT_RPC_URL;
+  const privateKey = process.env.HARDHAT_PRIVATE_KEY_3;
+
+  if (!rpcUrl || !privateKey) {
+    throw new Error("RPC_URL and PRIVATE_KEY must be set");
+  }
+
+  const provider = new ethers.JsonRpcProvider(rpcUrl);
+  const wallet = new ethers.Wallet(privateKey, provider);
+  return wallet;
+};
 
 export const getOfflineSigner_1 = (): Wallet => {
   const privateKey = process.env.PRIVATE_KEY;
