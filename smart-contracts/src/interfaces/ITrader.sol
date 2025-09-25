@@ -11,7 +11,6 @@ interface ITrader {
         ExecutorValidation.RouteData routeData;
     }
 
-
     /**
      * @notice Execute a trade using DEX-specific logic
      * @param params Route-specific data (path, fees, etc.)
