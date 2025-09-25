@@ -1,5 +1,5 @@
 import { Contract, ethers, EtherSymbol, TransactionReceipt, Wallet } from "ethers";
-import { getHardhatWallet_1, getHardhatWallet_2 } from "../../src/hooks/useSetup";
+import { getHardhatWallet_1, getHardhatWallet_2, getHardhatWallet_3 } from "../../src/hooks/useSetup";
 import { createDomain, SignedOrder, Protocol, RouteData } from "../../src/lib/generated-solidity-types";
 import { decodeError } from "../../src/lib/decoding-utils";
 import { ChainType, mapNetworkNameToChainType } from "../../src/config/chain-config";
@@ -10,6 +10,8 @@ import { createMinimalErc20 } from "../../src/smartcontracts/ERC/erc-utils";
 import { Permit2 } from "../../src/smartcontracts/permit2/Permit2";
 import { PermitTransferFrom } from "../../src/smartcontracts/permit2/permit2-types";
 import { Executor } from "../../src/smartcontracts/executor/Executor";
+import { InputType, Route, TradeCreationDto } from "../../src/trading/types/_index";
+import { RouteOptimizer } from "../../src/routing/RouteOptimizer";
 
 async function executorInteraction() {
   // ETH FORK
@@ -23,11 +25,11 @@ async function executorInteraction() {
   //const PERMIT2_ADDRESS = "0x000000000022D473030F116dDEE9F6B43aC78BA3";
   const PERMIT2_ADDRESS = "0xBE05d211eD3fd34A1624060419358AA073957faC";
 
-  const deployerWallet = getHardhatWallet_1();
-  const deployer: Wallet = deployerWallet;
-  const paymasterWallet = getHardhatWallet_2();
-  const provider = deployerWallet.provider;
-  const network = await deployerWallet.provider?.getNetwork();
+  const deployer: Wallet = getHardhatWallet_1();
+  const user: Wallet = getHardhatWallet_2();
+  const paymaster: Wallet = getHardhatWallet_3();
+  const provider = user.provider;
+  const network = await user.provider?.getNetwork();
   if (!provider || !network) throw new Error("PROVIDER ERROR");
   let chainId = network.chainId;
   let networkName = network.name;
@@ -50,7 +52,8 @@ async function executorInteraction() {
     throw new Error(`No Mock ERC20's created at addresses: \nA: ${DEPLOYED_MOCK_A}\nB: ${DEPLOYED_MOCK_B}`);
   }
 
-  const deployerBalance = await tokenA.getFormattedTokenBalance(deployerWallet.address);
+  const deployerBalance = await tokenA.getFormattedTokenBalance(deployer.address);
+  const userBalance = await tokenA.getFormattedTokenBalance(user.address);
   const executorBalance = await tokenA.getFormattedTokenBalance(EXECUTOR_ADDRESS);
 
   const permit2Address = await executor.getPermit2(deployer);
@@ -58,8 +61,8 @@ async function executorInteraction() {
   console.log("PERMIT2:", permit2Address);
   console.log("EXECUTOR:", tokenA.getTokenAddress());
   console.log();
-  console.log("DEPLOYER BALANCE\tEXECUTOR BALANCE");
-  console.log(`${deployerBalance}\t\t\t${executorBalance}`);
+  console.log("DEPLOYER BALANCE\tUSER BALANCE\tEXECUTOR BALANCE");
+  console.log(`${deployerBalance}\t\t\t${userBalance}\t\t\t${executorBalance}`);
   console.log();
 
   // await mintTokens(deployerWallet, tokenA.getTokenAddress());
@@ -70,52 +73,39 @@ async function executorInteraction() {
   /**
    * TRADE PARAMETER
    */
-  const signer: Wallet = deployerWallet;
-  const tokenIn: string = tokenA.getTokenAddress();
-  const amountIn: bigint = ethers.parseUnits("10", tokenA.getDecimals());
+  const trade: TradeCreationDto = {
+    chain: ChainType.ETH, //LOCAL
+    inputType: InputType.TOKEN,
+    inputToken: tokenA.getTokenAddress(),
+    inputAmount: "10",
+    outputToken: tokenB.getTokenAddress(),
+  };
+  const amountIn: bigint = ethers.parseUnits(trade.inputAmount, tokenA.getDecimals());
   const amountOutMin: bigint = 0n;
   const expiry: string = (Math.floor(Date.now() / 1000) + 3600).toString();
-  // REPLACE WITH TRADER ADDRESS IN EXECUTOR CONTRACT FOR GAS OPTIMIZATION
+
   const to: string = EXECUTOR_ADDRESS;
 
-  /**
-   * SIGNED PERMIT DATA
-   */
-  const signedPermitData = await creator.createSignedPermitData(signer, tokenIn, amountIn, expiry, to);
-  console.log("SIGNED PERMIT DATA");
-  console.log("===============================");
-  console.log(signedPermitData);
-  console.log();
+  // can let permit2 transfer tokens without order
+  const signedPermitData = await creator.createSignedPermitData(user, trade.inputToken, amountIn, expiry, to);
+  const signedOrder = await creator.createSignedOrder(user, trade.inputToken, amountIn, trade.outputToken);
 
-  /**
-   * SIGNED ORDER
-   */
-
-  const tokenOut: string = tokenB.getTokenAddress();
-
-  const signedOrder = await creator.createSignedOrder(signer, tokenIn, amountIn, tokenOut);
-  console.log("SIGNED ORDER");
-  console.log("===============================");
-  console.log(signedOrder);
-  console.log();
+  //const routeOptimizer = new RouteOptimizer(trade.chain);
+  //const bestRoute: Route = await routeOptimizer.getBestRoute(trade.inputToken, amountIn, trade.outputToken, user);
 
   const routeData: RouteData = {
     protocol: Protocol.UNISWAP_V2,
-    path: [tokenIn, tokenOut],
+    path: [trade.inputToken, trade.outputToken],
     fee: "3000",
     isMultiHop: false,
     encodedPath: "0x",
   };
-  console.log("ROUTE DATA");
-  console.log("===============================");
-  console.log(routeData);
-  console.log();
+
   return;
 
   /**
    * EXECUTION
    */
-  const paymaster: Wallet = paymasterWallet;
 
   try {
     await relayer.execute(signedPermitData, signedOrder, routeData, EXECUTOR_ADDRESS, paymaster);
