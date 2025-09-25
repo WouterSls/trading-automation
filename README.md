@@ -5,13 +5,13 @@ Repository to facilitate automated crypto trading. It aims to resolve the UX pro
 ## Overview
 
 This project holds 3 sections.
-- 1. docs 
-- 2. evm-trading-engine
-- 3. smart-contracts
+- docs 
+- evm-trading-engine
+- smart-contracts
 
 ### docs
 
-Markdown files that explain / add on to the project. Currently holding a) EIP712 security deep dive, which explains the benefits of EIP-712 and why it should be used b) Token flow optimization guide, how can optimize gas usage of the executor contracts used in smart-contracts  
+Markdown files that explain / add on to the project. Currently holding a) EIP712 security deep dive, which explains the benefits of EIP-712 and why it should be used b) Token flow optimization guide, how can we optimize gas usage of the executor contract used in smart-contracts folder 
 
 ### evm-trading-engine
 
