@@ -14,11 +14,8 @@ export class OrderCreator {
     this.permit2 = new Permit2(chainId, permit2Address);
   }
 
-  //approvePermit2
-
   async createSignedPermitData(signer: Wallet, tokenIn: string, amountIn: bigint, expiry: string, to: string) {
     const permit2Nonce = await this.permit2.getSignatureTransferNonce(signer);
-    //const permit2Nonce = "0";
     const value: PermitTransferFrom = {
       permitted: {
         token: tokenIn,
