@@ -9,8 +9,8 @@
 import { ethers, Wallet } from "ethers";
 import { ChainType } from "../../src/config/chain-config";
 //import { OrderSigner } from "../../src/orders/OrderSigner";
-import { OrderExecutor } from "../../src/trading/executor/OrderRelayer";
 import { OrderCreator } from "../../src/trading/executor/OrderCreator";
+import { OrderRelayer } from "../../src/trading/executor/OrderRelayer";
 
 // Example configuration
 const CHAIN = ChainType.ETH;
@@ -28,7 +28,7 @@ async function createOrder() {
 
   // Initialize order signer
   const creator = new OrderCreator(CHAIN_ID, EXECUTOR_CONTRACT_ADDRESS, PERMIT2_CONTRACT_ADDRESS);
-  const executor = new OrderExecutor();
+  const relayer = new OrderRelayer();
 
   const inputToken = "0xA0b86a33E6441D4B3bECa73A2d8C4d7a1C8A8B3c"; // Example USDC
   const outputToken = "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"; // WETH
@@ -69,7 +69,7 @@ async function executeOrder(signedPermitData: any, signedOrder: any, routeData: 
   const relayerWallet = new Wallet("RELAYER_PRIVATE_KEY", new ethers.JsonRpcProvider(RPC_URL));
 
   // Initialize order executor
-  const orderExecutor = new OrderExecutor();
+  const relayer = new OrderRelayer();
 
   // Check if order can be executed
   const canExecute = true; //await orderExecutor.canExecuteOrder(signedOrder, relayerWallet);
@@ -79,7 +79,7 @@ async function executeOrder(signedPermitData: any, signedOrder: any, routeData: 
   }
 
   // Execute the order
-  const txHash = await orderExecutor.execute(
+  const txHash = await relayer.execute(
     signedPermitData,
     signedOrder,
     routeData,

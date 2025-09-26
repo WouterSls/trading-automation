@@ -1,6 +1,6 @@
 import { Contract, Wallet } from "ethers";
 import { EXECUTOR_INTERFACE } from "../../lib/smartcontract-abis/executor";
-import { EIP712Domain } from "../../orders/order-types";
+import { EIP712Domain } from "../../trading/executor/executor-types";
 import {
   EIP712_TYPES,
   Order,

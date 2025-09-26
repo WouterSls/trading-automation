@@ -1,26 +1,24 @@
 import { Contract, ethers, Signature, Wallet } from "ethers";
-import { ChainType, getChainConfig } from "../../config/chain-config";
 import { PERMIT2_INTERFACE } from "../../lib/smartcontract-abis/_index";
-import { IPermitSingle } from "../universal-router/universal-router-types";
-import { Permit2Transfer, SignedPermit2Transfer } from "../../orders/order-types";
 import { PERMIT2_TYPES, Permit2Domain, PermitSingle, PermitTransferFrom } from "./permit2-types";
 import { SignedPermitSignatureData } from "../../trading/executor/executor-types";
-
-
 
 //Permit2 has two distincy ways of interacting with the permit2 contract.
 //Allowance based transfer -> update allowance via permit signature siging = preferred when multiple transfers are expected
 //Signature based transfer -> single token transfer via signature siging = preferred when single token transfer
 export class Permit2 {
-  constructor(private chainId: number, private permit2Address: string) { }
+  constructor(
+    private chainId: number,
+    private permit2Address: string,
+  ) {}
 
   getAddress = () => this.permit2Address;
   getDomain(): Permit2Domain {
     return {
-      name: 'Permit2',
+      name: "Permit2",
       chainId: this.chainId,
-      verifyingContract: this.permit2Address
-    }
+      verifyingContract: this.permit2Address,
+    };
   }
 
   async signSignatureTransfer(signer: Wallet, value: PermitTransferFrom) {
@@ -52,20 +50,21 @@ export class Permit2 {
     let foundAvailableNonce = false;
     while (!foundAvailableNonce) {
       const bitmap = await permit2Contract.nonceBitmap(owner, wordPos);
-      
+
       for (let bitPos = 0; bitPos < 256; bitPos++) {
         const bit = BigInt(1 << bitPos);
-        
+
         if ((bitmap & bit) === 0n) {
           const nonce = (BigInt(wordPos) << 8n) | BigInt(bitPos);
           foundAvailableNonce = true;
           return nonce.toString();
         }
       }
-      
+
       wordPos++;
-      
-      if (wordPos > 1000000) { // 1 million words = 256 million nonces safety check to prevent infinite loop (though practically impossible)
+
+      if (wordPos > 1000000) {
+        // 1 million words = 256 million nonces safety check to prevent infinite loop (though practically impossible)
         throw new Error("No available nonces found after checking 1 million words");
       }
     }
@@ -73,10 +72,7 @@ export class Permit2 {
     throw new Error("No available nonces found");
   }
 
-
-  async signAllowanecTranfer() {
-
-  }
+  async signAllowanecTranfer() {}
 
   async getAllowanceTransferNonce(wallet: Wallet, token: string, spender: string) {
     const permit2Contract = new Contract(this.permit2Address, PERMIT2_INTERFACE, wallet);
@@ -84,10 +80,6 @@ export class Permit2 {
     const [allowanceRaw, expiration, nonce] = await permit2Contract.allowance(owner, token, spender);
     return nonce;
   }
-
-
-
-
 
   /**
    * Executes a signed Permit2 transfer on-chain
@@ -169,7 +161,6 @@ export class Permit2 {
     }
   }
 
-
   async signPermitSingle(signer: Wallet, permitSingle: PermitSingle): Promise<string> {
     const network = await signer.provider!.getNetwork();
     const domain = this.getDomain();
@@ -178,13 +169,8 @@ export class Permit2 {
       PermitSingle: PERMIT2_TYPES.PermitSingle,
     };
 
-    const values = {
-
-    }
-
+    const values = {};
 
     return await signer.signTypedData(domain, types, permitSingle);
   }
-
-
 }
